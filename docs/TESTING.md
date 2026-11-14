@@ -272,3 +272,19 @@ Before release:
 - confirm migration/rollback readiness;
 - complete platform/store-specific checks;
 - complete the applicable release QA/manual validation gate.
+
+
+## RelateHandoff project testing profile (Phase 0)
+
+The project is currently **bootstrap-only**: no runtime package or Relate integration exists. `config/validation-contract.json` uses executable Python bootstrap and tracked-secret checks; build is explicitly N/A until Phase 1 creates an application. This is not a permanent build bypass.
+
+Run on an actual clean checkout, from the repository root (use `python3` instead of `python` when that is the installed Python 3 command):
+
+```bash
+python scripts/test_bootstrap.py
+python scripts/check_secret_tracking.py
+python scripts/validate_project_profile.py --repository mrdzyn/relatehandoff
+python scripts/validate.py --repository mrdzyn/relatehandoff
+```
+
+Every future runtime change must replace the build N/A and add real test/build/security commands, plus at least one live Relate integration check. GitHub's inherited manual-dispatch baseline is supplementary, not evidence that the application has been built. Evidence must be tied to the exact full proposed PR SHA.

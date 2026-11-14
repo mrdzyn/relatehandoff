@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "repositoryMode": "template",
+  "repositoryMode": "project",
   "capabilities": {
     "design": false,
     "storeRelease": false

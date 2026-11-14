@@ -1,5 +1,25 @@
 {
   "schemaVersion": 1,
+  "categories": {
+    "test": {
+      "name": "RelateHandoff bootstrap contract checks",
+      "command": [
+        "python",
+        "scripts/test_bootstrap.py"
+      ]
+    },
+    "build": {
+      "status": "not_applicable",
+      "reason": "Phase 0 initializes documentation and governance only; no application package exists. Replace with a real build before Phase 1 completion."
+    },
+    "security": {
+      "name": "Tracked sensitive-file name check",
+      "command": [
+        "python",
+        "scripts/check_secret_tracking.py"
+      ]
+    }
+  },
   "developmentCommands": [],
   "releaseCommands": [],
   "releaseArtifacts": []

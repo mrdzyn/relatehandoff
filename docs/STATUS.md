@@ -1,27 +1,30 @@
 # Project Status
 
 ## Project
-- **Name:** AI-Native Project Template
-- **Current phase:** P8.0 M7 — Agent Orchestration & Token Efficiency (merged)
-- **Status:** M7 governance integrated into `main`; awaiting owner selection of the next task to measure actual token and subagent efficiency.
+- **Name:** RelateHandoff
+- **Current phase:** RH-P0 — greenfield repository initialization
+- **Status:** Phase 0 initialization is proposed in a Draft PR; implementation/runtime not started; exact-head local validation pending
 - **Primary branch:** `main`
-- **Approved starting baseline:** `6916912bbafb50b10b276988fbf20dafdfa5e435` (M7 PR #29 squash merge)
-- **Working branch:** `main`
-- **Active task:** `tasks/P8.0-m7-agent-orchestration-token-efficiency.md`
+- **Starting baseline:** `ab028917b134b362d3a292c77f1b3d212d94e9a5` (new repository generated from mrdzyn/ai-native-project-template)
+- **Working branch:** `phase-0/relatehandoff-initialization`
+- **Active task:** `tasks/RH-P1-relate-handoff-mvp.md` (next implementation task; not yet authorized to execute)
 - **Active handoff:** None
 
-## Completed / parallel state
-- M5 local-first validation and M6 session continuity are merged into `main`.
-- Release-scope preservation governance (PR #28) is merged into `main`; a closed promotion gate never authorizes feature descoping.
-- M7 [PR #29](https://github.com/mrdzyn/ai-native-project-template/pull/29) was independently reviewed, owner-approved, and squash-merged at `6916912bbafb50b10b276988fbf20dafdfa5e435`. It introduces one-primary-agent default, bounded optional subagents, minimal verified context, soft token budgets, truthful telemetry, and focused agent test loops.
-- M7's independent audit reported PASS for pre-merge safeguards and local validation, with post-merge STATUS transition pending. This docs-only follow-up aligns the intended `main` state; exact-HEAD local M6 recovery still requires verification after its approved merge.
-- No production code, feature scope, release verifier, branch protections, deployment, or release was changed by M7.
-
-## Current decisions and gates
-- Local-first mandatory exact-HEAD validation, independent review, and separate human approvals remain required.
-- Soft token budgets are planning aids, never permission to skip security, tests, or release obligations.
-- M7 token/cost savings must be measured from available real telemetry on comparable authorized tasks; otherwise report NOT AVAILABLE.
-- Do not start new product work, merge, deploy, or publish solely from this status. Owner authorization remains required.
+## Foundation decisions in review
+- Project mode selected; no design/store/integration capability packs active for the initial CLI/MCP-only MVP.
+- Proposed Node.js/TypeScript recorder, persistent local Relate directory graph, and read-only MCP consumer; no working runtime yet.
+- Local Git and canonical repository files remain authoritative; remote GitHub state requires a live read when needed.
+- No user data, secrets, unreviewed license, production deployment, or cloud agent access will be included in the demo.
+- Licensing, actual runtime selection/compatibility, and judge evidence remain open gates.
 
 ## Next
-Request the owner's selection of the next authorized comparable coding task for evidence-based M7 token-efficiency measurement.
+1. Validate this bootstrap on a clean checkout using the documented local commands and review the Draft PR.
+2. Obtain owner approval for the P0 merge separately; no merge is implied by initialization.
+3. Only then start RH-P1 and implement a *real* persistent Relate store, read-only MCP handoff and exact-HEAD freshness proof.
+
+## Verification truth
+- GitHub tree inspection: inherited template inspected before bootstrap.
+- Runtime integration: NOT IMPLEMENTED.
+- Local automated/Relate integration tests: NOT RUN at this stage.
+- Hosted CI: NOT RUN / optional under inherited local-first policy.
+- Manual reviewer and human merge approval: PENDING.

@@ -1,5 +1,18 @@
 # AGENTS.md
 
+## RelateHandoff project overlay
+
+This repository implements a **local-first agent handoff and evidence graph**, not the master template. Product and architecture scope are under `docs/PRODUCT.md` and `docs/ARCHITECTURE.md`.
+
+- Preserve Git and canonical repository files as source of truth. Relate is a derived context index; no graph assertion alone authorizes a merge, approval or release.
+- Read `docs/STATUS.md`, `config/project-profile.json`, and the active task before touching product code.
+- Start Relate MCP consumers **read-only**, use bounded parameterized queries, and isolate writer privileges in a validated recorder.
+- Never ingest real credentials, private transcripts or production/customer datasets into public fixtures or public exports.
+- Distinguish `VERIFIED`, `STALE`, `UNVERIFIED` and `BLOCKED` explicitly. An agent claim about a test is not an executed test.
+- The initial no-UI profile is deliberate. A material browser UI needs its own design-first approval and capability profile update.
+- License, GitHub rulesets, hosted integration, and hackathon submission remain explicit owner decisions.
+
+
 ## Purpose
 
 This file defines the default operating rules for AI coding agents working in this repository. Project-specific instructions may extend these rules, but should not silently weaken safety, review, testing, or human-approval requirements.

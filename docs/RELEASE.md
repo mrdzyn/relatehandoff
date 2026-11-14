@@ -189,3 +189,12 @@ After release:
 - capture meaningful production feedback;
 - create bounded follow-up tasks;
 - update `docs/STATUS.md` when project state changes materially.
+
+
+## RelateHandoff release and hackathon packaging
+
+No service, deployment, store listing or signing is configured. Initial distribution will be a source repository plus local CLI installation steps, with optional demo assets. P0 is not releasable product code.
+
+Versioning proposal: SemVer starting at `0.1.0` after the first demonstrable Relate integration; no tag or release has been created. Every release candidate must include the approved-scope record under `docs/releases/<version>/`, license decision, a clean exact-HEAD local audit, a sanitized persistent demo graph, verified installation steps, relevant tests and the owner's explicit release approval.
+
+The inherited baseline is manual-dispatch only. Do not configure a dispatch-only check as GitHub required-PR status. Confirm actual ruleset protection in GitHub settings; policy text is not enforcement.

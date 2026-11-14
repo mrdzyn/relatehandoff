@@ -1,6 +1,6 @@
 # AI Agent Session Continuity & Context Recovery
 
-> **Status:** Implemented in `scripts/session_context.py` and validated by `scripts/test_session_context.py`; merged with M5 local-first CI; PR #27 squash-merged into `main`. See `tasks/P8.0-m6-agent-session-continuity.md`.
+ > **Status in RelateHandoff:** Inherited read-only `scripts/session_context.py` generator; the master-only `scripts/test_session_context.py` history/self-test is intentionally pruned under greenfield policy. Project-specific local validation has not yet run.
 
 ## Problem and guarantee boundary
 
