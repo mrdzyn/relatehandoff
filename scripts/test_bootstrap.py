@@ -22,4 +22,11 @@ assert (ROOT / ".github/workflows/ci.yml").exists()
 assert (ROOT / ".github/workflows/common-validation.yml").exists()
 assert contract["categories"]["build"]["status"] == "not_applicable"
 assert (ROOT / "docs/HACKATHON.md").exists()
+# Ensure that retaining orchestration governance also retains its discoverable links.
+for required in ("AGENTS.md", "README.md", "docs/TESTING.md", "tasks/TEMPLATE.md", ".agent/TASK-CONTRACT.md"):
+    assert "docs/AGENT-ORCHESTRATION.md" in (ROOT / required).read_text(encoding="utf-8"), (
+        f"Missing agent orchestration reference in {required}"
+    )
+assert "capabilities" in (ROOT / "config/project-profile.json").read_text(encoding="utf-8")
+assert "restore only selected guidance" in (ROOT / "AGENTS.md").read_text(encoding="utf-8")
 print("Phase 0 bootstrap assertions: PASS (not a Relate integration test)")

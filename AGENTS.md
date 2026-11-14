@@ -9,7 +9,7 @@ This repository implements a **local-first agent handoff and evidence graph**, n
 - Start Relate MCP consumers **read-only**, use bounded parameterized queries, and isolate writer privileges in a validated recorder.
 - Never ingest real credentials, private transcripts or production/customer datasets into public fixtures or public exports.
 - Distinguish `VERIFIED`, `STALE`, `UNVERIFIED` and `BLOCKED` explicitly. An agent claim about a test is not an executed test.
-- The initial no-UI profile is deliberate. A material browser UI needs its own design-first approval and capability profile update.
+- The initial no-UI profile is deliberate. Design, store, vendor-integration, and Android-signing packs were **pruned** from this project. Do not attempt to read absent optional files. Before any material UI, store or Android work, first obtain owner approval, enable the matching capability selectors in `config/project-profile.json`, and restore only selected guidance from `mrdzyn/ai-native-project-template` using `docs/REPOSITORY-SETUP.md`; then follow the design-first and release gates.
 - License, GitHub rulesets, hosted integration, and hackathon submission remain explicit owner decisions.
 
 
@@ -30,7 +30,7 @@ Before making changes, read:
 
 Use `config/project-profile.json` to determine which optional capability packs are active. Do not load unselected store/design/integration packs into routine task context. Do not load the full handoff history during routine startup; `docs/HANDOFFS.md` is the canonical handoff policy. In a newly generated child repository that is still in `repositoryMode: "template"`, ignore any inherited master `Active handoff` until greenfield initialization clears it. For session context recovery across new conversations without prior chat history, use `scripts/session_context.py` per `docs/SESSION-CONTINUITY.md`.
 
-For UI/UX implementation tasks, also read the relevant design context after the project profile:
+For UI/UX implementation tasks **only after the design pack is selected and its files restored**, also read the relevant design context after the project profile:
 - `docs/DESIGN-SYSTEM.md`;
 - `docs/ACCESSIBILITY.md`;
 - the applicable file under `design/platforms/`;
@@ -166,7 +166,7 @@ For UI/UX changes:
 - compare against approved Figma/design references when supplied;
 - document deliberate deviations from native/platform conventions.
 
-Using an official UI kit or component library does not by itself prove accessibility or product correctness. Community design resources are never authoritative merely because they are linked by the template. **Never allow a community Figma/Framer/UI kit to override an approved project-specific design system, product behavior, brand, accessibility requirement, or security/privacy boundary.** Follow the authority/applicability rules in `design/resources/DESIGN-RESOURCE-CATALOG.md`.
+Using an official UI kit or component library does not by itself prove accessibility or product correctness. Community design resources are never authoritative merely because they are linked by the template. **Never allow a community Figma/Framer/UI kit to override an approved project-specific design system, product behavior, brand, accessibility requirement, or security/privacy boundary.** Follow the authority/applicability rules in `design/resources/DESIGN-RESOURCE-CATALOG.md` **when the selected design pack is restored and active**.
 
 For repository initialization/adoption, also read `docs/CAPABILITY-PACKS.md` and `docs/REPOSITORY-SETUP.md`. **`docs/REPOSITORY-SETUP.md` is the canonical detailed policy for brownfield reconciliation and greenfield pruning.**
 
@@ -174,7 +174,7 @@ For **brownfield adoption**, follow its KEEP / MERGE / ADD / RETIRE reconciliati
 
 For a **generated greenfield repository**, set `repositoryMode: "project"` and follow its greenfield-pruning procedure before normal feature work. Project Baseline still requires the core operating model and all selected capability guidance; unselected optional packs may be physically absent.
 
-For distribution work, read `store/README.md`, the applicable storefront profile, `store/SUBMISSION-METADATA.md`, and `store/DATA-PRIVACY-DECLARATION.md`. For Apple, Google Play, Microsoft Store, or Huawei AppGallery releases, also read `store/AGE-CONTENT-RATINGS.md` and `store/JURISDICTION-MATRIX.md`; WordPress.org does not require those app-store overlays solely because it is selected. For Android production/release work—including Flutter, React Native, and native Android/Kotlin—also read `release/android-signing.md`. For a game targeting mainland China, `store/china-mainland-games.md` is mandatory context. Verify current official store and jurisdiction rules before submission; do not assume the repository checklist is more current than the authoritative source.
+For distribution work, **first select `storeRelease` and restore the applicable store pack from the master template**; then read `store/README.md`, the applicable storefront profile, `store/SUBMISSION-METADATA.md`, and `store/DATA-PRIVACY-DECLARATION.md`. For Apple, Google Play, Microsoft Store, or Huawei AppGallery releases, also read `store/AGE-CONTENT-RATINGS.md` and `store/JURISDICTION-MATRIX.md`; WordPress.org does not require those app-store overlays solely because it is selected. For Android production/release work—including Flutter, React Native, and native Android/Kotlin—**first select the Android platform/storefront and restore the signing guidance**, then read `release/android-signing.md`. For a game targeting mainland China, `store/china-mainland-games.md` is mandatory context. Verify current official store and jurisdiction rules before submission; do not assume the repository checklist is more current than the authoritative source.
 
 For selected third-party commerce/licensing integrations, read the matching file under `integrations/`. Do not load or implement unselected integration packs.
 

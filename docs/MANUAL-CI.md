@@ -14,7 +14,7 @@ GitHub Actions is retained solely as **optional supplementary automation** (`wor
 
 1. Work on an isolated feature branch, with a PR, from a verified base SHA. Check out the **exact full proposed PR HEAD** in a clean worktree. Any change to the head requires repeat validation and independent audit.
 2. Execute the local development validation entrypoint:
-   - Run `python scripts/validate.py` (or `./scripts/validate`).
+   - Run `python3 scripts/validate.py` on macOS/Linux (or use `py -3 scripts/validate.py` / a verified Python 3 `python` executable on Windows, or `./scripts/validate` where supported).
    - This runs `scripts/validate_project_profile.py --repository <actual-owner/repository>`. In the **master only**, it also runs `scripts/validate_master_template.py`, `scripts/test_validate_project_profile.py`, and `scripts/test_entrypoints.py`.
 3. Check diff and tracked environment files:
    - Run `git diff --check <base-ref>...HEAD`.
@@ -57,10 +57,10 @@ The primary and mandatory path for release validation is executed on approved lo
 1. **Freeze candidate:** Freeze the release candidate ref and exact commit SHA.
 2. **Clean working tree:** Ensure the working tree is completely clean (`git status --porcelain` empty). Uncommitted changes invalidate release verification.
 3. **Execute release verification entrypoint:**
-   - Run `python scripts/verify_release.py --candidate-sha <SHA> --version <VERSION> [--artifacts <PATHS>]` (or `./scripts/verify_release`).
+   - Run `python3 scripts/verify_release.py --candidate-sha <SHA> --version <VERSION> [--artifacts <PATHS>]` on macOS/Linux (use an installed Python 3 interpreter on Windows, or `./scripts/verify_release` where supported).
    - For the **master template**, this verifies template mode, capability inventory, profile self-tests, and hashes core distribution assets.
    - For a **generated project**, this verifies project profile, executes project-owned release checks, and verifies that built release artifacts exist, are non-empty, and generates cryptographic SHA-256 checksums.
-4. **Artifact & Signing Verification:** Verify that generated binaries, packages, and store bundles match required specifications. Check signatures where applicable (per `release/android-signing.md` or platform signing policies).
+4. **Artifact & Signing Verification:** Verify that generated binaries, packages, and store bundles match required specifications. Check signatures where applicable (per `release/android-signing.md` **only if the Android pack is selected and restored**, or applicable platform signing policies).
 5. **Durable release record:** Output and preserve the durable sanitized release record containing candidate commit SHA, timestamp, platform details, test counts, artifact SHA-256 hashes, and pass/fail summary.
 6. **Optional supplementary hosted run:** If GitHub Actions is online and the maintainer desires supplementary cloud validation, they may optionally run `workflow_dispatch` (`gh workflow run ci.yml --ref <candidate-ref>`). However, **hosted execution is never a prerequisite or blocking dependency** for approving a release.
 7. **Human Release Gate:** Automation never self-releases. Production release, store publishing, deployment, or tagging requires explicit human owner release approval. Before promotion, complete pending live/signing/integration gates and confirm that the approved candidate includes all approved features under intended production flags. After promotion, smoke-test approved features and live integrations. Mock-backed tests cannot substitute for live proof.

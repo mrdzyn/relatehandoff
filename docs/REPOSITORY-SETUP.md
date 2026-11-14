@@ -428,13 +428,13 @@ Before changing settings:
 Do not weaken a mature repository's protections merely to make it resemble the template.
 
 
-## RelateHandoff greenfield adoption record — 2026-11-15
+## RelateHandoff greenfield adoption record — 2026-11-15 (Asia/Manila)
 
-- **Source:** created with GitHub `Use this template` from `mrdzyn/ai-native-project-template` (initial tree `ab028917b134b362d3a292c77f1b3d212d94e9a5`).
+- **Source:** created with GitHub `Use this template` from `mrdzyn/ai-native-project-template` (initial tree `ab028917b134b362d3a292c77f1b3d212d94e9a5`). PR #1 creation timestamp 2026-11-14 16:28 UTC equals 2026-11-15 00:28 Asia/Manila; these dates are consistent.
 - **Mode:** `repositoryMode: project`.
 - **Selected capability packs:** design=false, storeRelease=false; no platform/storefront/integration selector. The initial CLI+MCP phase has no material graphical UI. A later browser interface must activate design/web guidance and obtain design approval before substantial UI work.
 - **Retained core:** agent, product, status, architecture, security, testing, release and handoff policies; local-first CI pair; project-profile validator, session-continuity generator and release verifier.
-- **Removed:** inherited master handoff/memory blocks and historical task contracts; master-only template integrity workflow/self-tests; unused design, store, commercial integration and Android signing packs.
+- **Removed:** inherited master handoff/memory blocks and historical task contracts; master-only template integrity workflow/self-tests; unused design, store, commercial integration and Android signing packs. Reactivation requires the relevant capability selector plus restoring only matching files from the master template before doing that work.
 - **CI:** original `ci.yml` manually dispatches `common-validation.yml`. The inherited master-only steps remain guarded for the master repository and are not executed in children. Local `scripts/validate.py` remains mandatory.
 - **Validation contract:** Phase 0 executes bootstrap and tracked-secret checks; build is N/A because product code has not been written. P1 must replace N/A with a real stack build and genuine Relate integration tests.
 - **GitHub administrative settings:** to be checked by owner in Settings → Rules → Rulesets: PR-only merges, no force pushes/deletions, conversation resolution where supported, human approval and no required dispatch-only checks. Repository metadata topics are not changed by this documentation PR; no assertion of enforcement.

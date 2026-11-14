@@ -27,7 +27,7 @@ Created from `mrdzyn/ai-native-project-template` for the December 2026 Relate ha
 
 ## Test objective / validation budget
 Prove the project profile, repository hygiene, task pointers, and local-first validation contract are internally consistent on the proposed exact commit.
-- **Minimum automated evidence:** `python3 scripts/test_bootstrap.py`; `python3 scripts/check_secret_tracking.py`; `python3 scripts/validate_project_profile.py --repository mrdzyn/relatehandoff`; `python3 scripts/validate.py --repository mrdzyn/relatehandoff`
+- **Minimum automated evidence:** `python3 scripts/test_bootstrap.py`; `python3 scripts/test_entrypoints.py` (separate governance self-test; intentionally not nested inside validate); `python3 scripts/check_secret_tracking.py`; `python3 scripts/validate_project_profile.py --repository mrdzyn/relatehandoff`; `python3 scripts/validate.py --repository mrdzyn/relatehandoff`
 - **Manual QA:** Inspect GitHub Draft PR, ensure preserved safeguards, check local checkout cleanliness and topic/ruleset settings.
 - **Escalation:** Unexpected profile failure, policy regression, tracked secrets, or missing canonical core.
 - **Required gates:** Exact-HEAD local validation, independent audit, applicable repository protection, separate human merge approval.
@@ -45,8 +45,8 @@ Runtime feature implementation, network/production deployment, GitHub topic/sett
 - [x] Required core operating model and CI caller/callee preserved.
 - [x] Phase 1 bounded task and hackathon submission checklist documented.
 - [x] GitHub static inventory confirms expected core paths and removal of master-only artifacts.
-- [ ] Run actual local Python and repository validator commands against final Draft PR HEAD.
-- [ ] Obtain an independent audit and resolve any findings.
+- [ ] Re-run the local validator commands **and `test_entrypoints.py`** against the updated exact Draft PR HEAD (prior owner Mac and independent Claude Linux 7/7 PASS were at `a6e04d25bc17434f3e8a8d1d47b303f0a82c0b59`, superseded by remediation).
+- [ ] Obtain a **PASS re-audit** of Claude's initial PARTIAL findings F1–F3 after remediation; F4 is explained by Asia/Manila timezone, F5 is informational.
 - [ ] Owner independently approves merge; no release or scope changes presumed.
 
 ## Security / privacy
@@ -59,4 +59,4 @@ No runtime or billing integration added. P1 must prove a real Relate process and
 `README.md`, `AGENTS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/STATUS.md`, `docs/SECURITY.md`, `docs/TESTING.md`, `docs/RELEASE.md`, `docs/REPOSITORY-SETUP.md`, `docs/HANDOFFS.md`, `docs/HACKATHON.md`, `config/project-profile.json`, `config/validation-contract.json`; pruned core template historical blocks.
 
 ## Completion handoff
-`RH-P0-H1` in `docs/HANDOFFS.md`; final PR HEAD must be validated. No tests were run in this GitHub-only session.
+`RH-P0-H1` is the original historical handoff; the next handoff entry will summarize Claude's PARTIAL audit and the remediation. The current PR HEAD must be independently revalidated. This implementation session did not run local Python commands.

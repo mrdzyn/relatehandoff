@@ -94,7 +94,7 @@ A caller controls the maximum `GITHUB_TOKEN` permissions available to a called r
 
 ## Platform signing
 
-For Android release artifacts, `release/android-signing.md` is the canonical cross-stack signing contract for Flutter, React Native, and native Android/Kotlin.
+For Android release artifacts **after an Android capability is selected and the pack is restored**, `release/android-signing.md` is the canonical cross-stack signing contract for Flutter, React Native, and native Android/Kotlin. It is intentionally absent from this CLI/MCP-only repository.
 
 Android release policy:
 - debug signing is development-only and must never sign a production artifact;

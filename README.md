@@ -34,18 +34,19 @@ This is the target for Phase 1, **not a feature currently available**.
 
 ## Repository development
 
-The project is initialized from [mrdzyn/ai-native-project-template](https://github.com/mrdzyn/ai-native-project-template). Follow [AGENTS.md](AGENTS.md), then [docs/STATUS.md](docs/STATUS.md), [config/project-profile.json](config/project-profile.json), and the active task contract.
+The project is initialized from [mrdzyn/ai-native-project-template](https://github.com/mrdzyn/ai-native-project-template). Follow [AGENTS.md](AGENTS.md), then [docs/STATUS.md](docs/STATUS.md), [config/project-profile.json](config/project-profile.json), and the active task contract. The retained [agent orchestration guide](docs/AGENT-ORCHESTRATION.md) defines one-primary-agent execution, bounded specialist work, and exact-HEAD audit responsibilities.
 
 Phase 0 validation on a clean checkout:
 
 ```bash
 python3 scripts/test_bootstrap.py
+python3 scripts/test_entrypoints.py
 python3 scripts/check_secret_tracking.py
 python3 scripts/validate_project_profile.py --repository mrdzyn/relatehandoff
 python3 scripts/validate.py --repository mrdzyn/relatehandoff
 ```
 
-Python 3 and Git are needed for this inherited local-first validation; the application stack, Relate executable and runtime tests are **not yet installed**. On systems where Python is named `python3`, use that executable or configure the interpreter alias. Hosted baseline CI is manual-dispatch only and not proof of application functionality.
+Python 3 and Git are needed for this inherited local-first validation; the application stack, Relate executable and runtime tests are **not yet installed**. On macOS/Linux invoke `python3`; on Windows use a correctly configured Python 3 executable (`py -3` or `python`). The retained `scripts/test_entrypoints.py` governance regression suite runs **separately** from `scripts/validate.py` because its test cases invoke the validation runner. Hosted baseline CI is manual-dispatch only and not proof of application functionality.
 
 ## Distribution and attribution
 

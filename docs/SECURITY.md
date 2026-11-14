@@ -33,7 +33,7 @@ Document the categories the product handles:
 - Production secrets must not be copied into documentation, tickets, prompts, or logs.
 - Provide sanitized `.env.example` or equivalent when configuration guidance is needed.
 - Rotate exposed credentials immediately and treat repository history as compromised if a secret was committed.
-- Android release/upload keystores, private keys, and signing passwords are critical secrets. Follow `release/android-signing.md`.
+- Android release/upload keystores, private keys, and signing passwords are critical secrets. After an owner-approved Android capability selection, restore the signing pack from the master template and follow `release/android-signing.md`; it is not present in this initial CLI/MCP repository.
 - Base64-encoded keystore content is still secret key material; encoding does not make it safe to commit or log.
 - Do not reuse one Android release/upload private key or one password set across unrelated apps by default; standardize secret names, not secret values.
 - Never configure a production Android release to fall back to debug signing when release secrets are absent.
