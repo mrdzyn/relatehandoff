@@ -189,4 +189,32 @@ If an existing repository already has a handoff/continuation mechanism:
 ### Next action
 On a trusted local checkout of PR #1's **current full HEAD**, run `python scripts/test_bootstrap.py`, `python scripts/check_secret_tracking.py`, `python scripts/validate_project_profile.py --repository mrdzyn/relatehandoff`, and `python scripts/validate.py --repository mrdzyn/relatehandoff`; then request independent review, and seek separate owner approval before merging.
 
+## Handoff: RH-P0-H2
+
+- **Task / phase:** `tasks/RH-P0-greenfield-bootstrap.md`
+- **From:** ChatGPT / Phase 0 audit-remediation implementer
+- **To:** project owner and independent Claude (or equivalent) re-auditor
+- **Branch:** `phase-0/relatehandoff-initialization`
+- **Implementation head:** `845eadaf6e5b5a38cda7fbe7bc9271de21b874e1` (before this handoff-only documentation commit)
+- **PR:** #1 (open, Draft; no merge)
+- **State:** REMEDIATED — PENDING EXACT-HEAD LOCAL VALIDATION AND INDEPENDENT RE-AUDIT
+
+### Completed
+- Claude audit comment #6881370268 on `a6e04d25bc17434f3e8a8d1d47b303f0a82c0b59` reported PARTIAL, reproducing 7/7 local PASS but exposing a missing retained `scripts/test_entrypoints.py` governance reference.
+- F1: restored `docs/AGENT-ORCHESTRATION.md` link in README and added bootstrap assertion for every mandatory orchestration-document pointer. Full `scripts/test_entrypoints.py` now documented as an **additional separately run** P0 test; it must not run inside the bootstrap test because the self-test invokes `scripts/validate.py`.
+- F2: conditionalized design/store/Android pack references; required future work must first restore selected packs from the master template, never assume absent files are present.
+- F3: documented portable Python 3 invocation and **appended this corrected handoff**, preserving H1 as a truthful historical snapshot rather than rewriting it.
+- F4: clarified that 2026-11-14 16:28 UTC = 2026-11-15 00:28 Philippine time; the existing 2026-11-15 adoption date is correct.
+- F5: optional hosted `workflow_dispatch` CI remains unchanged, appropriately disclosed as informational, not a security or CI defect.
+
+### Validation and limits
+- Owner's Mac validation: 7/7 PASS at **superseded** `a6e04d25`.
+- Claude's Linux validation: reproduced 7/7 PASS and `test_entrypoints.py` FAIL at **superseded** `a6e04d25`.
+- GitHub source/static remediation inspection: files/branch updated at `845eadaf6e5b5a38cda7fbe7bc9271de21b874e1`.
+- Local Python check on new HEAD: **NOT RUN** in ChatGPT GitHub-only environment; cannot claim PASS.
+- Runtime Relate integration: NOT IMPLEMENTED. GitHub Actions: NOT RUN. License and GitHub ruleset: owner gates still open.
+
+### Continuation and next action
+On a clean checkout at the **new current exact PR HEAD after this handoff-only commit**, run `python3 scripts/test_bootstrap.py`, `python3 scripts/test_entrypoints.py`, `python3 scripts/check_secret_tracking.py`, `python3 scripts/validate_project_profile.py --repository mrdzyn/relatehandoff`, and `python3 scripts/validate.py --repository mrdzyn/relatehandoff`. Confirm full SHA, clean tree, and report all results. Then request a fresh independent COMMENT-only PASS/PARTIAL/FAIL audit of F1–F3. Never merge or deploy without explicit owner approval.
+
 <!-- HANDOFF_ENTRIES_END -->
