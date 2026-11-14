@@ -1,0 +1,5 @@
+#!/bin/sh
+# Portable POSIX wrapper for local-first release candidate verification
+set -e
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+exec python3 -I "$SCRIPT_DIR/verify_release.py" "$@"
