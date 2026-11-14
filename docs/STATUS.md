@@ -7,8 +7,8 @@
 - **Primary branch:** `main`
 - **Starting baseline:** `ab028917b134b362d3a292c77f1b3d212d94e9a5` (new repository generated from mrdzyn/ai-native-project-template)
 - **Working branch:** `phase-0/relatehandoff-initialization`
-- **Active task:** `tasks/RH-P1-relate-handoff-mvp.md` (next implementation task; not yet authorized to execute)
-- **Active handoff:** None
+- **Active task:** `tasks/RH-P0-greenfield-bootstrap.md`
+- **Active handoff:** RH-P0-H1
 
 ## Foundation decisions in review
 - Project mode selected; no design/store/integration capability packs active for the initial CLI/MCP-only MVP.
@@ -19,8 +19,8 @@
 
 ## Next
 1. Validate this bootstrap on a clean checkout using the documented local commands and review the Draft PR.
-2. Obtain owner approval for the P0 merge separately; no merge is implied by initialization.
-3. Only then start RH-P1 and implement a *real* persistent Relate store, read-only MCP handoff and exact-HEAD freshness proof.
+2. Obtain independent review and owner approval for the P0 merge separately; no merge is implied by initialization.
+3. Next proposed task: `tasks/RH-P1-relate-handoff-mvp.md`. Only after P0 approval start implementing the *real* persistent Relate store, read-only MCP handoff and exact-HEAD freshness proof.
 
 ## Verification truth
 - GitHub tree inspection: inherited template inspected before bootstrap.

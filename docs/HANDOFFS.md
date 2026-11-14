@@ -159,4 +159,34 @@ If an existing repository already has a handoff/continuation mechanism:
 
 <!-- HANDOFF_ENTRIES_START -->
 <!-- Append project handoff sections before HANDOFF_ENTRIES_END. -->
+## Handoff: RH-P0-H1
+
+- **Task / phase:** `tasks/RH-P0-greenfield-bootstrap.md`
+- **From:** ChatGPT / Phase 0 initializer
+- **To:** project owner and separate local validation/review agent
+- **Branch:** `phase-0/relatehandoff-initialization`
+- **Implementation head:** `e73e1030c26421a1588ec7c0d9dc74c8f19e7f15` (before handoff-only documentation commit)
+- **PR:** #1 (OPEN, Draft at handoff creation)
+- **State:** PENDING EXACT-HEAD LOCAL VALIDATION AND INDEPENDENT REVIEW
+
+### Completed
+- Project profile converted from template to project; master-only artifacts and unselected packs pruned.
+- Project-specific docs, proposed local-first Relate architecture, bounded next task, hackathon checklist and development validation contract added.
+- GitHub static tree check confirmed core files present and inherited master-only files absent.
+
+### Validation
+- GitHub static inspection: PASS for required file inventory and cleanup at implementation head `e73e1030c26421a1588ec7c0d9dc74c8f19e7f15`.
+- Local Python/CLI checks: NOT RUN; runtime Relate tests: NOT IMPLEMENTED.
+- Local git clone attempt from this environment: BLOCKED by DNS resolution, not a code failure.
+- GitHub Actions and independent audit: NOT RUN.
+- License, repository ruleset, and GitHub topics: owner action/verification pending.
+
+### Continuation notes
+- Final PR HEAD after this handoff-only commit supersedes the implementation SHA for exact-HEAD validation.
+- Never claim a Relate graph exists until the Phase 1 real integration is implemented.
+- Owner merge approval is independent of any technical validation; no merge authorized.
+
+### Next action
+On a trusted local checkout of PR #1's **current full HEAD**, run `python scripts/test_bootstrap.py`, `python scripts/check_secret_tracking.py`, `python scripts/validate_project_profile.py --repository mrdzyn/relatehandoff`, and `python scripts/validate.py --repository mrdzyn/relatehandoff`; then request independent review, and seek separate owner approval before merging.
+
 <!-- HANDOFF_ENTRIES_END -->

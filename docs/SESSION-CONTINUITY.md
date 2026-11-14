@@ -1,6 +1,6 @@
 # AI Agent Session Continuity & Context Recovery
 
- > **Status in RelateHandoff:** Inherited read-only `scripts/session_context.py` generator; the master-only `scripts/test_session_context.py` history/self-test is intentionally pruned under greenfield policy. Project-specific local validation has not yet run.
+> **Status in RelateHandoff:** Inherited read-only `scripts/session_context.py` generator; the master-only `scripts/test_session_context.py` history/self-test is intentionally pruned under greenfield policy. Project-specific local validation has not yet run.
 
 ## Problem and guarantee boundary
 

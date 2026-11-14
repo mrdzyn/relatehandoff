@@ -11,6 +11,7 @@ handoffs = (ROOT / "docs/HANDOFFS.md").read_text(encoding="utf-8")
 assert profile["repositoryMode"] == "project"
 assert profile["capabilities"] == {"design": False, "storeRelease": False}
 assert profile["platforms"] == profile["storefronts"] == profile["integrations"] == []
+assert "**Active task:** `tasks/RH-P0-greenfield-bootstrap.md`" in status
 assert "tasks/RH-P1-relate-handoff-mvp.md" in status
 assert "RelateHandoff" in status
 assert "<!-- HANDOFF_ENTRIES_START -->" in handoffs
