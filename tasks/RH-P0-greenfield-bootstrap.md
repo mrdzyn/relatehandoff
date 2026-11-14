@@ -27,7 +27,7 @@ Created from `mrdzyn/ai-native-project-template` for the December 2026 Relate ha
 
 ## Test objective / validation budget
 Prove the project profile, repository hygiene, task pointers, and local-first validation contract are internally consistent on the proposed exact commit.
-- **Minimum automated evidence:** `python scripts/test_bootstrap.py`; `python scripts/check_secret_tracking.py`; `python scripts/validate_project_profile.py --repository mrdzyn/relatehandoff`; `python scripts/validate.py --repository mrdzyn/relatehandoff`
+- **Minimum automated evidence:** `python3 scripts/test_bootstrap.py`; `python3 scripts/check_secret_tracking.py`; `python3 scripts/validate_project_profile.py --repository mrdzyn/relatehandoff`; `python3 scripts/validate.py --repository mrdzyn/relatehandoff`
 - **Manual QA:** Inspect GitHub Draft PR, ensure preserved safeguards, check local checkout cleanliness and topic/ruleset settings.
 - **Escalation:** Unexpected profile failure, policy regression, tracked secrets, or missing canonical core.
 - **Required gates:** Exact-HEAD local validation, independent audit, applicable repository protection, separate human merge approval.

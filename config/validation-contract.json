@@ -4,7 +4,7 @@
     "test": {
       "name": "RelateHandoff bootstrap contract checks",
       "command": [
-        "python",
+        "python3",
         "scripts/test_bootstrap.py"
       ]
     },
@@ -15,7 +15,7 @@
     "security": {
       "name": "Tracked sensitive-file name check",
       "command": [
-        "python",
+        "python3",
         "scripts/check_secret_tracking.py"
       ]
     }

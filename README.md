@@ -39,10 +39,10 @@ The project is initialized from [mrdzyn/ai-native-project-template](https://gith
 Phase 0 validation on a clean checkout:
 
 ```bash
-python scripts/test_bootstrap.py
-python scripts/check_secret_tracking.py
-python scripts/validate_project_profile.py --repository mrdzyn/relatehandoff
-python scripts/validate.py --repository mrdzyn/relatehandoff
+python3 scripts/test_bootstrap.py
+python3 scripts/check_secret_tracking.py
+python3 scripts/validate_project_profile.py --repository mrdzyn/relatehandoff
+python3 scripts/validate.py --repository mrdzyn/relatehandoff
 ```
 
 Python 3 and Git are needed for this inherited local-first validation; the application stack, Relate executable and runtime tests are **not yet installed**. On systems where Python is named `python3`, use that executable or configure the interpreter alias. Hosted baseline CI is manual-dispatch only and not proof of application functionality.
