@@ -2,21 +2,25 @@
   "schemaVersion": 1,
   "categories": {
     "test": {
-      "name": "RelateHandoff bootstrap contract checks",
+      "name": "RelateHandoff bootstrap and live Relate/MCP E2E tests",
       "command": [
         "python3",
-        "scripts/test_bootstrap.py"
+        "scripts/run_p1_tests.py"
       ]
     },
     "build": {
-      "status": "not_applicable",
-      "reason": "Phase 0 initializes documentation and governance only; no application package exists. Replace with a real build before Phase 1 completion."
+      "name": "Node.js syntax and CLI entrypoint check",
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ]
     },
     "security": {
-      "name": "Tracked sensitive-file name check",
+      "name": "Tracked sensitive-file guard and security negative tests",
       "command": [
         "python3",
-        "scripts/check_secret_tracking.py"
+        "scripts/run_p1_security.py"
       ]
     }
   },

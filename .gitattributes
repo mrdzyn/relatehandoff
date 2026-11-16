@@ -1,0 +1,2 @@
+# Preserve exact bytes of committed Relate binary/WAL/lock fixture files across platforms
+examples/example-store/** -text

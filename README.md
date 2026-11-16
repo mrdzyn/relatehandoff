@@ -4,7 +4,7 @@
 
 RelateHandoff is a proposed local-first context and evidence layer for AI-assisted software development. It aims to let Codex, Claude Code, Gemini CLI, and other compatible clients resume work from a shared, provenance-aware handoff graph without reconstructing entire chat transcripts.
 
-**Current state:** Phase 0 foundation was squash-merged as PR #1. The RH-P1 implementation handoff is prepared for review. **No working Relate integration or hackathon demo exists yet.** See [status](docs/STATUS.md) and the [first implementation task](tasks/RH-P1-relate-handoff-mvp.md).
+**Current state:** Phase 0 (`#1`) and RH-P1 handoff (`#2`) are merged on `main`. On `phase-1/relate-handoff-mvp` (Draft PR #3), the Relate `v1.0.1` integration spike, schema-validated handoff recorder (`src/recorder.mjs`), exact-HEAD freshness engine (`src/freshness.mjs`), and read-only MCP stdio client (`src/mcp_client.mjs`, `src/cli.mjs`) are implemented and tested against live Relate. Sanitized example store and judge demo capture remain in progress. See [status](docs/STATUS.md), [spike findings](docs/RELATE-SPIKE.md), and the [first implementation task](tasks/RH-P1-relate-handoff-mvp.md).
 
 ## Why it exists
 
@@ -23,20 +23,19 @@ It is *not* an agent orchestrator, a Git replacement, or an autonomous merge app
 
 See [architecture](docs/ARCHITECTURE.md), [product](docs/PRODUCT.md) and [hackathon checklist](docs/HACKATHON.md).
 
-## Planned MVP acceptance demo
+## Judge walkthrough & demo
 
-1. Agent A records a task handoff against exact local Git SHA A with decisions, evidence, blockers and next action.
-2. Agent B, in a separate process/session, retrieves the minimal context through Relate MCP without reading Agent A's transcript.
-3. A newer local Git SHA B is introduced. RelateHandoff detects that A's evidence does not establish readiness at B.
-4. Agent B identifies the missing validation and does **not** merge, publish, or invent a passing audit.
+1. Install dependencies: `npm install` (pins `@relate/relate@1.0.1`), and ensure `relate` CLI `v1.0.1` is runnable (`relatedb.ai/install.sh`, or `cargo install` on `GLIBC < 2.39` Linux; see [spike findings](docs/RELATE-SPIKE.md)).
+2. Run the self-contained demo: `npm run demo` — exercises recording at `SHA-A`, read-only MCP retrieval, `VERIFIED` freshness, `SHA-A` → `SHA-B` `STALE` detection, missing-evidence `UNVERIFIED`, failed-evidence `BLOCKED`, and MCP write refusal.
+3. Inspect the committed synthetic example store ([`examples/example-store/`](examples/example-store/)) or regenerate it with `npm run generate:example`.
 
-This is the target for Phase 1, **not a feature currently available**.
+See [judge walkthrough](docs/JUDGE-WALKTHROUGH.md) for Cypher query examples and captured CLI output.
 
 ## Repository development
 
 The project is initialized from [mrdzyn/ai-native-project-template](https://github.com/mrdzyn/ai-native-project-template). Follow [AGENTS.md](AGENTS.md), then [docs/STATUS.md](docs/STATUS.md), [config/project-profile.json](config/project-profile.json), and the active task contract. The retained [agent orchestration guide](docs/AGENT-ORCHESTRATION.md) defines one-primary-agent execution, bounded specialist work, and exact-HEAD audit responsibilities.
 
-Foundation validation on a clean checkout (also required during the P1 transition):
+Exact-HEAD local-first validation on a clean checkout:
 
 ```bash
 python3 scripts/test_bootstrap.py
@@ -46,7 +45,7 @@ python3 scripts/validate_project_profile.py --repository mrdzyn/relatehandoff
 python3 scripts/validate.py --repository mrdzyn/relatehandoff
 ```
 
-Python 3 and Git are needed for this inherited local-first validation; the application stack, Relate executable and runtime tests are **not yet installed**. On macOS/Linux invoke `python3`; on Windows use a correctly configured Python 3 executable (`py -3` or `python`). The retained `scripts/test_entrypoints.py` governance regression suite runs **separately** from `scripts/validate.py` because its test cases invoke the validation runner. Hosted baseline CI is manual-dispatch only and not proof of application functionality.
+`validate.py` executes the mandatory contract in `config/validation-contract.json` (`test` via `scripts/run_p1_tests.py` with `RELATE_REQUIRE_CLI=1`, `build` via `npm run build`, and `security` via `scripts/run_p1_security.py`). Skipped MCP tests cannot pass `validate.py`. On macOS/Linux invoke `python3`; on Windows use `py -3` or `python`. The retained `scripts/test_entrypoints.py` governance regression suite runs **separately** from `scripts/validate.py`. Hosted baseline CI is manual-dispatch only.
 
 ## Distribution and attribution
 

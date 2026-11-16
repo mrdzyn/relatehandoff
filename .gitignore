@@ -18,6 +18,7 @@ Thumbs.db
 
 # Logs / temporary files
 *.log
+!examples/example-store/wal/*.log
 tmp/
 temp/
 
