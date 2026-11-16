@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { validateHandoffPayload } from "../src/schema.mjs";
+import { MAX_DETAIL_ROWS, validateHandoffPayload } from "../src/schema.mjs";
 
 const VALID_SHA = "7f96e006e768524e2f4064493fb77cb85bf6fd1b";
 
@@ -153,4 +153,50 @@ test("Security negative: rejects secret patterns and sensitive artifact filename
       `Expected rejection for sensitive artifact: ${sensitivePath}`
     );
   }
+});
+
+test("Security negative: rejects client-supplied runner/trust evidence fields", () => {
+  const repoRoot = process.cwd();
+  const baseEv = basePayload().evidence[0];
+
+  for (const overrides of [
+    { executionMode: "TRUSTED_LOCAL_RUNNER" },
+    { executionMode: "RUNNER_RECORDED_UNSIGNED" },
+    { validationProfile: "node-test-suite" },
+    { exitCode: 0 },
+    { attestationSha256: "a".repeat(64) },
+  ]) {
+    assert.throws(
+      () => validateHandoffPayload(basePayload({ evidence: [{ ...baseEv, ...overrides }] }), repoRoot),
+      /Security rejection/
+    );
+  }
+});
+
+test("Security bounds: validateHandoffPayload allows 100 detail rows and rejects 101", () => {
+  const repoRoot = process.cwd();
+  assert.equal(MAX_DETAIL_ROWS, 100);
+
+  const okDecisions = Array.from({ length: 100 }, (_, i) => ({ id: `D-${i}`, summary: "ok" }));
+  const ok = validateHandoffPayload(basePayload({ decisions: okDecisions }), repoRoot);
+  assert.equal(ok.decisions.length, 100);
+
+  const tooManyDecisions = Array.from({ length: 101 }, (_, i) => ({ id: `D-${i}`, summary: "no" }));
+  assert.throws(
+    () => validateHandoffPayload(basePayload({ decisions: tooManyDecisions }), repoRoot),
+    /BoundExceededError/
+  );
+
+  const tooManyArtifacts = Array.from({ length: 101 }, () => "README.md");
+  assert.throws(
+    () => validateHandoffPayload(basePayload({ artifacts: tooManyArtifacts }), repoRoot),
+    /BoundExceededError/
+  );
+
+  const baseEv = basePayload().evidence[0];
+  const tooManyEvidence = Array.from({ length: 101 }, (_, i) => ({ ...baseEv, id: `EV-${i}` }));
+  assert.throws(
+    () => validateHandoffPayload(basePayload({ evidence: tooManyEvidence }), repoRoot),
+    /BoundExceededError/
+  );
 });

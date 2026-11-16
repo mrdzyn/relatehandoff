@@ -1,10 +1,12 @@
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
+import { runTrustedValidation } from "./attestation.mjs";
 import { getGitState } from "./git.mjs";
 import { evaluateFreshness } from "./freshness.mjs";
+import { MAX_DETAIL_ROWS } from "./schema.mjs";
 
-export const MAX_DETAIL_ROWS = 100;
+export { MAX_DETAIL_ROWS };
 
 export function resolveRelateCli(explicitBin) {
   const candidates = [
@@ -83,6 +85,7 @@ export function resumeTaskViaReadOnlyMcp({
   taskId,
   repository,
   remoteVerified = false,
+  verifyProfile = null,
   relateBin,
 }) {
   const gitState = getGitState(repoRoot, { repository });
@@ -219,11 +222,27 @@ LIMIT ${detailLimit}`,
   ).map((r) => r.path);
   const decisions = assertBoundedRows(parseReadCypherResult(detailResponses[2]).rows ?? [], "decisions");
 
+  let inProcessVerification = null;
+  if (
+    verifyProfile &&
+    handoff.headSha === gitState.headSha &&
+    !gitState.isDirty &&
+    !evidence.some((e) => e.status === "FAIL" || e.headSha !== gitState.headSha)
+  ) {
+    inProcessVerification = runTrustedValidation({
+      repoRoot: gitState.repoRoot,
+      repository: gitState.repository,
+      headSha: gitState.headSha,
+      validationProfile: verifyProfile,
+    });
+  }
+
   const freshness = evaluateFreshness({
     handoff,
     evidenceList: evidence,
     gitState,
     remoteVerified,
+    inProcessVerification,
   });
 
   return {
@@ -233,6 +252,7 @@ LIMIT ${detailLimit}`,
     artifacts,
     decisions,
     gitState,
+    inProcessVerification,
     freshness,
   };
 }

@@ -31,7 +31,7 @@ function printHelp() {
 
 Usage:
   node src/cli.mjs record --store <dir> --repo <dir> --input <json-file> [--repo-id <owner/repo>] [--verify <profile>]
-  node src/cli.mjs resume --store <dir> --repo <dir> --task <taskId> [--repo-id <owner/repo>]
+  node src/cli.mjs resume --store <dir> --repo <dir> --task <taskId> [--repo-id <owner/repo>] [--verify <profile>]
   node src/cli.mjs --help`);
 }
 
@@ -67,6 +67,7 @@ function main() {
       repoRoot: flags.repo,
       taskId: flags.task,
       repository: flags["repo-id"],
+      verifyProfile: flags.verify ?? null,
     });
     console.log(JSON.stringify(result, null, 2));
     return;

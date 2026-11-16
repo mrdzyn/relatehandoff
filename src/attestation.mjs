@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import crypto from "node:crypto";
+import { getGitState } from "./git.mjs";
 
 export const TRUSTED_VALIDATION_PROFILES = Object.freeze({
   "relatehandoff-tests": {
@@ -28,6 +29,7 @@ export const TRUSTED_VALIDATION_PROFILES = Object.freeze({
   },
 });
 
+// Unkeyed SHA-256 consistency checksum over runner fields (NOT a cryptographic credential).
 export function computeEvidenceAttestation({
   repository,
   headSha,
@@ -52,12 +54,27 @@ export function runTrustedValidation({
   repository,
   headSha,
   validationProfile,
-  evidenceId = "EV-TRUSTED-1",
+  evidenceId = "EV-RUNNER-1",
 }) {
   const spec = TRUSTED_VALIDATION_PROFILES[validationProfile];
   if (!spec) {
     throw new Error(
       `Untrusted validation profile '${validationProfile}'. Allowed: ${Object.keys(TRUSTED_VALIDATION_PROFILES).join(", ")}`
+    );
+  }
+
+  const beforeGit = getGitState(repoRoot, { repository });
+  if (beforeGit.isDirty) {
+    throw new Error("Refusing --verify on dirty worktree; commit or stash changes first");
+  }
+  if (beforeGit.headSha !== headSha) {
+    throw new Error(
+      `Refusing --verify: checkout HEAD '${beforeGit.headSha}' does not match expected '${headSha}'`
+    );
+  }
+  if (beforeGit.repository !== repository) {
+    throw new Error(
+      `Refusing --verify: checkout repository '${beforeGit.repository}' does not match expected '${repository}'`
     );
   }
 
@@ -73,6 +90,17 @@ export function runTrustedValidation({
   } catch (err) {
     exitCode = typeof err.status === "number" ? err.status : 1;
     status = "FAIL";
+  }
+
+  const afterGit = getGitState(repoRoot, { repository });
+  if (
+    afterGit.isDirty ||
+    afterGit.headSha !== beforeGit.headSha ||
+    afterGit.repository !== beforeGit.repository
+  ) {
+    throw new Error(
+      "Git HEAD, repository, or worktree changed during validation window; refusing to record stale runner evidence"
+    );
   }
 
   const attestationSha256 = computeEvidenceAttestation({
@@ -91,31 +119,9 @@ export function runTrustedValidation({
     status,
     headSha,
     observedAt: new Date().toISOString(),
-    executionMode: "TRUSTED_LOCAL_RUNNER",
+    executionMode: "RUNNER_RECORDED_UNSIGNED",
     validationProfile,
     exitCode,
     attestationSha256,
   };
-}
-
-export function isTrustedEvidenceAuthenticated({ ev, repository }) {
-  if (!ev || ev.executionMode !== "TRUSTED_LOCAL_RUNNER") {
-    return false;
-  }
-  const spec = TRUSTED_VALIDATION_PROFILES[ev.validationProfile];
-  if (!spec) {
-    return false;
-  }
-  if (ev.command !== spec.displayCommand || ev.exitCode !== 0 || ev.status !== "PASS") {
-    return false;
-  }
-  const expected = computeEvidenceAttestation({
-    repository,
-    headSha: ev.headSha,
-    validationProfile: ev.validationProfile,
-    command: ev.command,
-    exitCode: ev.exitCode,
-    status: ev.status,
-  });
-  return ev.attestationSha256 === expected;
 }

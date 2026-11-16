@@ -97,7 +97,7 @@ test("RH-P1 E2E (B4): trusted local execution yields VERIFIED; self-asserted PAS
       selfRes.freshness.reasons.some((r) => r.startsWith("UNAUTHENTICATED_SELF_ASSERTED_EVIDENCE"))
     );
 
-    // B4: Trusted local validation execution (--verify node-test-suite) yields VERIFIED
+    // B4: Local runner execution (--verify node-test-suite) records RUNNER_RECORDED_UNSIGNED
     runRecordCli({
       storeDir,
       repoDir,
@@ -107,30 +107,64 @@ test("RH-P1 E2E (B4): trusted local execution yields VERIFIED; self-asserted PAS
       payload: {
         ...basePayload,
         handoffId: "RH-P1-TRUSTED-1",
-        summary: "Executed trusted local node --test suite at SHA-A",
+        summary: "Executed local node --test suite at SHA-A",
         evidence: [],
         createdAt: "2026-11-15T17:01:00Z",
       },
     });
 
-    const res1 = spawnSync(
+    // Read-only resume WITHOUT --verify: metadata is CURRENT, but unsigned store cannot authenticate execution
+    const resUnsigned = spawnSync(
       process.execPath,
       ["src/cli.mjs", "resume", "--store", storeDir, "--repo", repoDir, "--task", "RH-P1"],
       { cwd: process.cwd(), encoding: "utf8" }
     );
-    assert.equal(res1.status, 0, `CLI resume failed: ${res1.stderr}`);
-    const parsed1 = JSON.parse(res1.stdout);
+    assert.equal(resUnsigned.status, 0, `CLI resume failed: ${resUnsigned.stderr}`);
+    const parsedUnsigned = JSON.parse(resUnsigned.stdout);
 
-    assert.deepEqual(parsed1.tools, ["read_cypher", "get_schema"]);
-    assert.equal(parsed1.handoff.handoffId, "RH-P1-TRUSTED-1");
-    assert.equal(parsed1.freshness.metadataFreshness, "CURRENT");
-    assert.equal(parsed1.freshness.executionAuthenticity, "AUTHENTICATED");
-    assert.equal(parsed1.freshness.status, "VERIFIED");
-    assert.equal(parsed1.freshness.remoteStatus, "UNVERIFIED");
+    assert.deepEqual(parsedUnsigned.tools, ["read_cypher", "get_schema"]);
+    assert.equal(parsedUnsigned.handoff.handoffId, "RH-P1-TRUSTED-1");
+    assert.equal(parsedUnsigned.evidence[0].executionMode, "RUNNER_RECORDED_UNSIGNED");
+    assert.equal(parsedUnsigned.freshness.metadataFreshness, "CURRENT");
+    assert.equal(parsedUnsigned.freshness.executionAuthenticity, "UNVERIFIED");
+    assert.equal(parsedUnsigned.freshness.status, "UNVERIFIED");
+    assert.ok(
+      parsedUnsigned.freshness.reasons.some((r) => r.startsWith("UNSIGNED_LOCAL_STORE_EVIDENCE"))
+    );
+
+    // Read-only resume WITH explicit in-process --verify node-test-suite -> AUTHENTICATED / VERIFIED
+    const resVerified = spawnSync(
+      process.execPath,
+      [
+        "src/cli.mjs",
+        "resume",
+        "--store",
+        storeDir,
+        "--repo",
+        repoDir,
+        "--task",
+        "RH-P1",
+        "--verify",
+        "node-test-suite",
+      ],
+      { cwd: process.cwd(), encoding: "utf8" }
+    );
+    assert.equal(resVerified.status, 0, `CLI resume --verify failed: ${resVerified.stderr}`);
+    const parsedVerified = JSON.parse(resVerified.stdout);
+
+    assert.deepEqual(parsedVerified.tools, ["read_cypher", "get_schema"]);
+    assert.equal(parsedVerified.handoff.handoffId, "RH-P1-TRUSTED-1");
+    assert.equal(parsedVerified.freshness.metadataFreshness, "CURRENT");
+    assert.equal(parsedVerified.freshness.executionAuthenticity, "AUTHENTICATED");
+    assert.equal(parsedVerified.freshness.status, "VERIFIED");
+    assert.equal(parsedVerified.freshness.remoteStatus, "UNVERIFIED");
+    assert.ok(
+      parsedVerified.freshness.reasons.includes("IN_PROCESS_VERIFICATION_PASSED:node-test-suite")
+    );
 
     // Deterministic re-run
     const parsed2 = resumeTaskViaReadOnlyMcp({ storeDir, repoRoot: repoDir, taskId: "RH-P1" });
-    assert.deepEqual(parsed2, parsed1);
+    assert.deepEqual(parsed2, parsedUnsigned);
 
     // Dirty worktree at SHA-A -> STALE
     fs.appendFileSync(path.join(repoDir, "README.md"), "uncommitted edit\n", "utf8");
@@ -396,4 +430,228 @@ test("RH-P1 regression (B1): committed examples/example-store includes WAL and o
   assert.equal(res.handoff.handoffId, "RH-P1-EXAMPLE-1");
   assert.equal(res.handoff.headSha, "1111111111111111111111111111111111111111");
   assert.equal(res.freshness.status, "STALE");
+});
+
+test("RH-P1 regression (B4 forgery): rejects forged public-hash payload and never authenticates direct-store-injected runner evidence", async () => {
+  const { computeEvidenceAttestation } = await import("../src/attestation.mjs");
+  const { Database } = await import("@relate/relate");
+
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "relatehandoff-b4-forgery-"));
+  const repoDir = path.join(tmpRoot, "no-tests-repo");
+  const storeDir = path.join(tmpRoot, "relate-store");
+  fs.mkdirSync(repoDir, { recursive: true });
+
+  try {
+    // Synthetic repo with NO tests and NO package.json
+    const git = (args) =>
+      execFileSync("git", args, {
+        cwd: repoDir,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }).trim();
+    git(["init"]);
+    git(["config", "user.name", "RelateHandoff Forgery Test"]);
+    git(["config", "user.email", "forgery@example.invalid"]);
+    git(["config", "relatehandoff.repository", "mrdzyn/relatehandoff-notests"]);
+    fs.writeFileSync(path.join(repoDir, "README.md"), "# No tests here\n", "utf8");
+    git(["add", "README.md"]);
+    git(["commit", "-m", "chore: initial commit without tests"]);
+    const headSha = git(["rev-parse", "HEAD"]);
+    const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
+
+    const forgedSha = computeEvidenceAttestation({
+      repository: "mrdzyn/relatehandoff-notests",
+      headSha,
+      validationProfile: "node-test-suite",
+      command: "node --test",
+      exitCode: 0,
+      status: "PASS",
+    });
+
+    for (const forgedMode of ["TRUSTED_LOCAL_RUNNER", "RUNNER_RECORDED_UNSIGNED"]) {
+      const forgedPayload = {
+        schemaVersion: "1.0.0",
+        handoffId: `RH-P1-FORGE-${forgedMode}`,
+        taskId: "RH-P1",
+        repository: "mrdzyn/relatehandoff-notests",
+        branch,
+        sourceAgent: "untrusted-agent",
+        targetAgent: "claude-reviewer",
+        headSha,
+        summary: "Forged PASS payload with valid public SHA-256 checksum and no execution.",
+        nextAction: "Must be rejected at record ingress.",
+        artifacts: ["README.md"],
+        evidence: [
+          {
+            id: "EV-FORGED-1",
+            kind: "unit-test",
+            command: "node --test",
+            status: "PASS",
+            headSha,
+            observedAt: "2026-11-16T06:00:00Z",
+            executionMode: forgedMode,
+            validationProfile: "node-test-suite",
+            exitCode: 0,
+            attestationSha256: forgedSha,
+          },
+        ],
+        createdAt: "2026-11-16T06:00:00Z",
+      };
+
+      const res = runRecordCli({
+        storeDir,
+        repoDir,
+        tmpRoot,
+        name: `forge-${forgedMode}`,
+        payload: forgedPayload,
+        expectSuccess: false,
+      });
+      assert.notEqual(res.status, 0, `Forged ${forgedMode} payload must fail closed`);
+      assert.match(res.stderr, /Security rejection/);
+    }
+
+    // Direct-store-injection: even if a forged node is written directly into Relate bypassing record,
+    // read-only resume must NOT return AUTHENTICATED or VERIFIED.
+    const db = Database.open(storeDir);
+    const conn = db.connect();
+    conn.query(
+      `MERGE (r:Repository {name: $repository})
+       MERGE (t:Task {key: $taskKey})
+       ON CREATE SET t.id = $taskId, t.repository = $repository
+       MERGE (r)-[:OWNS_TASK]->(t)
+       MERGE (sa:Agent {name: 'attacker'})
+       MERGE (ta:Agent {name: 'claude-reviewer'})
+       MERGE (c:Commit {sha: $headSha})
+       CREATE (h:Handoff {
+         key: $handoffKey,
+         id: 'RH-P1-INJECTED',
+         repository: $repository,
+         taskId: $taskId,
+         schemaVersion: '1.0.0',
+         branch: $branch,
+         headSha: $headSha,
+         summary: 'Direct store injection',
+         nextAction: 'Must never authenticate on read alone',
+         createdAt: '2026-11-16T06:05:00Z',
+         fingerprint: 'injected'
+       })
+       CREATE (h)-[:HANDOFF_FOR]->(t)
+       CREATE (h)-[:FROM_AGENT]->(sa)
+       CREATE (h)-[:TO_AGENT]->(ta)
+       CREATE (h)-[:TARGETS_HEAD]->(c)
+       CREATE (e:Evidence {
+         key: $evidenceKey,
+         id: 'EV-INJECTED',
+         repository: $repository,
+         taskId: $taskId,
+         handoffId: 'RH-P1-INJECTED',
+         kind: 'unit-test',
+         command: 'node --test',
+         status: 'PASS',
+         headSha: $headSha,
+         observedAt: '2026-11-16T06:05:00Z',
+         executionMode: 'TRUSTED_LOCAL_RUNNER',
+         validationProfile: 'node-test-suite',
+         exitCode: 0,
+         attestationSha256: $forgedSha
+       })
+       CREATE (h)-[:PROVEN_BY]->(e)
+       CREATE (e)-[:AT_COMMIT]->(c)`,
+      {
+        repository: "mrdzyn/relatehandoff-notests",
+        taskKey: "mrdzyn/relatehandoff-notests::RH-P1",
+        taskId: "RH-P1",
+        handoffKey: "mrdzyn/relatehandoff-notests::RH-P1::RH-P1-INJECTED",
+        evidenceKey: "mrdzyn/relatehandoff-notests::RH-P1::RH-P1-INJECTED::EV-INJECTED",
+        branch,
+        headSha,
+        forgedSha,
+      }
+    );
+    db.checkpoint();
+
+    const resumed = resumeTaskViaReadOnlyMcp({
+      storeDir,
+      repoRoot: repoDir,
+      taskId: "RH-P1",
+    });
+    assert.equal(resumed.handoff.handoffId, "RH-P1-INJECTED");
+    assert.equal(resumed.freshness.metadataFreshness, "CURRENT");
+    assert.equal(resumed.freshness.executionAuthenticity, "UNVERIFIED");
+    assert.equal(resumed.freshness.status, "UNVERIFIED");
+    assert.notEqual(resumed.freshness.executionAuthenticity, "AUTHENTICATED");
+    assert.notEqual(resumed.freshness.status, "VERIFIED");
+  } finally {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  }
+});
+
+test("RH-P1 regression (bounds): 100 detail rows succeed and 101 detail rows fail closed at record time", async () => {
+  const { recordHandoff } = await import("../src/recorder.mjs");
+  const { MAX_DETAIL_ROWS } = await import("../src/schema.mjs");
+  assert.equal(MAX_DETAIL_ROWS, 100);
+
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "relatehandoff-bounds-"));
+  const repoDir = path.join(tmpRoot, "repo");
+  const storeDir = path.join(tmpRoot, "relate-store");
+  fs.mkdirSync(repoDir, { recursive: true });
+
+  try {
+    const { shaA, branch } = initTempGitRepo(repoDir, "mrdzyn/relatehandoff-bounds");
+    const makeDecisions = (n) =>
+      Array.from({ length: n }, (_, i) => ({ id: `DEC-${i + 1}`, summary: `Decision ${i + 1}` }));
+
+    // 100 rows: succeeds at record time and resumes cleanly
+    recordHandoff({
+      storeDir,
+      repoRoot: repoDir,
+      payload: {
+        schemaVersion: "1.0.0",
+        handoffId: "RH-P1-BOUND-100",
+        taskId: "RH-P1",
+        repository: "mrdzyn/relatehandoff-bounds",
+        branch,
+        sourceAgent: "codex-writer",
+        targetAgent: "claude-reviewer",
+        headSha: shaA,
+        summary: "Exactly 100 decisions",
+        nextAction: "Verify bounded resume",
+        decisions: makeDecisions(100),
+        artifacts: ["README.md"],
+        evidence: [],
+        createdAt: "2026-11-16T06:10:00Z",
+      },
+    });
+
+    const resumed = resumeTaskViaReadOnlyMcp({ storeDir, repoRoot: repoDir, taskId: "RH-P1" });
+    assert.equal(resumed.decisions.length, 100);
+
+    // 101 rows: fails closed at record time
+    assert.throws(
+      () =>
+        recordHandoff({
+          storeDir,
+          repoRoot: repoDir,
+          payload: {
+            schemaVersion: "1.0.0",
+            handoffId: "RH-P1-BOUND-101",
+            taskId: "RH-P1",
+            repository: "mrdzyn/relatehandoff-bounds",
+            branch,
+            sourceAgent: "codex-writer",
+            targetAgent: "claude-reviewer",
+            headSha: shaA,
+            summary: "101 decisions exceeds MAX_DETAIL_ROWS",
+            nextAction: "Must fail closed",
+            decisions: makeDecisions(101),
+            artifacts: ["README.md"],
+            evidence: [],
+            createdAt: "2026-11-16T06:11:00Z",
+          },
+        }),
+      /BoundExceededError/
+    );
+  } finally {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  }
 });

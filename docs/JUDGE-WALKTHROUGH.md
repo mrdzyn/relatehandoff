@@ -20,10 +20,10 @@ npm run demo
 ```
 
 `scripts/demo.mjs` creates a temporary synthetic Git repository and a temporary Relate directory store, then executes all seven steps end-to-end:
-1. Records `RH-P1-DEMO-1` with provenance at `SHA-A` via a separate writer process (`src/cli.mjs record --verify node-test-suite`), executing an allowlisted local runner (`node --test`) and attaching a SHA-256 `TRUSTED_LOCAL_RUNNER` attestation bound to `SHA-A`.
-2. Retrieves the handoff and multi-hop provenance (`Repository -> Task <- Handoff -> Commit`, `Evidence`, `Artifact`, `Decision`, `Agent`) through `relate serve --mcp stdio --database <store> --read-only`.
-3. Confirms `freshness.status: "VERIFIED"` (`metadataFreshness: "CURRENT"`, `executionAuthenticity: "AUTHENTICATED"`) at exact `SHA-A` (with `remoteStatus: "UNVERIFIED"` offline).
-4. Advances Git `HEAD` to `SHA-B` and confirms `freshness.status: "STALE"` (`HEAD_SHA_MISMATCH`, `EVIDENCE_SHA_MISMATCH`).
+1. Records `RH-P1-DEMO-1` with provenance at `SHA-A` via a separate writer process (`src/cli.mjs record --verify node-test-suite`), executing an allowlisted local runner (`node --test`, `shell: false`) on a clean worktree and recording `RUNNER_RECORDED_UNSIGNED` with an unkeyed SHA-256 consistency checksum (not a cryptographic signing credential).
+2. Retrieves the handoff and multi-hop provenance (`Repository -> Task <- Handoff -> Commit`, `Evidence`, `Artifact`, `Decision`, `Agent`) through `relate serve --mcp stdio --database <store> --read-only` **without** re-executing tests: confirms `metadataFreshness: "CURRENT"` at exact `SHA-A`, while `executionAuthenticity: "UNVERIFIED"` and `status: "UNVERIFIED"` (`UNSIGNED_LOCAL_STORE_EVIDENCE`), because an unsigned local graph store cannot cryptographically authenticate persisted execution claims on read alone.
+3. Resumes via read-only MCP **with** explicit in-process allowlisted re-execution (`--verify node-test-suite`) on the clean `SHA-A` checkout, establishing `executionAuthenticity: "AUTHENTICATED"` and `status: "VERIFIED"` (`IN_PROCESS_VERIFICATION_PASSED:node-test-suite`) without altering the read-only MCP trust boundary.
+4. Advances Git `HEAD` to `SHA-B` and confirms `freshness.status: "STALE"` (`metadataFreshness: "STALE"`, `HEAD_SHA_MISMATCH`, `EVIDENCE_SHA_MISMATCH`).
 5. Records `RH-P1-DEMO-2A` with unauthenticated self-asserted `PASS` (`UNAUTHENTICATED_SELF_ASSERTED_EVIDENCE`, `executionAuthenticity: "SELF_ASSERTED"`) and `RH-P1-DEMO-2B` without evidence (`MISSING_TEST_EVIDENCE`), confirming both yield `freshness.status: "UNVERIFIED"`.
 6. Records `RH-P1-DEMO-3` with failing evidence (`status: "FAIL"`) and confirms `freshness.status: "BLOCKED"` (`EVIDENCE_FAILED`).
 7. Sends `CREATE` to `read_cypher` and calls `write_cypher` on the read-only MCP server, proving both are refused (`isError: true`).
@@ -35,9 +35,9 @@ npm run demo
   "relateCliVersion": "Relate v1.0.1",
   "step1_recordAtShaA": {
     "handoffId": "RH-P1-DEMO-1",
-    "shaA": "2da29755a86901000f38460dcd525200f0e2ad33"
+    "shaA": "b0b60cbbc3d8c9595114f2c90510780694c79b63"
   },
-  "step2_3_readOnlyMcpVerified": {
+  "step2_readOnlyUnsignedStore": {
     "mcpTools": [
       "read_cypher",
       "get_schema"
@@ -55,35 +55,54 @@ npm run demo
         "DEC-1"
       ],
       "evidenceIds": [
-        "EV-TRUSTED-1:PASS:TRUSTED_LOCAL_RUNNER"
+        "EV-RUNNER-1:PASS:RUNNER_RECORDED_UNSIGNED"
       ]
     },
+    "freshness": {
+      "status": "UNVERIFIED",
+      "metadataFreshness": "CURRENT",
+      "executionAuthenticity": "UNVERIFIED",
+      "reasons": [
+        "UNSIGNED_LOCAL_STORE_EVIDENCE:EV-RUNNER-1",
+        "REMOTE_PR_STATE_UNVERIFIED"
+      ],
+      "handoffSha": "b0b60cbbc3d8c9595114f2c90510780694c79b63",
+      "currentHeadSha": "b0b60cbbc3d8c9595114f2c90510780694c79b63",
+      "isDirty": false,
+      "remoteStatus": "UNVERIFIED"
+    }
+  },
+  "step3_inProcessVerified": {
+    "verifyProfile": "node-test-suite",
     "freshness": {
       "status": "VERIFIED",
       "metadataFreshness": "CURRENT",
       "executionAuthenticity": "AUTHENTICATED",
       "reasons": [
+        "UNSIGNED_LOCAL_STORE_EVIDENCE:EV-RUNNER-1",
+        "IN_PROCESS_VERIFICATION_PASSED:node-test-suite",
         "REMOTE_PR_STATE_UNVERIFIED"
       ],
-      "handoffSha": "2da29755a86901000f38460dcd525200f0e2ad33",
-      "currentHeadSha": "2da29755a86901000f38460dcd525200f0e2ad33",
+      "handoffSha": "b0b60cbbc3d8c9595114f2c90510780694c79b63",
+      "currentHeadSha": "b0b60cbbc3d8c9595114f2c90510780694c79b63",
       "isDirty": false,
       "remoteStatus": "UNVERIFIED"
     }
   },
   "step4_shaBStaleDetection": {
-    "shaB": "764c8b9d49f29208fba19b4822006e487ca65847",
+    "shaB": "01d91fcb7e7eb359bb5e4c5e17ae4ee916339757",
     "freshness": {
       "status": "STALE",
       "metadataFreshness": "STALE",
-      "executionAuthenticity": "AUTHENTICATED",
+      "executionAuthenticity": "UNVERIFIED",
       "reasons": [
-        "HEAD_SHA_MISMATCH: handoff=2da29755a86901000f38460dcd525200f0e2ad33 current=764c8b9d49f29208fba19b4822006e487ca65847",
-        "EVIDENCE_SHA_MISMATCH:EV-TRUSTED-1",
+        "HEAD_SHA_MISMATCH: handoff=b0b60cbbc3d8c9595114f2c90510780694c79b63 current=01d91fcb7e7eb359bb5e4c5e17ae4ee916339757",
+        "EVIDENCE_SHA_MISMATCH:EV-RUNNER-1",
+        "UNSIGNED_LOCAL_STORE_EVIDENCE:EV-RUNNER-1",
         "REMOTE_PR_STATE_UNVERIFIED"
       ],
-      "handoffSha": "2da29755a86901000f38460dcd525200f0e2ad33",
-      "currentHeadSha": "764c8b9d49f29208fba19b4822006e487ca65847",
+      "handoffSha": "b0b60cbbc3d8c9595114f2c90510780694c79b63",
+      "currentHeadSha": "01d91fcb7e7eb359bb5e4c5e17ae4ee916339757",
       "isDirty": false,
       "remoteStatus": "UNVERIFIED"
     }
@@ -98,8 +117,8 @@ npm run demo
         "UNAUTHENTICATED_SELF_ASSERTED_EVIDENCE:EV-SELF-1",
         "REMOTE_PR_STATE_UNVERIFIED"
       ],
-      "handoffSha": "764c8b9d49f29208fba19b4822006e487ca65847",
-      "currentHeadSha": "764c8b9d49f29208fba19b4822006e487ca65847",
+      "handoffSha": "01d91fcb7e7eb359bb5e4c5e17ae4ee916339757",
+      "currentHeadSha": "01d91fcb7e7eb359bb5e4c5e17ae4ee916339757",
       "isDirty": false,
       "remoteStatus": "UNVERIFIED"
     }
@@ -114,8 +133,8 @@ npm run demo
         "MISSING_TEST_EVIDENCE",
         "REMOTE_PR_STATE_UNVERIFIED"
       ],
-      "handoffSha": "764c8b9d49f29208fba19b4822006e487ca65847",
-      "currentHeadSha": "764c8b9d49f29208fba19b4822006e487ca65847",
+      "handoffSha": "01d91fcb7e7eb359bb5e4c5e17ae4ee916339757",
+      "currentHeadSha": "01d91fcb7e7eb359bb5e4c5e17ae4ee916339757",
       "isDirty": false,
       "remoteStatus": "UNVERIFIED"
     }
@@ -130,8 +149,8 @@ npm run demo
         "EVIDENCE_FAILED:EV-FAIL-1",
         "REMOTE_PR_STATE_UNVERIFIED"
       ],
-      "handoffSha": "764c8b9d49f29208fba19b4822006e487ca65847",
-      "currentHeadSha": "764c8b9d49f29208fba19b4822006e487ca65847",
+      "handoffSha": "01d91fcb7e7eb359bb5e4c5e17ae4ee916339757",
+      "currentHeadSha": "01d91fcb7e7eb359bb5e4c5e17ae4ee916339757",
       "isDirty": false,
       "remoteStatus": "UNVERIFIED"
     }

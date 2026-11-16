@@ -4,7 +4,7 @@ import path from "node:path";
 import { Database } from "@relate/relate";
 import { runTrustedValidation } from "./attestation.mjs";
 import { getGitState } from "./git.mjs";
-import { validateHandoffPayload } from "./schema.mjs";
+import { MAX_DETAIL_ROWS, validateHandoffPayload } from "./schema.mjs";
 
 function canonicalFingerprint(validated) {
   const canonical = {
@@ -51,7 +51,7 @@ export function recordHandoff({
   }
   const resolvedStore = path.resolve(storeDir);
 
-  let workingPayload = payload && typeof payload === "object" && !Array.isArray(payload)
+  const workingPayload = payload && typeof payload === "object" && !Array.isArray(payload)
     ? { ...payload }
     : payload;
 
@@ -81,18 +81,27 @@ export function recordHandoff({
     }
   }
 
+  // Validate untrusted JSON ingress BEFORE executing any validation profile.
+  const validated = validateHandoffPayload(workingPayload, repoRoot);
+
   if (validationProfile) {
-    const trustedEv = runTrustedValidation({
+    if (validated.evidence.length + 1 > MAX_DETAIL_ROWS) {
+      throw new Error(
+        `BoundExceededError: evidence count (${validated.evidence.length + 1}) exceeds MAX_DETAIL_ROWS (${MAX_DETAIL_ROWS})`
+      );
+    }
+    const runnerEv = runTrustedValidation({
       repoRoot,
-      repository: workingPayload.repository,
-      headSha: workingPayload.headSha,
+      repository: validated.repository,
+      headSha: validated.headSha,
       validationProfile,
     });
-    const existingEv = Array.isArray(workingPayload.evidence) ? workingPayload.evidence : [];
-    workingPayload.evidence = [...existingEv, trustedEv];
+    if (validated.evidence.some((e) => e.id === runnerEv.id)) {
+      throw new Error(`Duplicate evidence id '${runnerEv.id}' conflicts with runner evidence`);
+    }
+    validated.evidence = [...validated.evidence, runnerEv];
   }
 
-  const validated = validateHandoffPayload(workingPayload, repoRoot);
   const fingerprint = canonicalFingerprint(validated);
 
   const taskKey = `${validated.repository}::${validated.taskId}`;

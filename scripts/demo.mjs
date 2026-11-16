@@ -80,11 +80,19 @@ function main() {
       },
     });
 
-    // 2 & 3. Retrieve via real read-only MCP and show VERIFIED (authenticated local execution)
+    // 2. Read-only MCP resume without re-execution -> metadata CURRENT, execution UNVERIFIED (unsigned store)
+    const stepReadOnlyUnsigned = resumeTaskViaReadOnlyMcp({
+      storeDir,
+      repoRoot: repoDir,
+      taskId: "RH-P1",
+    });
+
+    // 3. Read-only MCP resume WITH explicit in-process allowlisted verification -> VERIFIED / AUTHENTICATED
     const stepVerified = resumeTaskViaReadOnlyMcp({
       storeDir,
       repoRoot: repoDir,
       taskId: "RH-P1",
+      verifyProfile: "node-test-suite",
     });
 
     // 4. Advance Git HEAD to SHA-B and show STALE
@@ -229,17 +237,21 @@ function main() {
     const summary = {
       relateCliVersion: cli.version.split("\n")[0],
       step1_recordAtShaA: { handoffId: "RH-P1-DEMO-1", shaA },
-      step2_3_readOnlyMcpVerified: {
-        mcpTools: stepVerified.tools,
-        handoffId: stepVerified.handoff.handoffId,
+      step2_readOnlyUnsignedStore: {
+        mcpTools: stepReadOnlyUnsigned.tools,
+        handoffId: stepReadOnlyUnsigned.handoff.handoffId,
         provenance: {
-          repository: stepVerified.handoff.repository,
-          sourceAgent: stepVerified.handoff.sourceAgent,
-          targetAgent: stepVerified.handoff.targetAgent,
-          artifacts: stepVerified.artifacts,
-          decisions: stepVerified.decisions.map((d) => d.id),
-          evidenceIds: stepVerified.evidence.map((e) => `${e.id}:${e.status}:${e.executionMode}`),
+          repository: stepReadOnlyUnsigned.handoff.repository,
+          sourceAgent: stepReadOnlyUnsigned.handoff.sourceAgent,
+          targetAgent: stepReadOnlyUnsigned.handoff.targetAgent,
+          artifacts: stepReadOnlyUnsigned.artifacts,
+          decisions: stepReadOnlyUnsigned.decisions.map((d) => d.id),
+          evidenceIds: stepReadOnlyUnsigned.evidence.map((e) => `${e.id}:${e.status}:${e.executionMode}`),
         },
+        freshness: stepReadOnlyUnsigned.freshness,
+      },
+      step3_inProcessVerified: {
+        verifyProfile: "node-test-suite",
         freshness: stepVerified.freshness,
       },
       step4_shaBStaleDetection: {

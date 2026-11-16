@@ -1,11 +1,11 @@
 import { isFullSha } from "./git.mjs";
-import { isTrustedEvidenceAuthenticated } from "./attestation.mjs";
 
 export function evaluateFreshness({
   handoff,
   evidenceList = [],
   gitState,
   remoteVerified = false,
+  inProcessVerification = null,
 }) {
   const reasons = [];
   const currentHeadSha = gitState?.headSha ?? null;
@@ -45,7 +45,8 @@ export function evaluateFreshness({
   let hasBlocked = false;
   let hasUnverified = false;
   let hasSelfAsserted = false;
-  let hasAuthenticatedPass = false;
+  let hasUnsignedStored = false;
+  let hasInProcessVerified = false;
 
   if (currentRepo && handoff.repository !== currentRepo) {
     hasBlocked = true;
@@ -81,21 +82,30 @@ export function evaluateFreshness({
       } else if (ev.status !== "PASS") {
         hasUnverified = true;
         reasons.push(`EVIDENCE_UNVERIFIED:${ev.id ?? "unknown"}`);
+      } else if (ev.executionMode === "SELF_ASSERTED" || !ev.executionMode) {
+        hasSelfAsserted = true;
+        hasUnverified = true;
+        reasons.push(`UNAUTHENTICATED_SELF_ASSERTED_EVIDENCE:${ev.id ?? "unknown"}`);
       } else {
-        // status === "PASS": check whether execution was authenticated via trusted local runner
-        const authenticated = isTrustedEvidenceAuthenticated({
-          ev,
-          repository: handoff.repository,
-          currentHeadSha,
-        });
-        if (authenticated) {
-          hasAuthenticatedPass = true;
-        } else {
-          hasSelfAsserted = true;
-          hasUnverified = true;
-          reasons.push(`UNAUTHENTICATED_SELF_ASSERTED_EVIDENCE:${ev.id ?? "unknown"}`);
-        }
+        // Unsigned local Relate store cannot act as a cryptographic signing authority on read alone.
+        hasUnsignedStored = true;
+        hasUnverified = true;
+        reasons.push(`UNSIGNED_LOCAL_STORE_EVIDENCE:${ev.id ?? "unknown"}`);
       }
+    }
+  }
+
+  if (inProcessVerification) {
+    if (inProcessVerification.status === "FAIL") {
+      hasBlocked = true;
+      reasons.push(`IN_PROCESS_VERIFICATION_FAILED:${inProcessVerification.validationProfile}`);
+    } else if (
+      inProcessVerification.status === "PASS" &&
+      inProcessVerification.headSha === currentHeadSha &&
+      !isDirty
+    ) {
+      hasInProcessVerified = true;
+      reasons.push(`IN_PROCESS_VERIFICATION_PASSED:${inProcessVerification.validationProfile}`);
     }
   }
 
@@ -112,10 +122,12 @@ export function evaluateFreshness({
   let executionAuthenticity = "MISSING";
   if (hasBlocked) {
     executionAuthenticity = "FAILED";
+  } else if (hasInProcessVerified) {
+    executionAuthenticity = "AUTHENTICATED";
+  } else if (hasUnsignedStored) {
+    executionAuthenticity = "UNVERIFIED";
   } else if (hasSelfAsserted) {
     executionAuthenticity = "SELF_ASSERTED";
-  } else if (hasAuthenticatedPass && !hasUnverified) {
-    executionAuthenticity = "AUTHENTICATED";
   }
 
   let status = "VERIFIED";
@@ -123,6 +135,8 @@ export function evaluateFreshness({
     status = "BLOCKED";
   } else if (hasStale) {
     status = "STALE";
+  } else if (hasInProcessVerified) {
+    status = "VERIFIED";
   } else if (hasUnverified) {
     status = "UNVERIFIED";
   }
