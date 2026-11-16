@@ -2,10 +2,17 @@
   "name": "relatehandoff",
   "version": "0.1.0",
   "private": true,
-  "description": "RelateHandoff — local-first agent handoff and evidence graph (RH-P1 integration spike)",
+  "description": "RelateHandoff — local-first agent handoff and evidence graph (RH-P1)",
   "type": "module",
+  "bin": {
+    "relatehandoff": "src/cli.mjs"
+  },
   "scripts": {
-    "test:spike": "node --test spike/relate_spike.test.mjs"
+    "build": "node --check src/git.mjs && node --check src/schema.mjs && node --check src/freshness.mjs && node --check src/recorder.mjs && node --check src/mcp_client.mjs && node --check src/cli.mjs && node src/cli.mjs --help > /dev/null",
+    "test": "RELATE_REQUIRE_CLI=1 node --test spike/relate_spike.test.mjs test/e2e_mcp.test.mjs test/security.test.mjs",
+    "test:spike": "node --test spike/relate_spike.test.mjs",
+    "test:e2e": "RELATE_REQUIRE_CLI=1 node --test test/e2e_mcp.test.mjs",
+    "test:security": "node --test test/security.test.mjs"
   },
   "dependencies": {
     "@relate/relate": "1.0.1"

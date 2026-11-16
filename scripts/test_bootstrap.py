@@ -28,7 +28,9 @@ assert "<!-- MASTER_TEMPLATE_HANDOFFS_START -->" not in handoffs
 assert not (ROOT / ".github/workflows/template-integrity.yml").exists()
 assert (ROOT / ".github/workflows/ci.yml").exists()
 assert (ROOT / ".github/workflows/common-validation.yml").exists()
-assert contract["categories"]["build"]["status"] == "not_applicable"
+for cat in ("test", "build", "security"):
+    cmd = contract["categories"][cat].get("command")
+    assert isinstance(cmd, list) and len(cmd) > 0, f"Missing executable command for {cat}"
 assert (ROOT / "docs/HACKATHON.md").exists()
 # Ensure that retaining orchestration governance also retains its discoverable links.
 for required in ("AGENTS.md", "README.md", "docs/TESTING.md", "tasks/TEMPLATE.md", ".agent/TASK-CONTRACT.md"):

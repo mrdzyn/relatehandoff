@@ -4,7 +4,7 @@
 
 RelateHandoff is a proposed local-first context and evidence layer for AI-assisted software development. It aims to let Codex, Claude Code, Gemini CLI, and other compatible clients resume work from a shared, provenance-aware handoff graph without reconstructing entire chat transcripts.
 
-**Current state:** Phase 0 foundation was squash-merged as PR #1. The RH-P1 implementation handoff is prepared for review. **No working Relate integration or hackathon demo exists yet.** See [status](docs/STATUS.md) and the [first implementation task](tasks/RH-P1-relate-handoff-mvp.md).
+**Current state:** Phase 0 (`#1`) and RH-P1 handoff (`#2`) are merged on `main`. On `phase-1/relate-handoff-mvp` (Draft PR #3), the Relate `v1.0.1` integration spike, schema-validated handoff recorder (`src/recorder.mjs`), exact-HEAD freshness engine (`src/freshness.mjs`), and read-only MCP stdio client (`src/mcp_client.mjs`, `src/cli.mjs`) are implemented and tested against live Relate. Sanitized example store and judge demo capture remain in progress. See [status](docs/STATUS.md), [spike findings](docs/RELATE-SPIKE.md), and the [first implementation task](tasks/RH-P1-relate-handoff-mvp.md).
 
 ## Why it exists
 
