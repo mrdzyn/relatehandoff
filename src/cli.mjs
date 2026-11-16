@@ -30,8 +30,8 @@ function printHelp() {
   console.log(`RelateHandoff CLI (RH-P1)
 
 Usage:
-  node src/cli.mjs record --store <dir> --repo <dir> --input <json-file>
-  node src/cli.mjs resume --store <dir> --repo <dir> --task <taskId>
+  node src/cli.mjs record --store <dir> --repo <dir> --input <json-file> [--repo-id <owner/repo>] [--verify <profile>]
+  node src/cli.mjs resume --store <dir> --repo <dir> --task <taskId> [--repo-id <owner/repo>]
   node src/cli.mjs --help`);
 }
 
@@ -51,6 +51,8 @@ function main() {
       storeDir: flags.store,
       repoRoot: flags.repo,
       payload: raw,
+      repository: flags["repo-id"],
+      validationProfile: flags.verify,
     });
     console.log(JSON.stringify({ ok: true, recorded }, null, 2));
     return;
@@ -64,6 +66,7 @@ function main() {
       storeDir: flags.store,
       repoRoot: flags.repo,
       taskId: flags.task,
+      repository: flags["repo-id"],
     });
     console.log(JSON.stringify(result, null, 2));
     return;

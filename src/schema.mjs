@@ -4,7 +4,10 @@ export const SCHEMA_VERSION = "1.0.0";
 
 const ID_RE = /^[A-Za-z0-9._-]{1,128}$/;
 const EVIDENCE_STATUSES = new Set(["PASS", "FAIL", "UNVERIFIED"]);
+const EXECUTION_MODES = new Set(["SELF_ASSERTED", "TRUSTED_LOCAL_RUNNER"]);
+const SHA256_RE = /^[0-9a-f]{64}$/;
 
+// Best-effort regex guard for common token/key formats (not a comprehensive secret scanner).
 const SECRET_PATTERNS = [
   /ghp_[A-Za-z0-9]{20,}/,
   /github_pat_[A-Za-z0-9_]{20,}/,
@@ -16,10 +19,16 @@ const SECRET_PATTERNS = [
 
 const SENSITIVE_ARTIFACT_NAMES = new Set([
   ".env",
+  ".npmrc",
   "id_rsa",
   "id_ed25519",
   "credentials.json",
   "service-account.json",
+  "secrets.json",
+]);
+
+const SENSITIVE_ARTIFACT_PATHS = new Set([
+  ".aws/credentials",
 ]);
 
 function assertNonEmptyString(val, field, maxLen = 2000) {
@@ -74,6 +83,7 @@ export function validateHandoffPayload(raw, repoRoot) {
   const nextAction = assertNonEmptyString(raw.nextAction, "nextAction", 1000);
 
   const decisions = [];
+  const seenDecisionIds = new Set();
   if (raw.decisions !== undefined) {
     if (!Array.isArray(raw.decisions)) {
       throw new Error("Invalid field 'decisions': must be an array");
@@ -87,6 +97,10 @@ export function validateHandoffPayload(raw, repoRoot) {
       if (!ID_RE.test(id)) {
         throw new Error(`Invalid decisions[${i}].id`);
       }
+      if (seenDecisionIds.has(id)) {
+        throw new Error(`Duplicate decision id '${id}' in payload`);
+      }
+      seenDecisionIds.add(id);
       const dSummary = assertNonEmptyString(d.summary, `decisions[${i}].summary`, 1000);
       decisions.push({ id, summary: dSummary });
     }
@@ -100,9 +114,11 @@ export function validateHandoffPayload(raw, repoRoot) {
     for (let i = 0; i < raw.artifacts.length; i++) {
       const rel = raw.artifacts[i];
       const normalized = validateRepoRelativePath(repoRoot, rel);
-      const base = normalized.split("/").pop().toLowerCase();
+      const lowerNorm = normalized.toLowerCase();
+      const base = lowerNorm.split("/").pop();
       if (
         SENSITIVE_ARTIFACT_NAMES.has(base) ||
+        SENSITIVE_ARTIFACT_PATHS.has(lowerNorm) ||
         (base.startsWith(".env.") && base !== ".env.example") ||
         /\.(p12|pfx|pem|key)$/.test(base)
       ) {
@@ -113,6 +129,7 @@ export function validateHandoffPayload(raw, repoRoot) {
   }
 
   const evidence = [];
+  const seenEvidenceIds = new Set();
   if (raw.evidence !== undefined) {
     if (!Array.isArray(raw.evidence)) {
       throw new Error("Invalid field 'evidence': must be an array");
@@ -123,6 +140,14 @@ export function validateHandoffPayload(raw, repoRoot) {
         throw new Error(`Invalid evidence at index ${i}`);
       }
       const id = assertNonEmptyString(ev.id ?? `ev-${i + 1}`, `evidence[${i}].id`, 128);
+      if (!ID_RE.test(id)) {
+        throw new Error(`Invalid evidence[${i}].id`);
+      }
+      if (seenEvidenceIds.has(id)) {
+        throw new Error(`Duplicate evidence id '${id}' in payload`);
+      }
+      seenEvidenceIds.add(id);
+
       const kind = assertNonEmptyString(ev.kind, `evidence[${i}].kind`, 64);
       const command = assertNonEmptyString(ev.command, `evidence[${i}].command`, 512);
       if (!EVIDENCE_STATUSES.has(ev.status)) {
@@ -135,6 +160,25 @@ export function validateHandoffPayload(raw, repoRoot) {
       if (Number.isNaN(Date.parse(observedAt))) {
         throw new Error(`Invalid evidence[${i}].observedAt: must be ISO-8601 timestamp`);
       }
+
+      const executionMode = ev.executionMode ?? "SELF_ASSERTED";
+      if (!EXECUTION_MODES.has(executionMode)) {
+        throw new Error(`Invalid evidence[${i}].executionMode`);
+      }
+      const validationProfile = ev.validationProfile
+        ? assertNonEmptyString(ev.validationProfile, `evidence[${i}].validationProfile`, 64)
+        : null;
+      const exitCode = ev.exitCode !== undefined ? Number(ev.exitCode) : null;
+      if (exitCode !== null && !Number.isInteger(exitCode)) {
+        throw new Error(`Invalid evidence[${i}].exitCode: must be an integer`);
+      }
+      const attestationSha256 = ev.attestationSha256
+        ? assertNonEmptyString(ev.attestationSha256, `evidence[${i}].attestationSha256`, 64)
+        : null;
+      if (attestationSha256 !== null && !SHA256_RE.test(attestationSha256)) {
+        throw new Error(`Invalid evidence[${i}].attestationSha256: must be 64-char hex SHA-256`);
+      }
+
       evidence.push({
         id,
         kind,
@@ -142,6 +186,10 @@ export function validateHandoffPayload(raw, repoRoot) {
         status: ev.status,
         headSha: ev.headSha,
         observedAt,
+        executionMode,
+        validationProfile,
+        exitCode,
+        attestationSha256,
       });
     }
   }

@@ -1,4 +1,5 @@
 import { isFullSha } from "./git.mjs";
+import { isTrustedEvidenceAuthenticated } from "./attestation.mjs";
 
 export function evaluateFreshness({
   handoff,
@@ -8,6 +9,7 @@ export function evaluateFreshness({
 }) {
   const reasons = [];
   const currentHeadSha = gitState?.headSha ?? null;
+  const currentRepo = gitState?.repository ?? null;
   const isDirty = Boolean(gitState?.isDirty);
   const remoteStatus = remoteVerified ? "VERIFIED" : "UNVERIFIED";
 
@@ -15,6 +17,8 @@ export function evaluateFreshness({
     reasons.push("MISSING_OR_INVALID_HANDOFF_SHA");
     return {
       status: "UNVERIFIED",
+      metadataFreshness: "UNVERIFIED",
+      executionAuthenticity: "MISSING",
       reasons,
       handoffSha: handoff?.headSha ?? null,
       currentHeadSha,
@@ -27,6 +31,8 @@ export function evaluateFreshness({
     reasons.push("MISSING_LOCAL_HEAD_SHA");
     return {
       status: "UNVERIFIED",
+      metadataFreshness: "UNVERIFIED",
+      executionAuthenticity: "MISSING",
       reasons,
       handoffSha: handoff.headSha,
       currentHeadSha,
@@ -38,6 +44,13 @@ export function evaluateFreshness({
   let hasStale = false;
   let hasBlocked = false;
   let hasUnverified = false;
+  let hasSelfAsserted = false;
+  let hasAuthenticatedPass = false;
+
+  if (currentRepo && handoff.repository !== currentRepo) {
+    hasBlocked = true;
+    reasons.push(`REPOSITORY_MISMATCH: handoff=${handoff.repository} checkout=${currentRepo}`);
+  }
 
   if (handoff.headSha !== currentHeadSha) {
     hasStale = true;
@@ -68,12 +81,41 @@ export function evaluateFreshness({
       } else if (ev.status !== "PASS") {
         hasUnverified = true;
         reasons.push(`EVIDENCE_UNVERIFIED:${ev.id ?? "unknown"}`);
+      } else {
+        // status === "PASS": check whether execution was authenticated via trusted local runner
+        const authenticated = isTrustedEvidenceAuthenticated({
+          ev,
+          repository: handoff.repository,
+          currentHeadSha,
+        });
+        if (authenticated) {
+          hasAuthenticatedPass = true;
+        } else {
+          hasSelfAsserted = true;
+          hasUnverified = true;
+          reasons.push(`UNAUTHENTICATED_SELF_ASSERTED_EVIDENCE:${ev.id ?? "unknown"}`);
+        }
       }
     }
   }
 
   if (!remoteVerified) {
     reasons.push("REMOTE_PR_STATE_UNVERIFIED");
+  }
+
+  const metadataFreshness = hasStale
+    ? "STALE"
+    : !Array.isArray(evidenceList) || evidenceList.length === 0
+      ? "UNVERIFIED"
+      : "CURRENT";
+
+  let executionAuthenticity = "MISSING";
+  if (hasBlocked) {
+    executionAuthenticity = "FAILED";
+  } else if (hasSelfAsserted) {
+    executionAuthenticity = "SELF_ASSERTED";
+  } else if (hasAuthenticatedPass && !hasUnverified) {
+    executionAuthenticity = "AUTHENTICATED";
   }
 
   let status = "VERIFIED";
@@ -87,6 +129,8 @@ export function evaluateFreshness({
 
   return {
     status,
+    metadataFreshness,
+    executionAuthenticity,
     reasons,
     handoffSha: handoff.headSha,
     currentHeadSha,

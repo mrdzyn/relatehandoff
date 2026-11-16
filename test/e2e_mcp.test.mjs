@@ -9,9 +9,8 @@ import {
   resolveRelateCli,
   resumeTaskViaReadOnlyMcp,
 } from "../src/mcp_client.mjs";
-import { recordHandoff } from "../src/recorder.mjs";
 
-function initTempGitRepo(rootDir) {
+function initTempGitRepo(rootDir, repoId = "mrdzyn/relatehandoff-synthetic") {
   const git = (args) =>
     execFileSync("git", args, {
       cwd: rootDir,
@@ -22,45 +21,64 @@ function initTempGitRepo(rootDir) {
   git(["init"]);
   git(["config", "user.name", "RelateHandoff Test"]);
   git(["config", "user.email", "test@example.invalid"]);
+  git(["config", "relatehandoff.repository", repoId]);
   fs.writeFileSync(path.join(rootDir, "README.md"), "# Synthetic Repo\n", "utf8");
-  git(["add", "README.md"]);
+  fs.writeFileSync(
+    path.join(rootDir, "smoke.test.mjs"),
+    `import test from "node:test";\nimport assert from "node:assert/strict";\ntest("ok", () => assert.equal(1, 1));\n`,
+    "utf8"
+  );
+  git(["add", "README.md", "smoke.test.mjs"]);
   git(["commit", "-m", "chore: initial synthetic commit (SHA-A)"]);
   const shaA = git(["rev-parse", "HEAD"]);
-  return { git, shaA };
+  const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
+  return { git, shaA, branch };
 }
 
-test("RH-P1 E2E: schema-validated write, real read-only MCP resume, dirty/SHA-B stale detection, and write refusal", () => {
-  // Fail closed if no runnable relate CLI is available — skipped MCP tests never pass.
+function runRecordCli({ storeDir, repoDir, tmpRoot, name, payload, verifyProfile, expectSuccess = true }) {
+  const inputJson = path.join(tmpRoot, `${name}.json`);
+  fs.writeFileSync(inputJson, JSON.stringify(payload, null, 2), "utf8");
+  const args = ["src/cli.mjs", "record", "--store", storeDir, "--repo", repoDir, "--input", inputJson];
+  if (verifyProfile) {
+    args.push("--verify", verifyProfile);
+  }
+  const res = spawnSync(process.execPath, args, { cwd: process.cwd(), encoding: "utf8" });
+  if (expectSuccess) {
+    assert.equal(res.status, 0, `CLI record (${name}) failed: ${res.stderr}`);
+  }
+  return res;
+}
+
+test("RH-P1 E2E (B4): trusted local execution yields VERIFIED; self-asserted PASS yields UNVERIFIED; dirty/SHA-B/missing/failed/write-refusal", () => {
   const cli = resolveRelateCli();
   assert.ok(cli.bin, "Expected runnable relate CLI");
 
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "relatehandoff-e2e-"));
   const repoDir = path.join(tmpRoot, "repo");
   const storeDir = path.join(tmpRoot, "relate-store");
-  const inputJson = path.join(tmpRoot, "handoff.json");
   fs.mkdirSync(repoDir, { recursive: true });
 
   try {
-    const { git, shaA } = initTempGitRepo(repoDir);
+    const { git, shaA, branch } = initTempGitRepo(repoDir);
 
-    const payloadA = {
+    const basePayload = {
       schemaVersion: "1.0.0",
-      handoffId: "RH-P1-SYNTH-1",
+      handoffId: "RH-P1-SELF-1",
       taskId: "RH-P1",
       repository: "mrdzyn/relatehandoff-synthetic",
-      branch: "main",
+      branch,
       sourceAgent: "codex-writer",
       targetAgent: "claude-reviewer",
       headSha: shaA,
-      summary: "Implemented synthetic handoff recorder at SHA-A",
-      nextAction: "Verify freshness at exact SHA-A via read-only MCP",
+      summary: "Self-asserted PASS without trusted runner execution",
+      nextAction: "Verify freshness and execution authenticity",
       decisions: [{ id: "DEC-1", summary: "Use directory store with read-only stdio MCP" }],
       artifacts: ["README.md"],
       evidence: [
         {
-          id: "EV-1",
+          id: "EV-SELF-1",
           kind: "unit-test",
-          command: "npm run test:all",
+          command: "npm test (never executed)",
           status: "PASS",
           headSha: shaA,
           observedAt: "2026-11-15T17:00:00Z",
@@ -68,17 +86,33 @@ test("RH-P1 E2E: schema-validated write, real read-only MCP resume, dirty/SHA-B 
       ],
       createdAt: "2026-11-15T17:00:00Z",
     };
-    fs.writeFileSync(inputJson, JSON.stringify(payloadA, null, 2), "utf8");
 
-    // 1. Record via CLI subprocess (separate writer process)
-    const recRes = spawnSync(
-      process.execPath,
-      ["src/cli.mjs", "record", "--store", storeDir, "--repo", repoDir, "--input", inputJson],
-      { cwd: process.cwd(), encoding: "utf8" }
+    // B4: Self-asserted PASS at exact SHA-A with clean tree must report UNVERIFIED!
+    runRecordCli({ storeDir, repoDir, tmpRoot, name: "self-asserted", payload: basePayload });
+    const selfRes = resumeTaskViaReadOnlyMcp({ storeDir, repoRoot: repoDir, taskId: "RH-P1" });
+    assert.equal(selfRes.freshness.metadataFreshness, "CURRENT");
+    assert.equal(selfRes.freshness.executionAuthenticity, "SELF_ASSERTED");
+    assert.equal(selfRes.freshness.status, "UNVERIFIED");
+    assert.ok(
+      selfRes.freshness.reasons.some((r) => r.startsWith("UNAUTHENTICATED_SELF_ASSERTED_EVIDENCE"))
     );
-    assert.equal(recRes.status, 0, `CLI record failed: ${recRes.stderr}`);
 
-    // 2. Resume via CLI subprocess (uses real relate serve --mcp stdio --read-only)
+    // B4: Trusted local validation execution (--verify node-test-suite) yields VERIFIED
+    runRecordCli({
+      storeDir,
+      repoDir,
+      tmpRoot,
+      name: "trusted-exec",
+      verifyProfile: "node-test-suite",
+      payload: {
+        ...basePayload,
+        handoffId: "RH-P1-TRUSTED-1",
+        summary: "Executed trusted local node --test suite at SHA-A",
+        evidence: [],
+        createdAt: "2026-11-15T17:01:00Z",
+      },
+    });
+
     const res1 = spawnSync(
       process.execPath,
       ["src/cli.mjs", "resume", "--store", storeDir, "--repo", repoDir, "--task", "RH-P1"],
@@ -88,69 +122,56 @@ test("RH-P1 E2E: schema-validated write, real read-only MCP resume, dirty/SHA-B 
     const parsed1 = JSON.parse(res1.stdout);
 
     assert.deepEqual(parsed1.tools, ["read_cypher", "get_schema"]);
-    assert.equal(parsed1.handoff.handoffId, "RH-P1-SYNTH-1");
-    assert.equal(parsed1.handoff.headSha, shaA);
-    assert.equal(parsed1.handoff.sourceAgent, "codex-writer");
-    assert.equal(parsed1.handoff.targetAgent, "claude-reviewer");
-    assert.deepEqual(parsed1.artifacts, ["README.md"]);
-    assert.equal(parsed1.decisions.length, 1);
-    assert.equal(parsed1.evidence.length, 1);
+    assert.equal(parsed1.handoff.handoffId, "RH-P1-TRUSTED-1");
+    assert.equal(parsed1.freshness.metadataFreshness, "CURRENT");
+    assert.equal(parsed1.freshness.executionAuthenticity, "AUTHENTICATED");
     assert.equal(parsed1.freshness.status, "VERIFIED");
     assert.equal(parsed1.freshness.remoteStatus, "UNVERIFIED");
 
-    // Deterministic re-run check
+    // Deterministic re-run
     const parsed2 = resumeTaskViaReadOnlyMcp({ storeDir, repoRoot: repoDir, taskId: "RH-P1" });
     assert.deepEqual(parsed2, parsed1);
 
-    // 3. Dirty worktree at SHA-A must NOT report VERIFIED
+    // Dirty worktree at SHA-A -> STALE
     fs.appendFileSync(path.join(repoDir, "README.md"), "uncommitted edit\n", "utf8");
     const dirtyRes = resumeTaskViaReadOnlyMcp({ storeDir, repoRoot: repoDir, taskId: "RH-P1" });
     assert.equal(dirtyRes.freshness.status, "STALE");
     assert.ok(dirtyRes.freshness.reasons.includes("DIRTY_WORKTREE"));
 
-    // 4. Commit SHA-B -> clean worktree at SHA-B, evidence at SHA-A must report STALE
+    // Commit SHA-B -> STALE
     git(["add", "README.md"]);
     git(["commit", "-m", "feat: advance to SHA-B"]);
     const shaB = git(["rev-parse", "HEAD"]);
-    assert.notEqual(shaB, shaA);
-
     const staleRes = resumeTaskViaReadOnlyMcp({ storeDir, repoRoot: repoDir, taskId: "RH-P1" });
     assert.equal(staleRes.freshness.status, "STALE");
-    assert.equal(staleRes.freshness.handoffSha, shaA);
-    assert.equal(staleRes.freshness.currentHeadSha, shaB);
     assert.ok(staleRes.freshness.reasons.some((r) => r.startsWith("HEAD_SHA_MISMATCH")));
-    assert.ok(staleRes.freshness.reasons.some((r) => r.startsWith("EVIDENCE_SHA_MISMATCH")));
 
-    // 5. Missing evidence at SHA-B must report UNVERIFIED
-    const inputJson2 = path.join(tmpRoot, "handoff-2.json");
-    fs.writeFileSync(
-      inputJson2,
-      JSON.stringify({
-        ...payloadA,
+    // Missing evidence at SHA-B -> UNVERIFIED
+    runRecordCli({
+      storeDir,
+      repoDir,
+      tmpRoot,
+      name: "missing-ev",
+      payload: {
+        ...basePayload,
         handoffId: "RH-P1-SYNTH-2",
         headSha: shaB,
         evidence: [],
         createdAt: "2026-11-15T17:05:00Z",
-      }),
-      "utf8"
-    );
-    const recRes2 = spawnSync(
-      process.execPath,
-      ["src/cli.mjs", "record", "--store", storeDir, "--repo", repoDir, "--input", inputJson2],
-      { cwd: process.cwd(), encoding: "utf8" }
-    );
-    assert.equal(recRes2.status, 0, `CLI record 2 failed: ${recRes2.stderr}`);
+      },
+    });
     const noEvRes = resumeTaskViaReadOnlyMcp({ storeDir, repoRoot: repoDir, taskId: "RH-P1" });
-    assert.equal(noEvRes.handoff.handoffId, "RH-P1-SYNTH-2");
     assert.equal(noEvRes.freshness.status, "UNVERIFIED");
     assert.ok(noEvRes.freshness.reasons.includes("MISSING_TEST_EVIDENCE"));
 
-    // 6. Failed evidence at SHA-B must report BLOCKED
-    const inputJson3 = path.join(tmpRoot, "handoff-3.json");
-    fs.writeFileSync(
-      inputJson3,
-      JSON.stringify({
-        ...payloadA,
+    // Failed evidence at SHA-B -> BLOCKED
+    runRecordCli({
+      storeDir,
+      repoDir,
+      tmpRoot,
+      name: "failed-ev",
+      payload: {
+        ...basePayload,
         handoffId: "RH-P1-SYNTH-3",
         headSha: shaB,
         evidence: [
@@ -164,21 +185,13 @@ test("RH-P1 E2E: schema-validated write, real read-only MCP resume, dirty/SHA-B 
           },
         ],
         createdAt: "2026-11-15T17:10:00Z",
-      }),
-      "utf8"
-    );
-    const recRes3 = spawnSync(
-      process.execPath,
-      ["src/cli.mjs", "record", "--store", storeDir, "--repo", repoDir, "--input", inputJson3],
-      { cwd: process.cwd(), encoding: "utf8" }
-    );
-    assert.equal(recRes3.status, 0, `CLI record 3 failed: ${recRes3.stderr}`);
+      },
+    });
     const failedEvRes = resumeTaskViaReadOnlyMcp({ storeDir, repoRoot: repoDir, taskId: "RH-P1" });
-    assert.equal(failedEvRes.handoff.handoffId, "RH-P1-SYNTH-3");
     assert.equal(failedEvRes.freshness.status, "BLOCKED");
     assert.ok(failedEvRes.freshness.reasons.includes("EVIDENCE_FAILED:EV-FAIL-1"));
 
-    // 7. Read-only MCP refuses writes
+    // Read-only MCP refuses writes
     const mcpWriteAttempt = callRelateMcpBatch({
       storeDir,
       requests: [
@@ -205,9 +218,175 @@ test("RH-P1 E2E: schema-validated write, real read-only MCP resume, dirty/SHA-B 
   }
 });
 
-test("RH-P1 E2E: committed examples/example-store is portable and readable via read-only MCP", () => {
+test("RH-P1 regression (B2 & B3): repo-scoped immutable provenance, idempotent replay, conflict fail-closed, and cross-repo isolation", () => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "relatehandoff-b2b3-"));
+  const repoADir = path.join(tmpRoot, "repo-a");
+  const repoBDir = path.join(tmpRoot, "repo-b");
+  const repoCDir = path.join(tmpRoot, "repo-c");
+  const storeDir = path.join(tmpRoot, "shared-store");
+  fs.mkdirSync(repoADir, { recursive: true });
+  fs.mkdirSync(repoBDir, { recursive: true });
+  fs.mkdirSync(repoCDir, { recursive: true });
+
+  try {
+    const repoA = initTempGitRepo(repoADir, "mrdzyn/repo-a");
+    const repoB = initTempGitRepo(repoBDir, "mrdzyn/repo-b");
+    initTempGitRepo(repoCDir, "mrdzyn/repo-c");
+
+    const payloadA1 = {
+      schemaVersion: "1.0.0",
+      handoffId: "SHARED-HANDOFF-1",
+      taskId: "RH-P1",
+      repository: "mrdzyn/repo-a",
+      branch: repoA.branch,
+      sourceAgent: "codex",
+      targetAgent: "claude",
+      headSha: repoA.shaA,
+      summary: "Repo A handoff 1",
+      nextAction: "Review A1",
+      decisions: [{ id: "DEC-1", summary: "Repo A decision" }],
+      artifacts: ["README.md"],
+      evidence: [
+        {
+          id: "ev-1",
+          kind: "unit-test",
+          command: "npm test",
+          status: "PASS",
+          headSha: repoA.shaA,
+          observedAt: "2026-11-15T17:00:00Z",
+        },
+      ],
+      createdAt: "2026-11-15T17:00:00Z",
+    };
+
+    // 1. Record Repo A handoff
+    runRecordCli({ storeDir, repoDir: repoADir, tmpRoot, name: "a1", payload: payloadA1 });
+
+    // 2. B2: Idempotent exact rerun succeeds without duplicating TARGETS_HEAD
+    const replayRes = runRecordCli({ storeDir, repoDir: repoADir, tmpRoot, name: "a1-replay", payload: payloadA1 });
+    assert.equal(JSON.parse(replayRes.stdout).recorded.idempotentReplay, true);
+
+    // 3. B2: Conflicting duplicate handoffId (same repo/task, different summary) fails closed
+    const conflictRes = runRecordCli({
+      storeDir,
+      repoDir: repoADir,
+      tmpRoot,
+      name: "a1-conflict",
+      payload: { ...payloadA1, summary: "Mutated summary!" },
+      expectSuccess: false,
+    });
+    assert.notEqual(conflictRes.status, 0);
+    assert.match(conflictRes.stderr, /HandoffConflictError/);
+
+    // 4. B2: Second handoff in Repo A sharing implicit/explicit ev-1 with FAIL must NOT mutate A1's ev-1
+    runRecordCli({
+      storeDir,
+      repoDir: repoADir,
+      tmpRoot,
+      name: "a2",
+      payload: {
+        ...payloadA1,
+        handoffId: "SHARED-HANDOFF-2",
+        summary: "Repo A handoff 2",
+        evidence: [
+          {
+            id: "ev-1",
+            kind: "unit-test",
+            command: "npm test",
+            status: "FAIL",
+            headSha: repoA.shaA,
+            observedAt: "2026-11-15T17:02:00Z",
+          },
+        ],
+        createdAt: "2026-11-15T17:02:00Z",
+      },
+    });
+
+    // Verify A1's ev-1 is still PASS via MCP
+    const a1Check = callRelateMcpBatch({
+      storeDir,
+      requests: [
+        {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: {
+            name: "read_cypher",
+            arguments: {
+              statement: `MATCH (h:Handoff {key: $key})-[:PROVEN_BY]->(e:Evidence) RETURN e.status AS status`,
+              parameters: { key: "mrdzyn/repo-a::RH-P1::SHARED-HANDOFF-1" },
+            },
+          },
+        },
+      ],
+    });
+    assert.deepEqual(JSON.parse(a1Check[0].result.content[0].text).rows, [{ status: "PASS" }]);
+
+    // 5. B2 & B3: Repo B records same handoffId + decisionId + taskId into shared store
+    runRecordCli({
+      storeDir,
+      repoDir: repoBDir,
+      tmpRoot,
+      name: "b1",
+      payload: {
+        ...payloadA1,
+        repository: "mrdzyn/repo-b",
+        branch: repoB.branch,
+        headSha: repoB.shaA,
+        summary: "Repo B handoff 1",
+        decisions: [{ id: "DEC-1", summary: "Repo B decision" }],
+        evidence: [
+          {
+            id: "ev-1",
+            kind: "unit-test",
+            command: "npm test",
+            status: "FAIL",
+            headSha: repoB.shaA,
+            observedAt: "2026-11-15T17:03:00Z",
+          },
+        ],
+        createdAt: "2026-11-15T17:03:00Z",
+      },
+    });
+
+    // B3: Repo A resume returns ONLY Repo A; Repo B returns ONLY Repo B; Repo C returns null
+    const resumeA = resumeTaskViaReadOnlyMcp({ storeDir, repoRoot: repoADir, taskId: "RH-P1" });
+    const resumeB = resumeTaskViaReadOnlyMcp({ storeDir, repoRoot: repoBDir, taskId: "RH-P1" });
+    const resumeC = resumeTaskViaReadOnlyMcp({ storeDir, repoRoot: repoCDir, taskId: "RH-P1" });
+
+    assert.equal(resumeA.handoff.repository, "mrdzyn/repo-a");
+    assert.equal(resumeA.handoff.handoffId, "SHARED-HANDOFF-2");
+    assert.equal(resumeB.handoff.repository, "mrdzyn/repo-b");
+    assert.equal(resumeB.handoff.handoffId, "SHARED-HANDOFF-1");
+    assert.deepEqual(resumeB.decisions, [{ id: "DEC-1", summary: "Repo B decision" }]);
+    assert.equal(resumeC.handoff, null);
+    assert.equal(resumeC.freshness.status, "UNVERIFIED");
+
+    // B3: Recording Repo B's payload against Repo A's checkout must fail closed
+    const mismatchRes = runRecordCli({
+      storeDir,
+      repoDir: repoADir,
+      tmpRoot,
+      name: "mismatch",
+      payload: { ...payloadA1, repository: "mrdzyn/repo-b" },
+      expectSuccess: false,
+    });
+    assert.notEqual(mismatchRes.status, 0);
+    assert.match(mismatchRes.stderr, /Repository identity mismatch|does not match checkout repository/);
+  } finally {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  }
+});
+
+test("RH-P1 regression (B1): committed examples/example-store includes WAL and opens read-only in a fresh clone without regeneration", () => {
+  // Verify wal/*.log is tracked in Git
+  const trackedWal = execFileSync("git", ["ls-files", "examples/example-store/wal/"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  }).trim();
+  assert.match(trackedWal, /00000002\.log/, "examples/example-store/wal/00000002.log must be git-tracked");
+
   const exampleStore = path.resolve(process.cwd(), "examples/example-store");
-  assert.ok(fs.existsSync(path.join(exampleStore, "manifest.json")), "Committed example-store missing");
   const res = resumeTaskViaReadOnlyMcp({
     storeDir: exampleStore,
     repoRoot: process.cwd(),

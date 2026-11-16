@@ -6,23 +6,23 @@
   "commit_ts": 1,
   "node_parts": [
     {
-      "path": "nodes/0-262144-eb48e7e183311dce1ebef31e3bf9782f.parquet",
+      "path": "nodes/0-262144-593da2bb4e5a44ea46362d033efaedcd.parquet",
       "id_lo": 0,
       "id_hi": 262144,
       "rows": 10,
-      "bytes": 1732
+      "bytes": 2402
     }
   ],
   "rel_parts": [
     {
-      "path": "relationships/0-262144-db8b8f0921cd001020d1e175839a9aa9.parquet",
+      "path": "relationships/0-262144-56858792c10d0172045aa272b9b06942.parquet",
       "id_lo": 0,
       "id_hi": 262144,
       "rows": 10,
       "bytes": 1381
     }
   ],
-  "bytes_per_node": 173.2,
+  "bytes_per_node": 240.2,
   "bytes_per_rel": 138.1,
   "codec": "parquet",
   "indexes": [],

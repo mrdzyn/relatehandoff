@@ -2,7 +2,7 @@
   "schemaVersion": "1.0.0",
   "handoffId": "RH-P1-EXAMPLE-1",
   "taskId": "RH-P1",
-  "repository": "mrdzyn/relatehandoff-synthetic",
+  "repository": "mrdzyn/relatehandoff",
   "branch": "phase-1/relate-handoff-mvp",
   "sourceAgent": "codex-writer",
   "targetAgent": "claude-reviewer",

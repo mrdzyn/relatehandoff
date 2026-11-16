@@ -3,12 +3,29 @@ import fs from "node:fs";
 import path from "node:path";
 
 const FULL_SHA_RE = /^[0-9a-f]{40}$/;
+const WINDOWS_DRIVE_RE = /^[A-Za-z]:/;
+const UNC_OR_DOUBLE_SLASH_RE = /^(\\\\|\/\/)/;
 
 export function isFullSha(sha) {
   return typeof sha === "string" && FULL_SHA_RE.test(sha);
 }
 
-export function getGitState(repoRoot) {
+export function normalizeRepositoryIdentity(rawRemote) {
+  if (typeof rawRemote !== "string") return null;
+  const trimmed = rawRemote.trim();
+  if (!trimmed) return null;
+
+  // Normalize common GitHub HTTPS/SSH URLs to owner/repo
+  const httpsMatch = trimmed.match(/^https?:\/\/github\.com\/([^/]+\/[^/]+?)(?:\.git)?\/?$/i);
+  if (httpsMatch) return httpsMatch[1];
+
+  const sshMatch = trimmed.match(/^git@github\.com:([^/]+\/[^/]+?)(?:\.git)?$/i);
+  if (sshMatch) return sshMatch[1];
+
+  return trimmed;
+}
+
+export function getGitState(repoRoot, options = {}) {
   const resolvedRoot = fs.realpathSync(repoRoot);
   const runGit = (args) =>
     execFileSync("git", args, {
@@ -16,6 +33,14 @@ export function getGitState(repoRoot) {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     }).trim();
+
+  const tryGit = (args) => {
+    try {
+      return runGit(args);
+    } catch {
+      return "";
+    }
+  };
 
   let headSha = "";
   let branch = "";
@@ -29,6 +54,19 @@ export function getGitState(repoRoot) {
     throw new Error(`Failed to inspect Git state at ${resolvedRoot}: ${err.message}`);
   }
 
+  const originRemote = normalizeRepositoryIdentity(tryGit(["remote", "get-url", "origin"]));
+  const configuredRepo = tryGit(["config", "--get", "relatehandoff.repository"]) || null;
+  const establishedRepo = originRemote || configuredRepo;
+  const explicitRepo = options.repository ? String(options.repository).trim() : null;
+
+  if (establishedRepo && explicitRepo && establishedRepo !== explicitRepo) {
+    throw new Error(
+      `Repository identity mismatch: checkout is '${establishedRepo}', but caller/payload specified '${explicitRepo}'`
+    );
+  }
+
+  const repository = establishedRepo || explicitRepo || null;
+
   const dirtyFiles = porcelain
     ? porcelain
         .split("\n")
@@ -38,6 +76,7 @@ export function getGitState(repoRoot) {
 
   return {
     repoRoot: resolvedRoot,
+    repository,
     headSha,
     branch,
     isDirty: dirtyFiles.length > 0,
@@ -52,7 +91,10 @@ export function validateRepoRelativePath(repoRoot, relPath) {
   if (relPath.includes("\0")) {
     throw new Error(`Artifact path contains null byte: ${relPath}`);
   }
-  if (path.isAbsolute(relPath)) {
+  if (WINDOWS_DRIVE_RE.test(relPath) || UNC_OR_DOUBLE_SLASH_RE.test(relPath)) {
+    throw new Error(`Artifact path must be repo-relative (drive/UNC paths rejected): ${relPath}`);
+  }
+  if (path.isAbsolute(relPath) || relPath.startsWith("/")) {
     throw new Error(`Artifact path must be relative, got absolute path: ${relPath}`);
   }
 
@@ -67,11 +109,19 @@ export function validateRepoRelativePath(repoRoot, relPath) {
     throw new Error(`Artifact path resolves outside repository root: ${relPath}`);
   }
 
-  if (fs.existsSync(candidate)) {
-    const realTarget = fs.realpathSync(candidate);
-    if (realTarget !== realRoot && !realTarget.startsWith(realRoot + path.sep)) {
-      throw new Error(`Artifact symlink escapes repository root: ${relPath}`);
+  // Walk every existing ancestor (handles symlink-parent escapes even when leaf doesn't exist)
+  let current = candidate;
+  while (current !== realRoot) {
+    if (fs.existsSync(current)) {
+      const realCurrent = fs.realpathSync(current);
+      if (realCurrent !== realRoot && !realCurrent.startsWith(realRoot + path.sep)) {
+        throw new Error(`Artifact symlink or symlink-parent escapes repository root: ${relPath}`);
+      }
+      break;
     }
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
   }
 
   return normalized;

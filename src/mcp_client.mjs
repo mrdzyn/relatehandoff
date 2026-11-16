@@ -4,6 +4,8 @@ import path from "node:path";
 import { getGitState } from "./git.mjs";
 import { evaluateFreshness } from "./freshness.mjs";
 
+export const MAX_DETAIL_ROWS = 100;
+
 export function resolveRelateCli(explicitBin) {
   const candidates = [
     explicitBin,
@@ -66,13 +68,31 @@ function parseReadCypherResult(rpcResponse) {
   return JSON.parse(text);
 }
 
+function assertBoundedRows(rows, label) {
+  if (rows.length > MAX_DETAIL_ROWS) {
+    throw new Error(
+      `BoundExceededError: ${label} returned more than ${MAX_DETAIL_ROWS} rows; failing closed`
+    );
+  }
+  return rows;
+}
+
 export function resumeTaskViaReadOnlyMcp({
   storeDir,
   repoRoot,
   taskId,
+  repository,
   remoteVerified = false,
   relateBin,
 }) {
+  const gitState = getGitState(repoRoot, { repository });
+  if (!gitState.repository) {
+    throw new Error(
+      "Repository identity is not established for resume: configure git remote 'origin', 'relatehandoff.repository', or pass repository"
+    );
+  }
+
+  const taskKey = `${gitState.repository}::${taskId}`;
   const requests = [
     { jsonrpc: "2.0", id: 1, method: "tools/list", params: {} },
     {
@@ -82,11 +102,12 @@ export function resumeTaskViaReadOnlyMcp({
       params: {
         name: "read_cypher",
         arguments: {
-          statement: `MATCH (r:Repository)-[:OWNS_TASK]->(t:Task {id: $taskId})<-[:HANDOFF_FOR]-(h:Handoff)-[:TARGETS_HEAD]->(c:Commit),
+          statement: `MATCH (r:Repository {name: $repository})-[:OWNS_TASK]->(t:Task {key: $taskKey})<-[:HANDOFF_FOR]-(h:Handoff)-[:TARGETS_HEAD]->(c:Commit),
        (h)-[:FROM_AGENT]->(sa:Agent),
        (h)-[:TO_AGENT]->(ta:Agent)
 RETURN r.name AS repository,
        t.id AS taskId,
+       h.key AS handoffKey,
        h.id AS handoffId,
        h.schemaVersion AS schemaVersion,
        h.branch AS branch,
@@ -98,7 +119,7 @@ RETURN r.name AS repository,
        ta.name AS targetAgent
 ORDER BY h.createdAt DESC
 LIMIT 1`,
-          parameters: { taskId },
+          parameters: { repository: gitState.repository, taskKey },
         },
       },
     },
@@ -115,7 +136,6 @@ LIMIT 1`,
 
   const handoffEnvelope = parseReadCypherResult(initialResponses[1]);
   const handoff = handoffEnvelope.rows?.[0] ?? null;
-  const gitState = getGitState(repoRoot);
 
   if (!handoff) {
     const freshness = evaluateFreshness({
@@ -127,6 +147,13 @@ LIMIT 1`,
     return { tools, handoff: null, evidence: [], artifacts: [], decisions: [], gitState, freshness };
   }
 
+  if (handoff.repository !== gitState.repository) {
+    throw new Error(
+      `Repository isolation violation: retrieved '${handoff.repository}', expected '${gitState.repository}'`
+    );
+  }
+
+  const detailLimit = MAX_DETAIL_ROWS + 1;
   const detailRequests = [
     {
       jsonrpc: "2.0",
@@ -135,10 +162,20 @@ LIMIT 1`,
       params: {
         name: "read_cypher",
         arguments: {
-          statement: `MATCH (h:Handoff {id: $handoffId})-[:PROVEN_BY]->(e:Evidence)-[:AT_COMMIT]->(c:Commit)
-RETURN e.id AS id, e.kind AS kind, e.command AS command, e.status AS status, c.sha AS headSha, e.observedAt AS observedAt
-ORDER BY e.id`,
-          parameters: { handoffId: handoff.handoffId },
+          statement: `MATCH (h:Handoff {key: $handoffKey})-[:PROVEN_BY]->(e:Evidence)-[:AT_COMMIT]->(c:Commit)
+RETURN e.id AS id,
+       e.kind AS kind,
+       e.command AS command,
+       e.status AS status,
+       c.sha AS headSha,
+       e.observedAt AS observedAt,
+       e.executionMode AS executionMode,
+       e.validationProfile AS validationProfile,
+       e.exitCode AS exitCode,
+       e.attestationSha256 AS attestationSha256
+ORDER BY e.id
+LIMIT ${detailLimit}`,
+          parameters: { handoffKey: handoff.handoffKey },
         },
       },
     },
@@ -149,10 +186,11 @@ ORDER BY e.id`,
       params: {
         name: "read_cypher",
         arguments: {
-          statement: `MATCH (h:Handoff {id: $handoffId})-[:CITES]->(a:Artifact)
+          statement: `MATCH (h:Handoff {key: $handoffKey})-[:CITES]->(a:Artifact)
 RETURN a.path AS path
-ORDER BY a.path`,
-          parameters: { handoffId: handoff.handoffId },
+ORDER BY a.path
+LIMIT ${detailLimit}`,
+          parameters: { handoffKey: handoff.handoffKey },
         },
       },
     },
@@ -163,19 +201,23 @@ ORDER BY a.path`,
       params: {
         name: "read_cypher",
         arguments: {
-          statement: `MATCH (h:Handoff {id: $handoffId})-[:DECIDED]->(d:Decision)
+          statement: `MATCH (h:Handoff {key: $handoffKey})-[:DECIDED]->(d:Decision)
 RETURN d.id AS id, d.summary AS summary
-ORDER BY d.id`,
-          parameters: { handoffId: handoff.handoffId },
+ORDER BY d.id
+LIMIT ${detailLimit}`,
+          parameters: { handoffKey: handoff.handoffKey },
         },
       },
     },
   ];
 
   const detailResponses = callRelateMcpBatch({ storeDir, requests: detailRequests, relateBin });
-  const evidence = parseReadCypherResult(detailResponses[0]).rows ?? [];
-  const artifacts = (parseReadCypherResult(detailResponses[1]).rows ?? []).map((r) => r.path);
-  const decisions = parseReadCypherResult(detailResponses[2]).rows ?? [];
+  const evidence = assertBoundedRows(parseReadCypherResult(detailResponses[0]).rows ?? [], "evidence");
+  const artifacts = assertBoundedRows(
+    parseReadCypherResult(detailResponses[1]).rows ?? [],
+    "artifacts"
+  ).map((r) => r.path);
+  const decisions = assertBoundedRows(parseReadCypherResult(detailResponses[2]).rows ?? [], "decisions");
 
   const freshness = evaluateFreshness({
     handoff,

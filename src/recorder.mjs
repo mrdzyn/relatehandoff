@@ -1,14 +1,102 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { Database } from "@relate/relate";
+import { runTrustedValidation } from "./attestation.mjs";
+import { getGitState } from "./git.mjs";
 import { validateHandoffPayload } from "./schema.mjs";
 
-export function recordHandoff({ storeDir, repoRoot, payload }) {
+function canonicalFingerprint(validated) {
+  const canonical = {
+    schemaVersion: validated.schemaVersion,
+    handoffId: validated.handoffId,
+    taskId: validated.taskId,
+    repository: validated.repository,
+    branch: validated.branch,
+    sourceAgent: validated.sourceAgent,
+    targetAgent: validated.targetAgent,
+    headSha: validated.headSha,
+    summary: validated.summary,
+    nextAction: validated.nextAction,
+    decisions: [...validated.decisions].sort((a, b) => a.id.localeCompare(b.id)),
+    artifacts: [...validated.artifacts].sort(),
+    evidence: [...validated.evidence]
+      .map((e) => ({
+        id: e.id,
+        kind: e.kind,
+        command: e.command,
+        status: e.status,
+        headSha: e.headSha,
+        observedAt: e.observedAt,
+        executionMode: e.executionMode,
+        validationProfile: e.validationProfile,
+        exitCode: e.exitCode,
+        attestationSha256: e.attestationSha256,
+      }))
+      .sort((a, b) => a.id.localeCompare(b.id)),
+  };
+  return crypto.createHash("sha256").update(JSON.stringify(canonical), "utf8").digest("hex");
+}
+
+export function recordHandoff({
+  storeDir,
+  repoRoot,
+  payload,
+  repository,
+  validationProfile,
+  allowFixtureCheckout = false,
+}) {
   if (!storeDir || typeof storeDir !== "string") {
     throw new Error("storeDir must be a non-empty string");
   }
   const resolvedStore = path.resolve(storeDir);
-  const validated = validateHandoffPayload(payload, repoRoot);
+
+  let workingPayload = payload && typeof payload === "object" && !Array.isArray(payload)
+    ? { ...payload }
+    : payload;
+
+  if (!allowFixtureCheckout) {
+    const gitState = getGitState(repoRoot, { repository });
+    if (!gitState.repository) {
+      throw new Error(
+        "Repository identity is not established: configure git remote 'origin', 'relatehandoff.repository', or pass --repo-id"
+      );
+    }
+    if (workingPayload && typeof workingPayload === "object" && !Array.isArray(workingPayload)) {
+      if (workingPayload.repository !== gitState.repository) {
+        throw new Error(
+          `Payload repository '${workingPayload.repository}' does not match checkout repository '${gitState.repository}'`
+        );
+      }
+      if (workingPayload.branch !== gitState.branch) {
+        throw new Error(
+          `Payload branch '${workingPayload.branch}' does not match checkout branch '${gitState.branch}'`
+        );
+      }
+      if (workingPayload.headSha !== gitState.headSha) {
+        throw new Error(
+          `Payload headSha '${workingPayload.headSha}' does not match checkout HEAD '${gitState.headSha}'`
+        );
+      }
+    }
+  }
+
+  if (validationProfile) {
+    const trustedEv = runTrustedValidation({
+      repoRoot,
+      repository: workingPayload.repository,
+      headSha: workingPayload.headSha,
+      validationProfile,
+    });
+    const existingEv = Array.isArray(workingPayload.evidence) ? workingPayload.evidence : [];
+    workingPayload.evidence = [...existingEv, trustedEv];
+  }
+
+  const validated = validateHandoffPayload(workingPayload, repoRoot);
+  const fingerprint = canonicalFingerprint(validated);
+
+  const taskKey = `${validated.repository}::${validated.taskId}`;
+  const handoffKey = `${taskKey}::${validated.handoffId}`;
 
   fs.mkdirSync(path.dirname(resolvedStore), { recursive: true });
   const db = Database.open(resolvedStore);
@@ -16,78 +104,147 @@ export function recordHandoff({ storeDir, repoRoot, payload }) {
 
   conn.begin();
   try {
+    const existing = conn.query(
+      `MATCH (h:Handoff {key: $handoffKey})
+       RETURN h.fingerprint AS fingerprint`,
+      { handoffKey }
+    );
+
+    if (existing.rows.length > 0) {
+      const existingFp = existing.rows[0].fingerprint;
+      if (existingFp === fingerprint) {
+        conn.commit();
+        db.checkpoint();
+        return { ...validated, idempotentReplay: true };
+      }
+      throw new Error(
+        `HandoffConflictError: Handoff '${validated.handoffId}' already exists for '${taskKey}' with different content; refusing to mutate`
+      );
+    }
+
     conn.query(
       `MERGE (r:Repository {name: $repository})
-       MERGE (t:Task {id: $taskId})
+       MERGE (t:Task {key: $taskKey})
+       ON CREATE SET t.id = $taskId, t.repository = $repository
        MERGE (r)-[:OWNS_TASK]->(t)
        MERGE (sa:Agent {name: $sourceAgent})
        MERGE (ta:Agent {name: $targetAgent})
        MERGE (c:Commit {sha: $headSha})
-       MERGE (h:Handoff {id: $handoffId})
-       SET h.schemaVersion = $schemaVersion,
-           h.branch = $branch,
-           h.headSha = $headSha,
-           h.summary = $summary,
-           h.nextAction = $nextAction,
-           h.createdAt = $createdAt
-       MERGE (h)-[:HANDOFF_FOR]->(t)
-       MERGE (h)-[:FROM_AGENT]->(sa)
-       MERGE (h)-[:TO_AGENT]->(ta)
-       MERGE (h)-[:TARGETS_HEAD]->(c)`,
+       CREATE (h:Handoff {
+         key: $handoffKey,
+         id: $handoffId,
+         repository: $repository,
+         taskId: $taskId,
+         schemaVersion: $schemaVersion,
+         branch: $branch,
+         headSha: $headSha,
+         summary: $summary,
+         nextAction: $nextAction,
+         createdAt: $createdAt,
+         fingerprint: $fingerprint
+       })
+       CREATE (h)-[:HANDOFF_FOR]->(t)
+       CREATE (h)-[:FROM_AGENT]->(sa)
+       CREATE (h)-[:TO_AGENT]->(ta)
+       CREATE (h)-[:TARGETS_HEAD]->(c)`,
       {
         repository: validated.repository,
+        taskKey,
         taskId: validated.taskId,
         sourceAgent: validated.sourceAgent,
         targetAgent: validated.targetAgent,
         headSha: validated.headSha,
+        handoffKey,
         handoffId: validated.handoffId,
         schemaVersion: validated.schemaVersion,
         branch: validated.branch,
         summary: validated.summary,
         nextAction: validated.nextAction,
         createdAt: validated.createdAt,
+        fingerprint,
       }
     );
 
     for (const d of validated.decisions) {
+      const decisionKey = `${handoffKey}::${d.id}`;
       conn.query(
-        `MATCH (h:Handoff {id: $handoffId})
-         MERGE (d:Decision {id: $id})
-         SET d.summary = $summary
-         MERGE (h)-[:DECIDED]->(d)`,
-        { handoffId: validated.handoffId, id: d.id, summary: d.summary }
+        `MATCH (h:Handoff {key: $handoffKey})
+         CREATE (d:Decision {
+           key: $decisionKey,
+           id: $id,
+           repository: $repository,
+           taskId: $taskId,
+           handoffId: $handoffId,
+           summary: $summary
+         })
+         CREATE (h)-[:DECIDED]->(d)`,
+        {
+          handoffKey,
+          decisionKey,
+          id: d.id,
+          repository: validated.repository,
+          taskId: validated.taskId,
+          handoffId: validated.handoffId,
+          summary: d.summary,
+        }
       );
     }
 
     for (const artifactPath of validated.artifacts) {
+      const artifactKey = `${validated.repository}::${artifactPath}`;
       conn.query(
-        `MATCH (h:Handoff {id: $handoffId})
-         MERGE (a:Artifact {path: $path})
-         MERGE (h)-[:CITES]->(a)`,
-        { handoffId: validated.handoffId, path: artifactPath }
+        `MATCH (h:Handoff {key: $handoffKey})
+         MERGE (a:Artifact {key: $artifactKey})
+         ON CREATE SET a.path = $path, a.repository = $repository
+         CREATE (h)-[:CITES]->(a)`,
+        {
+          handoffKey,
+          artifactKey,
+          path: artifactPath,
+          repository: validated.repository,
+        }
       );
     }
 
     for (const ev of validated.evidence) {
+      const evidenceKey = `${handoffKey}::${ev.id}`;
       conn.query(
-        `MATCH (h:Handoff {id: $handoffId})
+        `MATCH (h:Handoff {key: $handoffKey})
          MERGE (ec:Commit {sha: $headSha})
-         MERGE (e:Evidence {id: $id})
-         SET e.kind = $kind,
-             e.command = $command,
-             e.status = $status,
-             e.headSha = $headSha,
-             e.observedAt = $observedAt
-         MERGE (h)-[:PROVEN_BY]->(e)
-         MERGE (e)-[:AT_COMMIT]->(ec)`,
+         CREATE (e:Evidence {
+           key: $evidenceKey,
+           id: $id,
+           repository: $repository,
+           taskId: $taskId,
+           handoffId: $handoffId,
+           kind: $kind,
+           command: $command,
+           status: $status,
+           headSha: $headSha,
+           observedAt: $observedAt,
+           executionMode: $executionMode,
+           validationProfile: $validationProfile,
+           exitCode: $exitCode,
+           attestationSha256: $attestationSha256
+         })
+         CREATE (h)-[:PROVEN_BY]->(e)
+         CREATE (e)-[:AT_COMMIT]->(ec)`,
         {
-          handoffId: validated.handoffId,
+          handoffKey,
+          evidenceKey,
           id: ev.id,
+          repository: validated.repository,
+          taskId: validated.taskId,
+          handoffId: validated.handoffId,
           kind: ev.kind,
           command: ev.command,
           status: ev.status,
           headSha: ev.headSha,
           observedAt: ev.observedAt,
+          executionMode: ev.executionMode,
+          validationProfile: ev.validationProfile,
+          exitCode: ev.exitCode,
+          attestationSha256: ev.attestationSha256,
         }
       );
     }
@@ -97,11 +254,11 @@ export function recordHandoff({ storeDir, repoRoot, payload }) {
     try {
       conn.rollback();
     } catch {
-      // ignore rollback failure if already rolled back
+      // ignore rollback failure
     }
     throw err;
   }
 
   db.checkpoint();
-  return validated;
+  return { ...validated, idempotentReplay: false };
 }

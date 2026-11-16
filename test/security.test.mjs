@@ -34,7 +34,7 @@ function basePayload(overrides = {}) {
   };
 }
 
-test("Security negative: rejects malformed payloads and invalid Git SHAs", () => {
+test("Security negative: rejects malformed payloads, invalid Git SHAs, and duplicate IDs", () => {
   const repoRoot = process.cwd();
   assert.throws(() => validateHandoffPayload(null, repoRoot), /JSON object/);
   assert.throws(() => validateHandoffPayload([], repoRoot), /JSON object/);
@@ -50,27 +50,75 @@ test("Security negative: rejects malformed payloads and invalid Git SHAs", () =>
     () => validateHandoffPayload(basePayload({ handoffId: "bad id with spaces" }), repoRoot),
     /handoffId/
   );
+  assert.throws(
+    () =>
+      validateHandoffPayload(
+        basePayload({
+          decisions: [
+            { id: "DEC-1", summary: "First" },
+            { id: "DEC-1", summary: "Duplicate" },
+          ],
+        }),
+        repoRoot
+      ),
+    /Duplicate decision id/
+  );
+  assert.throws(
+    () =>
+      validateHandoffPayload(
+        basePayload({
+          evidence: [
+            {
+              id: "EV-DUP",
+              kind: "test",
+              command: "npm test",
+              status: "PASS",
+              headSha: VALID_SHA,
+              observedAt: "2026-11-15T17:00:00Z",
+            },
+            {
+              id: "EV-DUP",
+              kind: "test",
+              command: "npm test",
+              status: "FAIL",
+              headSha: VALID_SHA,
+              observedAt: "2026-11-15T17:01:00Z",
+            },
+          ],
+        }),
+        repoRoot
+      ),
+    /Duplicate evidence id/
+  );
 });
 
-test("Security negative: rejects path traversal, absolute paths, null bytes, and symlink escapes", () => {
+test("Security negative: rejects path traversal, Windows drive/UNC, symlink and symlink-parent escapes", () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "relatehandoff-sec-"));
   const repoDir = path.join(tmpRoot, "repo");
+  const outsideDir = path.join(tmpRoot, "outside-dir");
   const outsideFile = path.join(tmpRoot, "outside-secret.txt");
   fs.mkdirSync(repoDir, { recursive: true });
+  fs.mkdirSync(outsideDir, { recursive: true });
   fs.writeFileSync(outsideFile, "do not read\n", "utf8");
   fs.symlinkSync(outsideFile, path.join(repoDir, "escape-link.txt"));
+  fs.symlinkSync(outsideDir, path.join(repoDir, "escape-dir"));
 
   try {
     for (const badPath of [
       "../outside-secret.txt",
       "a/../../outside-secret.txt",
       "/etc/passwd",
+      "C:\\Windows\\System32\\drivers\\etc\\hosts",
+      "D:/secret.txt",
+      "\\\\server\\share\\secret.txt",
+      "//server/share/secret.txt",
       "foo\0bar.txt",
       "escape-link.txt",
+      "escape-dir/nonexistent-leaf.txt",
     ]) {
       assert.throws(
         () => validateHandoffPayload(basePayload({ artifacts: [badPath] }), repoDir),
-        /escapes repository root|must be relative|null byte|outside repository root/i,
+        /escapes repository root|must be relative|drive\/UNC|null byte|outside repository root/i,
         `Expected rejection for path: ${badPath}`
       );
     }
@@ -92,12 +140,17 @@ test("Security negative: rejects secret patterns and sensitive artifact filename
     () => validateHandoffPayload(basePayload({ nextAction: fakePrivateKey }), repoRoot),
     /secret\/token pattern/
   );
-  assert.throws(
-    () => validateHandoffPayload(basePayload({ artifacts: [".env"] }), repoRoot),
-    /sensitive artifact filename/
-  );
-  assert.throws(
-    () => validateHandoffPayload(basePayload({ artifacts: ["keys/id_ed25519"] }), repoRoot),
-    /sensitive artifact filename/
-  );
+  for (const sensitivePath of [
+    ".env",
+    "keys/id_ed25519",
+    ".aws/credentials",
+    ".npmrc",
+    "config/secrets.json",
+  ]) {
+    assert.throws(
+      () => validateHandoffPayload(basePayload({ artifacts: [sensitivePath] }), repoRoot),
+      /sensitive artifact filename/,
+      `Expected rejection for sensitive artifact: ${sensitivePath}`
+    );
+  }
 });

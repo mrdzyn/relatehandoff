@@ -16,6 +16,7 @@ const recorded = recordHandoff({
   storeDir,
   repoRoot,
   payload,
+  allowFixtureCheckout: true,
 });
 
 console.log(
