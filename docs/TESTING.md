@@ -251,7 +251,7 @@ Document the matrix only when it adds value:
 
 ## Android signing validation
 
-For Android release artifacts, follow `release/android-signing.md`.
+For Android release artifacts only, first activate the Android capability and restore the relevant master-template signing guidance, then follow `release/android-signing.md`. This file is intentionally absent from the current CLI/MCP-only project.
 
 At minimum:
 - release CI must fail if required signing inputs are missing;
@@ -272,3 +272,20 @@ Before release:
 - confirm migration/rollback readiness;
 - complete platform/store-specific checks;
 - complete the applicable release QA/manual validation gate.
+
+
+## RelateHandoff project testing profile (Phase 0)
+
+The project is currently **bootstrap-only**: no runtime package or Relate integration exists. `config/validation-contract.json` uses executable Python bootstrap and tracked-secret checks; build is explicitly N/A until Phase 1 creates an application. This is not a permanent build bypass.
+
+Run on an actual clean checkout from the repository root. On macOS/Linux use `python3`; on Windows use `py -3` or a verified `python` executable:
+
+```bash
+python3 scripts/test_bootstrap.py
+python3 scripts/test_entrypoints.py
+python3 scripts/check_secret_tracking.py
+python3 scripts/validate_project_profile.py --repository mrdzyn/relatehandoff
+python3 scripts/validate.py --repository mrdzyn/relatehandoff
+```
+
+The bootstrap test checks retained orchestration-document references, preventing the F1 regression from escaping the 7/7 gate. The retained `test_entrypoints.py` governance suite is a **separate mandatory Phase 0 check**: it runs validation as part of its own negative tests, so do not naively invoke it from the validation contract (which would recursively call itself). Every future runtime change must replace the build N/A and add real test/build/security commands, plus at least one live Relate integration check. GitHub's inherited manual-dispatch baseline is supplementary, not evidence that the application has been built. Evidence must be tied to the exact full proposed PR SHA.

@@ -1,27 +1,30 @@
 # Project Status
 
 ## Project
-- **Name:** AI-Native Project Template
-- **Current phase:** P8.0 M7 — Agent Orchestration & Token Efficiency (merged)
-- **Status:** M7 governance integrated into `main`; awaiting owner selection of the next task to measure actual token and subagent efficiency.
+- **Name:** RelateHandoff
+- **Current phase:** RH-P0 — greenfield repository initialization
+- **Status:** Initial independent audit PARTIAL at `a6e04d25`; targeted remediation committed; fresh exact-HEAD local checks and independent re-audit pending; runtime not started
 - **Primary branch:** `main`
-- **Approved starting baseline:** `6916912bbafb50b10b276988fbf20dafdfa5e435` (M7 PR #29 squash merge)
-- **Working branch:** `main`
-- **Active task:** `tasks/P8.0-m7-agent-orchestration-token-efficiency.md`
-- **Active handoff:** None
+- **Starting baseline:** `ab028917b134b362d3a292c77f1b3d212d94e9a5` (new repository generated from mrdzyn/ai-native-project-template)
+- **Working branch:** `phase-0/relatehandoff-initialization`
+- **Active task:** `tasks/RH-P0-greenfield-bootstrap.md`
+- **Active handoff:** RH-P0-H2
 
-## Completed / parallel state
-- M5 local-first validation and M6 session continuity are merged into `main`.
-- Release-scope preservation governance (PR #28) is merged into `main`; a closed promotion gate never authorizes feature descoping.
-- M7 [PR #29](https://github.com/mrdzyn/ai-native-project-template/pull/29) was independently reviewed, owner-approved, and squash-merged at `6916912bbafb50b10b276988fbf20dafdfa5e435`. It introduces one-primary-agent default, bounded optional subagents, minimal verified context, soft token budgets, truthful telemetry, and focused agent test loops.
-- M7's independent audit reported PASS for pre-merge safeguards and local validation, with post-merge STATUS transition pending. This docs-only follow-up aligns the intended `main` state; exact-HEAD local M6 recovery still requires verification after its approved merge.
-- No production code, feature scope, release verifier, branch protections, deployment, or release was changed by M7.
-
-## Current decisions and gates
-- Local-first mandatory exact-HEAD validation, independent review, and separate human approvals remain required.
-- Soft token budgets are planning aids, never permission to skip security, tests, or release obligations.
-- M7 token/cost savings must be measured from available real telemetry on comparable authorized tasks; otherwise report NOT AVAILABLE.
-- Do not start new product work, merge, deploy, or publish solely from this status. Owner authorization remains required.
+## Foundation decisions in review
+- Project mode selected; no design/store/integration capability packs active for the initial CLI/MCP-only MVP.
+- Proposed Node.js/TypeScript recorder, persistent local Relate directory graph, and read-only MCP consumer; no working runtime yet.
+- Local Git and canonical repository files remain authoritative; remote GitHub state requires a live read when needed.
+- No user data, secrets, unreviewed license, production deployment, or cloud agent access will be included in the demo.
+- Licensing, actual runtime selection/compatibility, and judge evidence remain open gates.
 
 ## Next
-Request the owner's selection of the next authorized comparable coding task for evidence-based M7 token-efficiency measurement.
+1. Revalidate the *current final* Draft PR HEAD on a clean checkout: `scripts/test_bootstrap.py`, `scripts/test_entrypoints.py`, `scripts/check_secret_tracking.py`, `scripts/validate_project_profile.py`, and `scripts/validate.py`.
+2. Request Claude or another independent reviewer to re-audit F1–F3 at the exact updated HEAD; F4 is a timezone misunderstanding and F5 is informational. Obtain separate human owner approval for the P0 merge.
+3. Next proposed task: `tasks/RH-P1-relate-handoff-mvp.md`. Only after P0 approval start implementing the *real* persistent Relate store, read-only MCP handoff and exact-HEAD freshness proof.
+
+## Verification truth
+- GitHub static inspection: inherited template inspected; targeted remediation files and current PR HEAD confirmed on connected GitHub.
+- Runtime integration: NOT IMPLEMENTED.
+- Local foundation checks: owner Mac and independent Claude Linux both reported 7/7 PASS at *superseded* HEAD `a6e04d25bc17434f3e8a8d1d47b303f0a82c0b59`. The retained entrypoints self-test failed at that head. **Corrected final PR HEAD NOT TESTED YET.** No Relate integration tests exist.
+- Hosted CI: NOT RUN / optional under inherited local-first policy.
+- Independent audit: Claude PARTIAL at superseded HEAD (F1–F3 remediated, F4 timezone clarified, F5 information-only); new-HEAD re-audit PENDING. Human merge approval PENDING.

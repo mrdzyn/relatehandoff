@@ -33,7 +33,7 @@ Document the categories the product handles:
 - Production secrets must not be copied into documentation, tickets, prompts, or logs.
 - Provide sanitized `.env.example` or equivalent when configuration guidance is needed.
 - Rotate exposed credentials immediately and treat repository history as compromised if a secret was committed.
-- Android release/upload keystores, private keys, and signing passwords are critical secrets. Follow `release/android-signing.md`.
+- Android release/upload keystores, private keys, and signing passwords are critical secrets. After an owner-approved Android capability selection, restore the signing pack from the master template and follow `release/android-signing.md`; it is not present in this initial CLI/MCP repository.
 - Base64-encoded keystore content is still secret key material; encoding does not make it safe to commit or log.
 - Do not reuse one Android release/upload private key or one password set across unrelated apps by default; standardize secret names, not secret values.
 - Never configure a production Android release to fall back to debug signing when release secrets are absent.
@@ -110,3 +110,16 @@ Before production release, confirm:
 - configuration and secrets are supplied through approved mechanisms;
 - migration and rollback implications are understood;
 - security/privacy-impacting changes received human review.
+
+
+## RelateHandoff-specific threat model (proposed)
+
+- **Sensitive inputs:** agent prompts, handoff summaries, filesystem paths, private source code, Git history, review comments, credentials in tool output. The Phase 0 repository collects none of them; Phase 1 must persist *sanitized* handoff metadata only.
+- **Default exposure:** a private local directory store; consumer MCP servers operate read-only over `stdio`. Do not expose an unauthenticated HTTP or non-loopback listener.
+- **Trust:** all agent-submitted claims are untrusted; never accept the words "PASS" or "approved" as verified without checking actual source/evidence/full commit SHA. Repo `AGENTS.md`, canonical files, local Git and live GitHub metadata remain higher-authority sources.
+- **Writes:** only an explicit local recorder with validation and a single-writer policy. Do not grant unrestricted writable Cypher to untrusted clients.
+- **Paths:** canonicalize paths and deny directory traversal, symlink escape and writes outside the selected workspace.
+- **Data minimization:** no full transcripts, production secrets, client data or private code in committed demo stores. Redact, sample and review before exporting.
+- **Integrity:** immutable evidence identity (SHA, timestamp, origin and optional content hash); stale/missing/contradictory evidence blocks readiness, not work on unrelated tasks.
+- **Cross-device:** graph export/sync is not part of the MVP. A portable file is not automatically encrypted or access-controlled. No promises of confidentiality solely from "offline".
+- **Release:** owner approval, applicable third-party licenses and real negative security tests required before publishing.

@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+"""Phase 0 non-runtime foundation assertions; intentionally offline."""
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+profile = json.loads((ROOT / "config/project-profile.json").read_text(encoding="utf-8"))
+contract = json.loads((ROOT / "config/validation-contract.json").read_text(encoding="utf-8"))
+status = (ROOT / "docs/STATUS.md").read_text(encoding="utf-8")
+handoffs = (ROOT / "docs/HANDOFFS.md").read_text(encoding="utf-8")
+assert profile["repositoryMode"] == "project"
+assert profile["capabilities"] == {"design": False, "storeRelease": False}
+assert profile["platforms"] == profile["storefronts"] == profile["integrations"] == []
+assert "**Active task:** `tasks/RH-P0-greenfield-bootstrap.md`" in status
+assert "tasks/RH-P1-relate-handoff-mvp.md" in status
+assert "RelateHandoff" in status
+assert "<!-- HANDOFF_ENTRIES_START -->" in handoffs
+assert "<!-- HANDOFF_ENTRIES_END -->" in handoffs
+assert "<!-- MASTER_TEMPLATE_HANDOFFS_START -->" not in handoffs
+assert not (ROOT / ".github/workflows/template-integrity.yml").exists()
+assert (ROOT / ".github/workflows/ci.yml").exists()
+assert (ROOT / ".github/workflows/common-validation.yml").exists()
+assert contract["categories"]["build"]["status"] == "not_applicable"
+assert (ROOT / "docs/HACKATHON.md").exists()
+# Ensure that retaining orchestration governance also retains its discoverable links.
+for required in ("AGENTS.md", "README.md", "docs/TESTING.md", "tasks/TEMPLATE.md", ".agent/TASK-CONTRACT.md"):
+    assert "docs/AGENT-ORCHESTRATION.md" in (ROOT / required).read_text(encoding="utf-8"), (
+        f"Missing agent orchestration reference in {required}"
+    )
+assert "capabilities" in (ROOT / "config/project-profile.json").read_text(encoding="utf-8")
+assert "restore only selected guidance" in (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+print("Phase 0 bootstrap assertions: PASS (not a Relate integration test)")
