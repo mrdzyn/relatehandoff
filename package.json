@@ -1,0 +1,13 @@
+{
+  "name": "relatehandoff",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RelateHandoff — local-first agent handoff and evidence graph (RH-P1 integration spike)",
+  "type": "module",
+  "scripts": {
+    "test:spike": "node --test spike/relate_spike.test.mjs"
+  },
+  "dependencies": {
+    "@relate/relate": "1.0.1"
+  }
+}
