@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0.0",
+  "handoffId": "RH-P1-EXAMPLE-1",
+  "taskId": "RH-P1",
+  "repository": "mrdzyn/relatehandoff-synthetic",
+  "branch": "phase-1/relate-handoff-mvp",
+  "sourceAgent": "codex-writer",
+  "targetAgent": "claude-reviewer",
+  "headSha": "1111111111111111111111111111111111111111",
+  "summary": "Sanitized synthetic handoff fixture demonstrating typed provenance in a persistent Relate directory store.",
+  "nextAction": "Resume via read-only Relate MCP and verify exact local Git HEAD freshness before any review or merge.",
+  "decisions": [
+    {
+      "id": "DEC-EXAMPLE-1",
+      "summary": "Use local Relate directory store with read-only MCP stdio for cross-agent handoff retrieval."
+    }
+  ],
+  "artifacts": [
+    "README.md",
+    "docs/ARCHITECTURE.md"
+  ],
+  "evidence": [
+    {
+      "id": "EV-EXAMPLE-1",
+      "kind": "integration-test",
+      "command": "npm test",
+      "status": "PASS",
+      "headSha": "1111111111111111111111111111111111111111",
+      "observedAt": "2026-11-15T17:00:00Z"
+    }
+  ],
+  "createdAt": "2026-11-15T17:00:00Z"
+}

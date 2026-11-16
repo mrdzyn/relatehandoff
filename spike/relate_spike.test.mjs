@@ -19,6 +19,7 @@ function runNodeSubprocess(code, env = {}) {
 function findRunnableRelateCli() {
   const candidates = [
     process.env.RELATE_BIN,
+    path.join(os.homedir(), ".cargo/bin/relate"),
     "/tmp/relate-cargo/bin/relate",
     "relate",
   ].filter(Boolean);

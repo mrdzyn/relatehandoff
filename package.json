@@ -8,7 +8,9 @@
     "relatehandoff": "src/cli.mjs"
   },
   "scripts": {
-    "build": "node --check src/git.mjs && node --check src/schema.mjs && node --check src/freshness.mjs && node --check src/recorder.mjs && node --check src/mcp_client.mjs && node --check src/cli.mjs && node src/cli.mjs --help > /dev/null",
+    "build": "node --check src/git.mjs && node --check src/schema.mjs && node --check src/freshness.mjs && node --check src/recorder.mjs && node --check src/mcp_client.mjs && node --check src/cli.mjs && node --check scripts/demo.mjs && node --check examples/generate_example.mjs && node src/cli.mjs --help > /dev/null",
+    "demo": "node scripts/demo.mjs",
+    "generate:example": "node examples/generate_example.mjs",
     "test": "RELATE_REQUIRE_CLI=1 node --test spike/relate_spike.test.mjs test/e2e_mcp.test.mjs test/security.test.mjs",
     "test:spike": "node --test spike/relate_spike.test.mjs",
     "test:e2e": "RELATE_REQUIRE_CLI=1 node --test test/e2e_mcp.test.mjs",

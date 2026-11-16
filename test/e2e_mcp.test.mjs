@@ -122,23 +122,63 @@ test("RH-P1 E2E: schema-validated write, real read-only MCP resume, dirty/SHA-B 
     assert.ok(staleRes.freshness.reasons.some((r) => r.startsWith("EVIDENCE_SHA_MISMATCH")));
 
     // 5. Missing evidence at SHA-B must report UNVERIFIED
-    recordHandoff({
-      storeDir,
-      repoRoot: repoDir,
-      payload: {
+    const inputJson2 = path.join(tmpRoot, "handoff-2.json");
+    fs.writeFileSync(
+      inputJson2,
+      JSON.stringify({
         ...payloadA,
         handoffId: "RH-P1-SYNTH-2",
         headSha: shaB,
         evidence: [],
         createdAt: "2026-11-15T17:05:00Z",
-      },
-    });
+      }),
+      "utf8"
+    );
+    const recRes2 = spawnSync(
+      process.execPath,
+      ["src/cli.mjs", "record", "--store", storeDir, "--repo", repoDir, "--input", inputJson2],
+      { cwd: process.cwd(), encoding: "utf8" }
+    );
+    assert.equal(recRes2.status, 0, `CLI record 2 failed: ${recRes2.stderr}`);
     const noEvRes = resumeTaskViaReadOnlyMcp({ storeDir, repoRoot: repoDir, taskId: "RH-P1" });
     assert.equal(noEvRes.handoff.handoffId, "RH-P1-SYNTH-2");
     assert.equal(noEvRes.freshness.status, "UNVERIFIED");
     assert.ok(noEvRes.freshness.reasons.includes("MISSING_TEST_EVIDENCE"));
 
-    // 6. Read-only MCP refuses writes
+    // 6. Failed evidence at SHA-B must report BLOCKED
+    const inputJson3 = path.join(tmpRoot, "handoff-3.json");
+    fs.writeFileSync(
+      inputJson3,
+      JSON.stringify({
+        ...payloadA,
+        handoffId: "RH-P1-SYNTH-3",
+        headSha: shaB,
+        evidence: [
+          {
+            id: "EV-FAIL-1",
+            kind: "unit-test",
+            command: "npm test",
+            status: "FAIL",
+            headSha: shaB,
+            observedAt: "2026-11-15T17:10:00Z",
+          },
+        ],
+        createdAt: "2026-11-15T17:10:00Z",
+      }),
+      "utf8"
+    );
+    const recRes3 = spawnSync(
+      process.execPath,
+      ["src/cli.mjs", "record", "--store", storeDir, "--repo", repoDir, "--input", inputJson3],
+      { cwd: process.cwd(), encoding: "utf8" }
+    );
+    assert.equal(recRes3.status, 0, `CLI record 3 failed: ${recRes3.stderr}`);
+    const failedEvRes = resumeTaskViaReadOnlyMcp({ storeDir, repoRoot: repoDir, taskId: "RH-P1" });
+    assert.equal(failedEvRes.handoff.handoffId, "RH-P1-SYNTH-3");
+    assert.equal(failedEvRes.freshness.status, "BLOCKED");
+    assert.ok(failedEvRes.freshness.reasons.includes("EVIDENCE_FAILED:EV-FAIL-1"));
+
+    // 7. Read-only MCP refuses writes
     const mcpWriteAttempt = callRelateMcpBatch({
       storeDir,
       requests: [
@@ -163,4 +203,18 @@ test("RH-P1 E2E: schema-validated write, real read-only MCP resume, dirty/SHA-B 
   } finally {
     fs.rmSync(tmpRoot, { recursive: true, force: true });
   }
+});
+
+test("RH-P1 E2E: committed examples/example-store is portable and readable via read-only MCP", () => {
+  const exampleStore = path.resolve(process.cwd(), "examples/example-store");
+  assert.ok(fs.existsSync(path.join(exampleStore, "manifest.json")), "Committed example-store missing");
+  const res = resumeTaskViaReadOnlyMcp({
+    storeDir: exampleStore,
+    repoRoot: process.cwd(),
+    taskId: "RH-P1",
+  });
+  assert.deepEqual(res.tools, ["read_cypher", "get_schema"]);
+  assert.equal(res.handoff.handoffId, "RH-P1-EXAMPLE-1");
+  assert.equal(res.handoff.headSha, "1111111111111111111111111111111111111111");
+  assert.equal(res.freshness.status, "STALE");
 });

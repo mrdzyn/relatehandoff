@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import os from "node:os";
 import path from "node:path";
 import { getGitState } from "./git.mjs";
 import { evaluateFreshness } from "./freshness.mjs";
@@ -7,6 +8,7 @@ export function resolveRelateCli(explicitBin) {
   const candidates = [
     explicitBin,
     process.env.RELATE_BIN,
+    path.join(os.homedir(), ".cargo/bin/relate"),
     "/tmp/relate-cargo/bin/relate",
     "relate",
   ].filter(Boolean);
