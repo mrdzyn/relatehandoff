@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Phase 0 non-runtime foundation assertions; intentionally offline."""
+"""Non-runtime repository foundation assertions across Phase 0 and Phase 1 handoff."""
 import json
 from pathlib import Path
 
@@ -11,7 +11,15 @@ handoffs = (ROOT / "docs/HANDOFFS.md").read_text(encoding="utf-8")
 assert profile["repositoryMode"] == "project"
 assert profile["capabilities"] == {"design": False, "storeRelease": False}
 assert profile["platforms"] == profile["storefronts"] == profile["integrations"] == []
-assert "**Active task:** `tasks/RH-P0-greenfield-bootstrap.md`" in status
+# Verify STATUS selects an existing, bounded task rather than freezing bootstrap to P0.
+active_task_line = next((line for line in status.splitlines() if line.startswith("- **Active task:** `")), None)
+assert active_task_line is not None, "Missing active task pointer"
+active_task_path = active_task_line.split("`")[1]
+assert active_task_path in {
+    "tasks/RH-P0-greenfield-bootstrap.md",
+    "tasks/RH-P1-relate-handoff-mvp.md",
+}, "Unexpected active task in P0/P1 foundation"
+assert (ROOT / active_task_path).is_file(), "STATUS active task file not found"
 assert "tasks/RH-P1-relate-handoff-mvp.md" in status
 assert "RelateHandoff" in status
 assert "<!-- HANDOFF_ENTRIES_START -->" in handoffs
@@ -29,4 +37,4 @@ for required in ("AGENTS.md", "README.md", "docs/TESTING.md", "tasks/TEMPLATE.md
     )
 assert "capabilities" in (ROOT / "config/project-profile.json").read_text(encoding="utf-8")
 assert "restore only selected guidance" in (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-print("Phase 0 bootstrap assertions: PASS (not a Relate integration test)")
+print("Repository foundation assertions: PASS (not a Relate integration test)")

@@ -1,6 +1,6 @@
 # RH-P0 — Greenfield Bootstrap and RelateHandoff Specification
 
-- **Status:** Review — local exact-HEAD validation and independent review pending
+- **Status:** Done — exact audited head `3a32213394d762ab33928ed939fc65756d2320db` squash-merged through PR #1 into `7e21fcebc0192ee6f6fecd553ef3619b9ea7465b`
 - **Owner/orchestrator:** mrdzyn
 - **Implementation agent:** ChatGPT (GitHub connector; documentation + repository hygiene)
 - **Target branch:** `main`
@@ -45,9 +45,9 @@ Runtime feature implementation, network/production deployment, GitHub topic/sett
 - [x] Required core operating model and CI caller/callee preserved.
 - [x] Phase 1 bounded task and hackathon submission checklist documented.
 - [x] GitHub static inventory confirms expected core paths and removal of master-only artifacts.
-- [ ] Re-run the local validator commands **and `test_entrypoints.py`** against the updated exact Draft PR HEAD (prior owner Mac and independent Claude Linux 7/7 PASS were at `a6e04d25bc17434f3e8a8d1d47b303f0a82c0b59`, superseded by remediation).
-- [ ] Obtain a **PASS re-audit** of Claude's initial PARTIAL findings F1–F3 after remediation; F4 is explained by Asia/Manila timezone, F5 is informational.
-- [ ] Owner independently approves merge; no release or scope changes presumed.
+- [x] Owner Mac local validator 7/7 PASS and separate `test_entrypoints.py` PASS at final PR #1 HEAD; independently reproduced by Claude Linux.
+- [x] Claude independent COMMENT-only PASS re-audit at the final PR #1 HEAD; F1–F3 resolved, F4 timezone clarified, F5 informational.
+- [x] Owner explicitly approved squash merge of PR #1 at the exact audited head; GitHub merged successfully to `main`. No deployment or release approved.
 
 ## Security / privacy
 No app code, network secrets, customers or real user data. New checks reject tracked sensitive filenames; future Relate clients default read-only.
@@ -59,4 +59,4 @@ No runtime or billing integration added. P1 must prove a real Relate process and
 `README.md`, `AGENTS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/STATUS.md`, `docs/SECURITY.md`, `docs/TESTING.md`, `docs/RELEASE.md`, `docs/REPOSITORY-SETUP.md`, `docs/HANDOFFS.md`, `docs/HACKATHON.md`, `config/project-profile.json`, `config/validation-contract.json`; pruned core template historical blocks.
 
 ## Completion handoff
-`RH-P0-H1` is the original historical handoff; the next handoff entry will summarize Claude's PARTIAL audit and the remediation. The current PR HEAD must be independently revalidated. This implementation session did not run local Python commands.
+`RH-P0-H1` and `RH-P0-H2` preserve historical evidence. PR #1 was fully revalidated and independently re-audited prior to owner-authorized squash merge. `RH-P1-H1` is the next phase transition entry; no Phase 1 runtime is implemented.
