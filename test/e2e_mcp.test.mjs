@@ -655,3 +655,118 @@ test("RH-P1 regression (bounds): 100 detail rows succeed and 101 detail rows fai
     fs.rmSync(tmpRoot, { recursive: true, force: true });
   }
 });
+
+test("RH-P1 regression (zero-test vs one-test --verify): zero discovered tests cannot yield PASS or VERIFIED", () => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "relatehandoff-zero-tests-"));
+  const repoDir = path.join(tmpRoot, "repo");
+  const storeDir = path.join(tmpRoot, "relate-store");
+  fs.mkdirSync(repoDir, { recursive: true });
+
+  try {
+    const git = (args) =>
+      execFileSync("git", args, {
+        cwd: repoDir,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }).trim();
+    git(["init"]);
+    git(["config", "user.name", "RelateHandoff Zero Test"]);
+    git(["config", "user.email", "zero@example.invalid"]);
+    git(["config", "relatehandoff.repository", "mrdzyn/relatehandoff-zero"]);
+    fs.writeFileSync(path.join(repoDir, "README.md"), "# Only README, no tests\n", "utf8");
+    git(["add", "README.md"]);
+    git(["commit", "-m", "chore: initial commit with zero tests"]);
+    const sha0 = git(["rev-parse", "HEAD"]);
+    const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
+
+    // 0 tests: record --verify node-test-suite must record UNVERIFIED, never PASS
+    const recZero = runRecordCli({
+      storeDir,
+      repoDir,
+      tmpRoot,
+      name: "zero-tests",
+      verifyProfile: "node-test-suite",
+      payload: {
+        schemaVersion: "1.0.0",
+        handoffId: "RH-P1-ZERO-0",
+        taskId: "RH-P1",
+        repository: "mrdzyn/relatehandoff-zero",
+        branch,
+        sourceAgent: "codex-writer",
+        targetAgent: "claude-reviewer",
+        headSha: sha0,
+        summary: "Zero tests in checkout",
+        nextAction: "Must not mark PASS or VERIFIED",
+        artifacts: ["README.md"],
+        evidence: [],
+        createdAt: "2026-11-16T07:00:00Z",
+      },
+    });
+    const recordedZero = JSON.parse(recZero.stdout);
+    assert.equal(recordedZero.recorded.evidence[0].status, "UNVERIFIED");
+
+    // 0 tests: resume --verify node-test-suite must NOT return AUTHENTICATED or VERIFIED
+    const resZero = resumeTaskViaReadOnlyMcp({
+      storeDir,
+      repoRoot: repoDir,
+      taskId: "RH-P1",
+      verifyProfile: "node-test-suite",
+    });
+    assert.equal(resZero.freshness.metadataFreshness, "CURRENT");
+    assert.notEqual(resZero.freshness.executionAuthenticity, "AUTHENTICATED");
+    assert.equal(resZero.freshness.status, "UNVERIFIED");
+    assert.ok(
+      resZero.freshness.reasons.includes("IN_PROCESS_VERIFICATION_UNVERIFIED:node-test-suite")
+    );
+
+    // 1 test: add smoke.test.mjs and commit -> record & resume --verify yield PASS & VERIFIED
+    fs.writeFileSync(
+      path.join(repoDir, "smoke.test.mjs"),
+      `import test from "node:test";\nimport assert from "node:assert/strict";\ntest("one test", () => assert.equal(1, 1));\n`,
+      "utf8"
+    );
+    git(["add", "smoke.test.mjs"]);
+    git(["commit", "-m", "test: add one smoke test"]);
+    const sha1 = git(["rev-parse", "HEAD"]);
+
+    const recOne = runRecordCli({
+      storeDir,
+      repoDir,
+      tmpRoot,
+      name: "one-test",
+      verifyProfile: "node-test-suite",
+      payload: {
+        schemaVersion: "1.0.0",
+        handoffId: "RH-P1-ONE-1",
+        taskId: "RH-P1",
+        repository: "mrdzyn/relatehandoff-zero",
+        branch,
+        sourceAgent: "codex-writer",
+        targetAgent: "claude-reviewer",
+        headSha: sha1,
+        summary: "One real test in checkout",
+        nextAction: "Verify PASS and VERIFIED",
+        artifacts: ["README.md", "smoke.test.mjs"],
+        evidence: [],
+        createdAt: "2026-11-16T07:01:00Z",
+      },
+    });
+    const recordedOne = JSON.parse(recOne.stdout);
+    assert.equal(recordedOne.recorded.evidence[0].status, "PASS");
+
+    const resOne = resumeTaskViaReadOnlyMcp({
+      storeDir,
+      repoRoot: repoDir,
+      taskId: "RH-P1",
+      verifyProfile: "node-test-suite",
+    });
+    assert.equal(resOne.freshness.metadataFreshness, "CURRENT");
+    assert.equal(resOne.freshness.executionAuthenticity, "AUTHENTICATED");
+    assert.equal(resOne.freshness.status, "VERIFIED");
+    assert.ok(
+      resOne.freshness.reasons.includes("IN_PROCESS_VERIFICATION_PASSED:node-test-suite")
+    );
+  } finally {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  }
+});

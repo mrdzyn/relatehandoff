@@ -23,11 +23,29 @@ export const TRUSTED_VALIDATION_PROFILES = Object.freeze({
   },
   "node-test-suite": {
     bin: process.execPath,
-    args: ["--test"],
+    args: ["--test", "--test-reporter=tap"],
     displayCommand: "node --test",
     kind: "unit-test",
+    requireTapTests: true,
   },
 });
+
+function parseTapSummary(stdout) {
+  if (typeof stdout !== "string") return null;
+  const testsMatch = stdout.match(/^# tests (\d+)$/m);
+  const passMatch = stdout.match(/^# pass (\d+)$/m);
+  const failMatch = stdout.match(/^# fail (\d+)$/m);
+  const skippedMatch = stdout.match(/^# skipped (\d+)$/m);
+  const cancelledMatch = stdout.match(/^# cancelled (\d+)$/m);
+  if (!testsMatch || !passMatch) return null;
+  return {
+    tests: Number(testsMatch[1]),
+    pass: Number(passMatch[1]),
+    fail: failMatch ? Number(failMatch[1]) : 0,
+    skipped: skippedMatch ? Number(skippedMatch[1]) : 0,
+    cancelled: cancelledMatch ? Number(cancelledMatch[1]) : 0,
+  };
+}
 
 // Unkeyed SHA-256 consistency checksum over runner fields (NOT a cryptographic credential).
 export function computeEvidenceAttestation({
@@ -78,11 +96,16 @@ export function runTrustedValidation({
     );
   }
 
+  const childEnv = { ...process.env };
+  delete childEnv.NODE_TEST_CONTEXT;
+
+  let stdout = "";
   let exitCode = 0;
   let status = "PASS";
   try {
-    execFileSync(spec.bin, spec.args, {
+    stdout = execFileSync(spec.bin, spec.args, {
       cwd: repoRoot,
+      env: childEnv,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
       shell: false,
@@ -90,6 +113,20 @@ export function runTrustedValidation({
   } catch (err) {
     exitCode = typeof err.status === "number" ? err.status : 1;
     status = "FAIL";
+  }
+
+  if (status === "PASS" && spec.requireTapTests) {
+    const tap = parseTapSummary(stdout);
+    if (
+      !tap ||
+      tap.tests < 1 ||
+      tap.pass < 1 ||
+      tap.fail > 0 ||
+      tap.skipped > 0 ||
+      tap.cancelled > 0
+    ) {
+      status = "UNVERIFIED";
+    }
   }
 
   const afterGit = getGitState(repoRoot, { repository });

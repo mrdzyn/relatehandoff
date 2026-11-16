@@ -99,8 +99,10 @@ export function evaluateFreshness({
     if (inProcessVerification.status === "FAIL") {
       hasBlocked = true;
       reasons.push(`IN_PROCESS_VERIFICATION_FAILED:${inProcessVerification.validationProfile}`);
+    } else if (inProcessVerification.status !== "PASS") {
+      hasUnverified = true;
+      reasons.push(`IN_PROCESS_VERIFICATION_UNVERIFIED:${inProcessVerification.validationProfile}`);
     } else if (
-      inProcessVerification.status === "PASS" &&
       inProcessVerification.headSha === currentHeadSha &&
       !isDirty
     ) {
