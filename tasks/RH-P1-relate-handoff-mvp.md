@@ -1,16 +1,25 @@
 # RH-P1 — Persistent Relate Handoffs and Evidence Freshness MVP
 
-- **Status:** Draft / not authorized for implementation until P0 owner review
+- **Status:** Ready for implementation handoff; runtime implementation not yet started or independently authorized
 - **Owner/orchestrator:** mrdzyn
 - **Implementation agent:** Unassigned
-- **Target branch:** `main` after owner-approved P0 merge
-- **Working branch:** `phase-1/relate-handoff-mvp` (proposed)
+- **Target branch:** `main` (Phase 0 was owner-approved and squash-merged as PR #1)
+- **Working branch:** `phase-1/relate-handoff-mvp` (proposed; create from freshly verified `main` only after handoff acceptance)
 
 ## Objective
 Two separate agent sessions can exchange a validated, persistent Relate-backed task handoff through read-only MCP, and stale exact-Git-HEAD evidence is detected.
 
 ## Context
-Project concept and boundaries are in `docs/PRODUCT.md` and `docs/ARCHITECTURE.md`. A bootstrap-only repository does not demonstrate Relate usage. This task creates the minimum actual working engine needed for the hackathon.
+Project concept and boundaries are in `docs/PRODUCT.md` and `docs/ARCHITECTURE.md`. Phase 0 merged to `main` at `7e21fcebc0192ee6f6fecd553ef3619b9ea7465b` with an independent exact-HEAD PASS on PR #1. The repository still does not demonstrate Relate usage. This task creates the minimum actual working engine needed for the hackathon.
+
+### First bounded implementation slice
+1. Verify the current `main` SHA and load canonical repo/task/handoff context; do not assume the handoff-preparation Draft PR is already merged.
+2. Obtain a runnable **real Relate binary or library** for the target development OS. Verify version, licensing, supported Cypher execution, persistent storage and read-only MCP interface experimentally rather than trusting proposed CLI text.
+3. Record an executable smoke test that creates a local graph, writes one synthetic node/edge, closes and reopens the store, and queries it from another process. Record real outputs, actual CLI commands, paths and limitations.
+4. If the actual CLI, directory concurrency, read-only MCP or supported OS differs from the proposed architecture, stop and document the smallest evidence-based alternative before broadening scope.
+5. After a working baseline, implement the validated handoff writer, bounded cross-agent read, exact-Git-HEAD evidence freshness, and security negative tests as specified below.
+
+**No production feature changes, hosting, credentials, mergers or releases are included in this handoff preparation.**
 
 ## Delivery mode / UI design gate
 - **Material user-facing UI:** No; initial CLI and MCP only

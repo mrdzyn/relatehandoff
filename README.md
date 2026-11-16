@@ -4,7 +4,7 @@
 
 RelateHandoff is a proposed local-first context and evidence layer for AI-assisted software development. It aims to let Codex, Claude Code, Gemini CLI, and other compatible clients resume work from a shared, provenance-aware handoff graph without reconstructing entire chat transcripts.
 
-**Current state:** Phase 0 foundation in review. **No working Relate integration or hackathon demo exists yet.** See [status](docs/STATUS.md) and the [first implementation task](tasks/RH-P1-relate-handoff-mvp.md).
+**Current state:** Phase 0 foundation was squash-merged as PR #1. The RH-P1 implementation handoff is prepared for review. **No working Relate integration or hackathon demo exists yet.** See [status](docs/STATUS.md) and the [first implementation task](tasks/RH-P1-relate-handoff-mvp.md).
 
 ## Why it exists
 
@@ -36,7 +36,7 @@ This is the target for Phase 1, **not a feature currently available**.
 
 The project is initialized from [mrdzyn/ai-native-project-template](https://github.com/mrdzyn/ai-native-project-template). Follow [AGENTS.md](AGENTS.md), then [docs/STATUS.md](docs/STATUS.md), [config/project-profile.json](config/project-profile.json), and the active task contract. The retained [agent orchestration guide](docs/AGENT-ORCHESTRATION.md) defines one-primary-agent execution, bounded specialist work, and exact-HEAD audit responsibilities.
 
-Phase 0 validation on a clean checkout:
+Foundation validation on a clean checkout (also required during the P1 transition):
 
 ```bash
 python3 scripts/test_bootstrap.py
@@ -54,4 +54,4 @@ Hackathon entry: [Relate by Neo4j](https://relate.devpost.com/), deadline **Dece
 
 **License decision is pending owner approval.** Public visibility does not itself grant open-source redistribution rights. Do not import third-party implementation or accept contributions before the project's license and contribution terms are settled.
 
-No hosted service, payment, telemetry, agent credentials, or end-user records are part of Phase 0.
+No hosted service, payment, telemetry, agent credentials, or end-user records are part of the current foundation; implementation, distribution and release remain separately gated.

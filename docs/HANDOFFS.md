@@ -217,4 +217,33 @@ On a trusted local checkout of PR #1's **current full HEAD**, run `python script
 ### Continuation and next action
 On a clean checkout at the **new current exact PR HEAD after this handoff-only commit**, run `python3 scripts/test_bootstrap.py`, `python3 scripts/test_entrypoints.py`, `python3 scripts/check_secret_tracking.py`, `python3 scripts/validate_project_profile.py --repository mrdzyn/relatehandoff`, and `python3 scripts/validate.py --repository mrdzyn/relatehandoff`. Confirm full SHA, clean tree, and report all results. Then request a fresh independent COMMENT-only PASS/PARTIAL/FAIL audit of F1–F3. Never merge or deploy without explicit owner approval.
 
+## Handoff: RH-P1-H1
+
+- **Task / phase:** `tasks/RH-P1-relate-handoff-mvp.md`
+- **From:** ChatGPT / Phase 0 merger and Phase 1 handoff preparer
+- **To:** one primary implementation agent (Codex or compatible CLI agent), once the handoff and branch are approved
+- **Branch:** `docs/rh-p1-implementation-handoff` (documentation-only transition, not the implementation branch)
+- **Verified Phase 0 merge baseline:** `7e21fcebc0192ee6f6fecd553ef3619b9ea7465b` (`main`, PR #1 merged)
+- **Audited PR #1 implementation head:** `3a32213394d762ab33928ed939fc65756d2320db`
+- **PR:** separate docs-only Draft transition; number assigned at PR creation
+- **State:** HANDOFF PREPARED — Phase 1 code NOT STARTED; exact-HEAD validation and review of this docs-only change pending
+
+### Completed
+- PR #1 passed final-owner-reported Mac local 7/7 and separate entrypoint self-tests, plus independent Claude Linux PASS re-audit at the audited exact head. See https://github.com/mrdzyn/relatehandoff/pull/1#issuecomment-6893352785.
+- Owner explicitly approved squash merge of precisely the audited PR head. GitHub returned successful squash merge SHA `7e21fcebc0192ee6f6fecd553ef3619b9ea7465b`; remote `main` was verified equal to that SHA.
+- Updated Phase 0 task to Done, prepared the RH-P1 bounded implementation contract, and corrected the bootstrap test's P0-only active-task assertion for this transition.
+
+### First execution objective and evidence
+- Starting from a fresh verified `main`, verify the actual Relate release/CLI or API, local install, real persisted directory graph across restart, and read-only MCP behavior **before** implementing a broader recorder. Verify platform support rather than inventing compatibility.
+- Build the minimum demonstrable agent handoff: validated writer → persistent Relate graph → independent read-only MCP client → SHA-A-to-SHA-B stale-evidence detection; prove each using real local integration tests and synthetic records.
+- Git/repo instructions remain canonical; graph is a derived context index. No generic write-Cypher MCP, shell execution, private transcripts, secrets or autonomous merging.
+
+### Validation and limits
+- Phase 0 evidence is attached to **PR #1's audited head**; the new squash `main` SHA is not a claim that Phase 1 runtime checks passed.
+- This handoff-preparation branch: project checks and independent audit **NOT RUN YET**; no product code or Relate binary was executed.
+- Host CI, license decision, repository protections, cross-device and agent-host compatibility remain unverified until explicitly checked. No deployment or publication.
+
+### Next action
+Review the docs-only phase transition, run `python3 scripts/test_bootstrap.py`, `python3 scripts/test_entrypoints.py`, `python3 scripts/check_secret_tracking.py`, `python3 scripts/validate_project_profile.py --repository mrdzyn/relatehandoff`, and `python3 scripts/validate.py --repository mrdzyn/relatehandoff` on the exact clean Draft PR HEAD. Seek independent audit and separate owner merge approval. Only after transition acceptance should the implementation agent create `phase-1/relate-handoff-mvp` from the then-current main and start real Relate feasibility testing.
+
 <!-- HANDOFF_ENTRIES_END -->
