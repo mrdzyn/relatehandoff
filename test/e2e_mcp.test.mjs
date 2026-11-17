@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -766,6 +766,127 @@ test("RH-P1 regression (zero-test vs one-test --verify): zero discovered tests c
     assert.ok(
       resOne.freshness.reasons.includes("IN_PROCESS_VERIFICATION_PASSED:node-test-suite")
     );
+  } finally {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  }
+});
+
+test("RH-P2 regression (long-lived MCP snapshot): long-lived read-only MCP misses external write until restart; short-lived resume sees it immediately", async () => {
+  const cli = resolveRelateCli();
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "relatehandoff-longlived-mcp-"));
+  const repoDir = path.join(tmpRoot, "repo");
+  const storeDir = path.join(tmpRoot, "relate-store");
+  fs.mkdirSync(repoDir, { recursive: true });
+
+  try {
+    const { shaA, branch } = initTempGitRepo(repoDir, "mrdzyn/relatehandoff-longlived");
+
+    // 1. Writer process #1 records H-1 and exits cleanly
+    runRecordCli({
+      storeDir,
+      repoDir,
+      tmpRoot,
+      name: "handoff-h1",
+      payload: {
+        schemaVersion: "1.0.0",
+        handoffId: "RH-P2-H-1",
+        taskId: "RH-P2",
+        repository: "mrdzyn/relatehandoff-longlived",
+        branch,
+        sourceAgent: "codex",
+        targetAgent: "claude",
+        headSha: shaA,
+        summary: "First handoff before long-lived MCP starts",
+        nextAction: "Observe initial snapshot",
+        artifacts: ["README.md"],
+        evidence: [],
+        createdAt: "2026-11-16T18:30:00Z",
+      },
+    });
+
+    // 2. Start a long-lived read-only MCP stdio process
+    const mcp = spawn(
+      cli.bin,
+      ["serve", "--mcp", "stdio", "--database", storeDir, "--read-only"],
+      { stdio: ["pipe", "pipe", "pipe"] }
+    );
+
+    let buf = "";
+    const pending = new Map();
+    mcp.stdout.on("data", (chunk) => {
+      buf += chunk.toString("utf8");
+      let idx;
+      while ((idx = buf.indexOf("\n")) !== -1) {
+        const line = buf.slice(0, idx).trim();
+        buf = buf.slice(idx + 1);
+        if (!line) continue;
+        const msg = JSON.parse(line);
+        const resolve = pending.get(msg.id);
+        if (resolve) {
+          pending.delete(msg.id);
+          resolve(msg);
+        }
+      }
+    });
+
+    const rpc = (id, statement) =>
+      new Promise((resolve) => {
+        pending.set(id, resolve);
+        mcp.stdin.write(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id,
+            method: "tools/call",
+            params: { name: "read_cypher", arguments: { statement, parameters: {} } },
+          }) + "\n"
+        );
+      });
+
+    const query = "MATCH (h:Handoff) RETURN h.id AS id ORDER BY h.id";
+    const beforeResp = await rpc(1, query);
+    const beforeIds = JSON.parse(beforeResp.result.content[0].text).rows.map((r) => r.id);
+    assert.deepEqual(beforeIds, ["RH-P2-H-1"]);
+
+    // 3. Separate writer process #2 records H-2 while the long-lived MCP process is open
+    runRecordCli({
+      storeDir,
+      repoDir,
+      tmpRoot,
+      name: "handoff-h2",
+      payload: {
+        schemaVersion: "1.0.0",
+        handoffId: "RH-P2-H-2",
+        taskId: "RH-P2",
+        repository: "mrdzyn/relatehandoff-longlived",
+        branch,
+        sourceAgent: "codex",
+        targetAgent: "claude",
+        headSha: shaA,
+        summary: "Second handoff recorded while long-lived MCP is open",
+        nextAction: "Verify snapshot behavior and restart visibility",
+        artifacts: ["README.md"],
+        evidence: [],
+        createdAt: "2026-11-16T18:31:00Z",
+      },
+    });
+
+    // 4. Same long-lived MCP process still sees only H-1 (point-in-time startup snapshot)
+    const staleSnapshotResp = await rpc(2, query);
+    const staleSnapshotIds = JSON.parse(staleSnapshotResp.result.content[0].text).rows.map(
+      (r) => r.id
+    );
+    assert.deepEqual(staleSnapshotIds, ["RH-P2-H-1"]);
+
+    mcp.stdin.end();
+    await new Promise((resolve) => mcp.on("close", resolve));
+
+    // 5. Fresh/restarted read-only MCP process sees H-2 immediately
+    const resumed = resumeTaskViaReadOnlyMcp({
+      storeDir,
+      repoRoot: repoDir,
+      taskId: "RH-P2",
+    });
+    assert.equal(resumed.handoff.handoffId, "RH-P2-H-2");
   } finally {
     fs.rmSync(tmpRoot, { recursive: true, force: true });
   }
