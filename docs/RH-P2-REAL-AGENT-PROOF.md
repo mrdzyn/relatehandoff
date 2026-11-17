@@ -11,16 +11,16 @@
 - **Platform & Engine:** macOS ARM64 (`Relate v1.0.1`, read-only MCP stdio)
 - **Sanitized Handoff Record (`RH-P2-CODEX-CLAUDE-1`):**
   - `handoffId`: `RH-P2-CODEX-CLAUDE-1`
-  - `taskId`: `RH-P2`
+  - `taskId`: `RH-P2-AGENT-DEMO`
   - `repository`: `mrdzyn/relatehandoff`
   - `headSha`: `f759f40ef19ecd3ca5ee5e7cc42152561ccddfcd`
-  - `sourceAgent`: `codex` (writer via `src/cli.mjs record`)
-  - `targetAgent`: `claude` (consumer via `relate serve --mcp stdio --read-only`)
-  - **Evidence & authenticity distinction:** Persisted store evidence recorded by `codex` is unsigned (`RUNNER_RECORDED_UNSIGNED` or `SELF_ASSERTED`), so read-only MCP retrieval without in-process `--verify` reports `metadataFreshness: "CURRENT"` and `executionAuthenticity: "UNVERIFIED"` (`status: "UNVERIFIED"`). Explicit local in-process verification (`--verify <profile>`) is required to yield `executionAuthenticity: "AUTHENTICATED"`.
+  - `sourceAgent`: `codex-cli` (writer via `src/cli.mjs record`)
+  - `targetAgent`: `claude-code` (consumer via `relate serve --mcp stdio --read-only`)
+  - **Evidence & authenticity distinction:** Persisted store evidence recorded by `codex-cli` is unsigned (`RUNNER_RECORDED_UNSIGNED` or `SELF_ASSERTED`), so read-only MCP retrieval without in-process `--verify` reports `metadataFreshness: "CURRENT"` and `executionAuthenticity: "UNVERIFIED"` (`status: "UNVERIFIED"`). Explicit local in-process verification (`--verify <profile>`) is required to yield `executionAuthenticity: "AUTHENTICATED"`.
 - **Observed Outcome:**
-  1. `codex` recorded `RH-P2-CODEX-CLAUDE-1` with repository-scoped provenance (`Repository -> Task <- Handoff -> Commit`, `Artifact`, `Decision`, `Evidence`) into the local Relate directory store.
-  2. `claude` retrieved the handoff and provenance through read-only MCP (`read_cypher` / `get_schema`), observing exact-HEAD freshness separation and confirming write operations remain refused in `--read-only` mode.
-  3. **Operational Finding:** When `claude`'s MCP host kept a **long-lived** `relate serve --mcp stdio --database <store> --read-only` process open across turns, a newly recorded handoff written by a separate `codex` process was **not visible** until the MCP server process was restarted.
+  1. `codex-cli` recorded `RH-P2-CODEX-CLAUDE-1` with repository-scoped provenance (`Repository -> Task <- Handoff -> Commit`, `Artifact`, `Decision`, `Evidence`) into the local Relate directory store.
+  2. `claude-code` retrieved the handoff and provenance through read-only MCP (`read_cypher` / `get_schema`), observing exact-HEAD freshness separation and confirming write operations remain refused in `--read-only` mode.
+  3. **Operational Finding:** When `claude-code`'s MCP host kept a **long-lived** `relate serve --mcp stdio --database <store> --read-only` process open across turns, a newly recorded handoff written by a separate `codex-cli` process was **not visible** until the MCP server process was restarted.
 
 ## 3. Reproduced Long-Lived MCP Reader Behavior (Linux x86_64, `Relate v1.0.1`)
 Reproduced against source-built `relate` (`Relate v1.0.1` on `PATH`) and automated in `test/e2e_mcp.test.mjs` (`RH-P2 regression (long-lived MCP snapshot)`):

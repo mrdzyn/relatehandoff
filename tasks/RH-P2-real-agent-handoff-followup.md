@@ -33,6 +33,7 @@ Document the sanitized RH-P2 real-agent Codex-to-Claude handoff proof, harden `s
 - `package.json`
 - `src/mcp_client.mjs`
 - `test/e2e_mcp.test.mjs`
+- `scripts/test_bootstrap.py`
 - `docs/RH-P2-REAL-AGENT-PROOF.md`
 - `docs/STATUS.md`
 - `docs/HANDOFFS.md`
