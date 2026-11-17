@@ -7,6 +7,7 @@ import { evaluateFreshness } from "./freshness.mjs";
 import { MAX_DETAIL_ROWS } from "./schema.mjs";
 
 export { MAX_DETAIL_ROWS };
+export const DEFAULT_MCP_TIMEOUT_MS = 15000;
 
 export function resolveRelateCli(explicitBin) {
   const candidates = [
@@ -19,7 +20,11 @@ export function resolveRelateCli(explicitBin) {
 
   const failures = [];
   for (const bin of candidates) {
-    const res = spawnSync(bin, ["--version"], { encoding: "utf8" });
+    const res = spawnSync(bin, ["--version"], {
+      encoding: "utf8",
+      timeout: 5000,
+      killSignal: "SIGKILL",
+    });
     if (res.status === 0) {
       return { bin, version: res.stdout.trim() };
     }
@@ -31,7 +36,15 @@ export function resolveRelateCli(explicitBin) {
   );
 }
 
-export function callRelateMcpBatch({ storeDir, requests, relateBin }) {
+export function callRelateMcpBatch({
+  storeDir,
+  requests,
+  relateBin,
+  timeoutMs = DEFAULT_MCP_TIMEOUT_MS,
+}) {
+  if (!Array.isArray(requests) || requests.length === 0) {
+    throw new Error("callRelateMcpBatch requires a non-empty requests array");
+  }
   const cli = resolveRelateCli(relateBin);
   const resolvedStore = path.resolve(storeDir);
 
@@ -41,24 +54,75 @@ export function callRelateMcpBatch({ storeDir, requests, relateBin }) {
     {
       input: requests.map((req) => JSON.stringify(req)).join("\n") + "\n",
       encoding: "utf8",
+      timeout: timeoutMs,
+      killSignal: "SIGKILL",
     }
   );
 
-  if (res.status !== 0) {
+  const stderrText = res.stderr?.trim() || "";
+  const stdoutText = res.stdout?.trim() || "";
+
+  if (res.error) {
+    if (res.error.code === "ETIMEDOUT") {
+      throw new Error(
+        `relate serve --mcp stdio timed out after ${timeoutMs}ms (killed with SIGKILL)${stderrText ? `: ${stderrText}` : ""}`
+      );
+    }
     throw new Error(
-      `relate serve --mcp stdio failed (exit ${res.status}): ${res.stderr?.trim() || res.stdout?.trim()}`
+      `relate serve --mcp stdio spawn error (${res.error.code || res.error.message})${stderrText ? `: ${stderrText}` : ""}`
     );
   }
 
-  const lines = res.stdout
+  if (res.signal) {
+    throw new Error(
+      `relate serve --mcp stdio terminated by signal ${res.signal}${stderrText ? `: ${stderrText}` : ""}`
+    );
+  }
+
+  if (res.status !== 0) {
+    throw new Error(
+      `relate serve --mcp stdio failed (exit ${res.status}): ${stderrText || stdoutText || "no output"}`
+    );
+  }
+
+  const lines = (res.stdout || "")
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
 
-  return lines.map((line) => JSON.parse(line));
+  const responses = lines.map((line, idx) => {
+    try {
+      return JSON.parse(line);
+    } catch (err) {
+      throw new Error(
+        `Invalid JSON-RPC line ${idx + 1} from relate serve --mcp stdio: ${err.message}${stderrText ? ` (stderr: ${stderrText})` : ""}`
+      );
+    }
+  });
+
+  if (responses.length < requests.length) {
+    throw new Error(
+      `Incomplete MCP batch response: expected ${requests.length}, received ${responses.length}${stderrText ? ` (stderr: ${stderrText})` : ""}`
+    );
+  }
+
+  const expectedIds = new Set(requests.map((r) => r.id));
+  const receivedIds = new Set(responses.map((r) => r?.id));
+  for (const id of expectedIds) {
+    if (!receivedIds.has(id)) {
+      throw new Error(
+        `Incomplete MCP batch response: missing response for request id ${id}${stderrText ? ` (stderr: ${stderrText})` : ""}`
+      );
+    }
+  }
+
+  return responses;
 }
 
 function parseReadCypherResult(rpcResponse) {
+  if (!rpcResponse || typeof rpcResponse !== "object") {
+    throw new Error("Missing or invalid MCP JSON-RPC response object");
+  }
   if (rpcResponse.error) {
     throw new Error(`MCP JSON-RPC error: ${JSON.stringify(rpcResponse.error)}`);
   }
@@ -66,8 +130,15 @@ function parseReadCypherResult(rpcResponse) {
     const msg = rpcResponse.result?.content?.[0]?.text ?? "unknown MCP tool error";
     throw new Error(`MCP read_cypher refused: ${msg}`);
   }
-  const text = rpcResponse.result?.content?.[0]?.text ?? "{}";
-  return JSON.parse(text);
+  const text = rpcResponse.result?.content?.[0]?.text;
+  if (typeof text !== "string" || text.trim().length === 0) {
+    throw new Error("MCP read_cypher returned empty or missing content text");
+  }
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    throw new Error(`Invalid JSON payload in MCP read_cypher result: ${err.message}`);
+  }
 }
 
 function assertBoundedRows(rows, label) {
@@ -87,6 +158,7 @@ export function resumeTaskViaReadOnlyMcp({
   remoteVerified = false,
   verifyProfile = null,
   relateBin,
+  timeoutMs = DEFAULT_MCP_TIMEOUT_MS,
 }) {
   const gitState = getGitState(repoRoot, { repository });
   if (!gitState.repository) {
@@ -128,8 +200,13 @@ LIMIT 1`,
     },
   ];
 
-  const initialResponses = callRelateMcpBatch({ storeDir, requests, relateBin });
-  const tools = (initialResponses[0]?.result?.tools ?? []).map((t) => t.name);
+  const initialResponses = callRelateMcpBatch({ storeDir, requests, relateBin, timeoutMs });
+  const initialById = new Map(initialResponses.map((r) => [r.id, r]));
+  const toolsResp = initialById.get(1);
+  if (!toolsResp || toolsResp.error || toolsResp.result?.isError) {
+    throw new Error(`MCP tools/list failed: ${JSON.stringify(toolsResp ?? null)}`);
+  }
+  const tools = (toolsResp.result?.tools ?? []).map((t) => t.name);
   if (tools.includes("write_cypher")) {
     throw new Error("Security violation: read-only MCP server exposed write_cypher");
   }
@@ -137,7 +214,7 @@ LIMIT 1`,
     throw new Error("MCP server missing required read_cypher tool");
   }
 
-  const handoffEnvelope = parseReadCypherResult(initialResponses[1]);
+  const handoffEnvelope = parseReadCypherResult(initialById.get(2));
   const handoff = handoffEnvelope.rows?.[0] ?? null;
 
   if (!handoff) {
@@ -214,13 +291,19 @@ LIMIT ${detailLimit}`,
     },
   ];
 
-  const detailResponses = callRelateMcpBatch({ storeDir, requests: detailRequests, relateBin });
-  const evidence = assertBoundedRows(parseReadCypherResult(detailResponses[0]).rows ?? [], "evidence");
+  const detailResponses = callRelateMcpBatch({
+    storeDir,
+    requests: detailRequests,
+    relateBin,
+    timeoutMs,
+  });
+  const detailById = new Map(detailResponses.map((r) => [r.id, r]));
+  const evidence = assertBoundedRows(parseReadCypherResult(detailById.get(3)).rows ?? [], "evidence");
   const artifacts = assertBoundedRows(
-    parseReadCypherResult(detailResponses[1]).rows ?? [],
+    parseReadCypherResult(detailById.get(4)).rows ?? [],
     "artifacts"
   ).map((r) => r.path);
-  const decisions = assertBoundedRows(parseReadCypherResult(detailResponses[2]).rows ?? [], "decisions");
+  const decisions = assertBoundedRows(parseReadCypherResult(detailById.get(5)).rows ?? [], "decisions");
 
   let inProcessVerification = null;
   if (

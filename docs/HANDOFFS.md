@@ -246,4 +246,30 @@ On a clean checkout at the **new current exact PR HEAD after this handoff-only c
 ### Next action
 Review the docs-only phase transition, run `python3 scripts/test_bootstrap.py`, `python3 scripts/test_entrypoints.py`, `python3 scripts/check_secret_tracking.py`, `python3 scripts/validate_project_profile.py --repository mrdzyn/relatehandoff`, and `python3 scripts/validate.py --repository mrdzyn/relatehandoff` on the exact clean Draft PR HEAD. Seek independent audit and separate owner merge approval. Only after transition acceptance should the implementation agent create `phase-1/relate-handoff-mvp` from the then-current main and start real Relate feasibility testing.
 
+## Handoff: RH-P2-H1
+
+- **Task / phase:** `tasks/RH-P2-real-agent-handoff-followup.md`
+- **From:** Antigravity / RH-P2 remediation implementer
+- **To:** Independent reviewer (Claude or equivalent)
+- **Branch:** `phase-2/real-agent-handoff-followup`
+- **Implementation head:** `phase-2/real-agent-handoff-followup` exact HEAD at Draft PR #4 re-audit
+- **PR:** #4 (OPEN, Draft; no merge)
+- **State:** REMEDIATED — PENDING INDEPENDENT EXACT-HEAD RE-AUDIT
+
+### Completed
+- Hardened `src/mcp_client.mjs` (`callRelateMcpBatch`, `resumeTaskViaReadOnlyMcp`) with `DEFAULT_MCP_TIMEOUT_MS = 15000`, `killSignal: "SIGKILL"`, safe JSON-RPC parsing, id-based response lookup, and stderr diagnostics.
+- Hardened `test/e2e_mcp.test.mjs` with `--test-timeout=30000`, per-RPC timeouts, `error`/`exit` handlers, guaranteed `SIGKILL` cleanup, diagnostic persistent-reader characterization, and `(fake)` fault-injection tests.
+- Sanitized `docs/RH-P2-REAL-AGENT-PROOF.md` (removed private paths and unsupported internal claims, added `RH-P2-CODEX-CLAUDE-1` with exact SHA, unsigned evidence distinction, and placeholder clock disclosure).
+- Added `tasks/RH-P2-real-agent-handoff-followup.md` and reconciled `docs/STATUS.md`.
+
+### Validation
+- See `docs/STATUS.md` (`Verification truth`) and PR #4 re-audit comment for exact-HEAD `scripts/validate.py`, Python entrypoints, `npm run build`, `npm run test:security`, `npm test`, `npm run demo`, and orphan-process check.
+
+### Continuation notes
+- Persistent `relate serve --mcp stdio --read-only` hosts must restart to observe external writes; `src/mcp_client.mjs` spawns a fresh short-lived process per `resume` batch.
+- Keep PR #4 Draft until independent exact-HEAD re-audit and separate owner merge approval.
+
+### Next action
+Run independent COMMENT-only exact-HEAD re-audit on Draft PR #4 (`phase-2/real-agent-handoff-followup`) and await separate human owner merge approval.
+
 <!-- HANDOFF_ENTRIES_END -->

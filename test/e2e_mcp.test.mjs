@@ -771,12 +771,15 @@ test("RH-P1 regression (zero-test vs one-test --verify): zero discovered tests c
   }
 });
 
-test("RH-P2 regression (long-lived MCP snapshot): long-lived read-only MCP misses external write until restart; short-lived resume sees it immediately", async () => {
+test("RH-P2 regression (long-lived MCP snapshot): fresh short-lived resume sees newest commit immediately; persistent reader snapshot characterized", async (t) => {
   const cli = resolveRelateCli();
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "relatehandoff-longlived-mcp-"));
   const repoDir = path.join(tmpRoot, "repo");
   const storeDir = path.join(tmpRoot, "relate-store");
   fs.mkdirSync(repoDir, { recursive: true });
+
+  let mcp = null;
+  let mcpExited = false;
 
   try {
     const { shaA, branch } = initTempGitRepo(repoDir, "mrdzyn/relatehandoff-longlived");
@@ -804,15 +807,45 @@ test("RH-P2 regression (long-lived MCP snapshot): long-lived read-only MCP misse
       },
     });
 
-    // 2. Start a long-lived read-only MCP stdio process
-    const mcp = spawn(
+    // 2. Start a long-lived read-only MCP stdio process with bounded handlers and cleanup
+    mcp = spawn(
       cli.bin,
       ["serve", "--mcp", "stdio", "--database", storeDir, "--read-only"],
       { stdio: ["pipe", "pipe", "pipe"] }
     );
 
     let buf = "";
+    let stderrBuf = "";
     const pending = new Map();
+
+    const rejectAllPending = (err) => {
+      for (const [id, entry] of pending.entries()) {
+        clearTimeout(entry.timer);
+        pending.delete(id);
+        entry.reject(err);
+      }
+    };
+
+    mcp.stderr.on("data", (chunk) => {
+      stderrBuf += chunk.toString("utf8");
+    });
+
+    mcp.on("error", (err) => {
+      mcpExited = true;
+      rejectAllPending(new Error(`Long-lived MCP process error: ${err.message} (stderr: ${stderrBuf.trim()})`));
+    });
+
+    mcp.on("exit", (code, signal) => {
+      mcpExited = true;
+      if (pending.size > 0) {
+        rejectAllPending(
+          new Error(
+            `Long-lived MCP exited prematurely (code=${code}, signal=${signal}): ${stderrBuf.trim()}`
+          )
+        );
+      }
+    });
+
     mcp.stdout.on("data", (chunk) => {
       buf += chunk.toString("utf8");
       let idx;
@@ -820,18 +853,39 @@ test("RH-P2 regression (long-lived MCP snapshot): long-lived read-only MCP misse
         const line = buf.slice(0, idx).trim();
         buf = buf.slice(idx + 1);
         if (!line) continue;
-        const msg = JSON.parse(line);
-        const resolve = pending.get(msg.id);
-        if (resolve) {
+        let msg;
+        try {
+          msg = JSON.parse(line);
+        } catch (err) {
+          rejectAllPending(
+            new Error(`Invalid JSON-RPC line from long-lived MCP: ${err.message} (${line})`)
+          );
+          return;
+        }
+        const entry = pending.get(msg.id);
+        if (entry) {
+          clearTimeout(entry.timer);
           pending.delete(msg.id);
-          resolve(msg);
+          entry.resolve(msg);
         }
       }
     });
 
-    const rpc = (id, statement) =>
-      new Promise((resolve) => {
-        pending.set(id, resolve);
+    const rpc = (id, statement, timeoutMs = 10000) =>
+      new Promise((resolve, reject) => {
+        if (mcpExited) {
+          reject(new Error(`Cannot send RPC ${id}: MCP process already exited`));
+          return;
+        }
+        const timer = setTimeout(() => {
+          pending.delete(id);
+          reject(
+            new Error(
+              `Long-lived MCP RPC id=${id} timed out after ${timeoutMs}ms (stderr: ${stderrBuf.trim()})`
+            )
+          );
+        }, timeoutMs);
+        pending.set(id, { resolve, reject, timer });
         mcp.stdin.write(
           JSON.stringify({
             jsonrpc: "2.0",
@@ -870,23 +924,191 @@ test("RH-P2 regression (long-lived MCP snapshot): long-lived read-only MCP misse
       },
     });
 
-    // 4. Same long-lived MCP process still sees only H-1 (point-in-time startup snapshot)
-    const staleSnapshotResp = await rpc(2, query);
-    const staleSnapshotIds = JSON.parse(staleSnapshotResp.result.content[0].text).rows.map(
-      (r) => r.id
+    // 4. Diagnostic characterization of the same long-lived MCP process (do not require upstream bug as pass condition)
+    const afterResp = await rpc(2, query);
+    const afterIds = JSON.parse(afterResp.result.content[0].text).rows.map((r) => r.id);
+    assert.ok(
+      (afterIds.length === 1 && afterIds[0] === "RH-P2-H-1") ||
+        (afterIds.length === 2 && afterIds[0] === "RH-P2-H-1" && afterIds[1] === "RH-P2-H-2"),
+      `Unexpected long-lived MCP query result: ${JSON.stringify(afterIds)}`
     );
-    assert.deepEqual(staleSnapshotIds, ["RH-P2-H-1"]);
+    t.diagnostic(
+      `Long-lived MCP persistent reader returned ${JSON.stringify(afterIds)} after external write RH-P2-H-2`
+    );
 
-    mcp.stdin.end();
-    await new Promise((resolve) => mcp.on("close", resolve));
-
-    // 5. Fresh/restarted read-only MCP process sees H-2 immediately
+    // 5. Product invariant: fresh short-lived read-only MCP resume sees H-2 immediately
     const resumed = resumeTaskViaReadOnlyMcp({
       storeDir,
       repoRoot: repoDir,
       taskId: "RH-P2",
     });
     assert.equal(resumed.handoff.handoffId, "RH-P2-H-2");
+  } finally {
+    if (mcp && !mcpExited) {
+      try {
+        mcp.stdin.end();
+      } catch {
+        // ignore
+      }
+      await new Promise((resolve) => {
+        const killTimer = setTimeout(() => {
+          if (!mcpExited) {
+            try {
+              mcp.kill("SIGKILL");
+            } catch {
+              // ignore
+            }
+          }
+          resolve();
+        }, 2000);
+        mcp.once("close", () => {
+          clearTimeout(killTimer);
+          resolve();
+        });
+      });
+    }
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  }
+});
+
+function writeFakeRelateScript(tmpRoot, name, nodeBody) {
+  const scriptPath = path.join(tmpRoot, `${name}.mjs`);
+  const wrapperPath = path.join(tmpRoot, name);
+  fs.writeFileSync(scriptPath, nodeBody, "utf8");
+  fs.writeFileSync(
+    wrapperPath,
+    `#!/bin/sh\nexec "${process.execPath}" "${scriptPath}" "$@"\n`,
+    { mode: 0o755 }
+  );
+  return wrapperPath;
+}
+
+test("RH-P2 fault injection (fake): callRelateMcpBatch and resume fail closed on silent, crashed, malformed, and wrong-answer fakes", () => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "relatehandoff-fake-mcp-"));
+  const repoDir = path.join(tmpRoot, "repo");
+  const storeDir = path.join(tmpRoot, "store");
+  fs.mkdirSync(repoDir, { recursive: true });
+  fs.mkdirSync(storeDir, { recursive: true });
+
+  try {
+    initTempGitRepo(repoDir, "mrdzyn/relatehandoff-fakes");
+
+    // 1. Silent / hanging fake -> bounded timeoutMs kills child with SIGKILL
+    const silentFake = writeFakeRelateScript(
+      tmpRoot,
+      "relate-silent",
+      `if (process.argv.includes("--version")) { console.log("relate-fake 1.0.0"); process.exit(0); }
+setTimeout(() => {}, 10000);`
+    );
+    const t0 = Date.now();
+    assert.throws(
+      () =>
+        callRelateMcpBatch({
+          storeDir,
+          relateBin: silentFake,
+          timeoutMs: 250,
+          requests: [{ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }],
+        }),
+      /timed out after 250ms/
+    );
+    assert.ok(Date.now() - t0 < 5000, "Timeout must fail fast without hanging");
+
+    // 2. Crashed / non-zero exit fake -> fails closed with exit status and stderr diagnostics
+    const crashFake = writeFakeRelateScript(
+      tmpRoot,
+      "relate-crash",
+      `if (process.argv.includes("--version")) { console.log("relate-fake 1.0.0"); process.exit(0); }
+console.error("simulated fatal store panic");
+process.exit(2);`
+    );
+    assert.throws(
+      () =>
+        callRelateMcpBatch({
+          storeDir,
+          relateBin: crashFake,
+          timeoutMs: 2000,
+          requests: [{ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }],
+        }),
+      /failed \(exit 2\): simulated fatal store panic/
+    );
+
+    // 3. Malformed / truncated JSON-RPC output fake
+    const malformedFake = writeFakeRelateScript(
+      tmpRoot,
+      "relate-malformed",
+      `if (process.argv.includes("--version")) { console.log("relate-fake 1.0.0"); process.exit(0); }
+process.stdout.write("{not-valid-json\\n");`
+    );
+    assert.throws(
+      () =>
+        callRelateMcpBatch({
+          storeDir,
+          relateBin: malformedFake,
+          timeoutMs: 2000,
+          requests: [{ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }],
+        }),
+      /Invalid JSON-RPC line 1/
+    );
+
+    // 4a. Wrong-answer fake: exposes write_cypher in read-only mode
+    const writeToolFake = writeFakeRelateScript(
+      tmpRoot,
+      "relate-write-tool",
+      `if (process.argv.includes("--version")) { console.log("relate-fake 1.0.0"); process.exit(0); }
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { tools: [{ name: "read_cypher" }, { name: "write_cypher" }] } }));
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 2, result: { content: [{ text: JSON.stringify({ rows: [] }) }] } }));`
+    );
+    assert.throws(
+      () =>
+        resumeTaskViaReadOnlyMcp({
+          storeDir,
+          repoRoot: repoDir,
+          taskId: "RH-P2",
+          relateBin: writeToolFake,
+          timeoutMs: 2000,
+        }),
+      /Security violation: read-only MCP server exposed write_cypher/
+    );
+
+    // 4b. Wrong-answer fake: missing read_cypher
+    const missingReadToolFake = writeFakeRelateScript(
+      tmpRoot,
+      "relate-missing-read",
+      `if (process.argv.includes("--version")) { console.log("relate-fake 1.0.0"); process.exit(0); }
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { tools: [{ name: "get_schema" }] } }));
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 2, result: { content: [{ text: JSON.stringify({ rows: [] }) }] } }));`
+    );
+    assert.throws(
+      () =>
+        resumeTaskViaReadOnlyMcp({
+          storeDir,
+          repoRoot: repoDir,
+          taskId: "RH-P2",
+          relateBin: missingReadToolFake,
+          timeoutMs: 2000,
+        }),
+      /MCP server missing required read_cypher tool/
+    );
+
+    // 4c. Wrong-answer fake: mismatched repository isolation violation
+    const wrongRepoFake = writeFakeRelateScript(
+      tmpRoot,
+      "relate-wrong-repo",
+      `if (process.argv.includes("--version")) { console.log("relate-fake 1.0.0"); process.exit(0); }
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { tools: [{ name: "read_cypher" }, { name: "get_schema" }] } }));
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 2, result: { content: [{ text: JSON.stringify({ rows: [{ repository: "mrdzyn/other-repo", taskId: "RH-P2", handoffKey: "x", handoffId: "H-X", headSha: "0".repeat(40) }] }) }] } }));`
+    );
+    assert.throws(
+      () =>
+        resumeTaskViaReadOnlyMcp({
+          storeDir,
+          repoRoot: repoDir,
+          taskId: "RH-P2",
+          relateBin: wrongRepoFake,
+          timeoutMs: 2000,
+        }),
+      /Repository isolation violation/
+    );
   } finally {
     fs.rmSync(tmpRoot, { recursive: true, force: true });
   }
