@@ -272,4 +272,33 @@ Review the docs-only phase transition, run `python3 scripts/test_bootstrap.py`, 
 ### Next action
 Run independent COMMENT-only exact-HEAD re-audit on Draft PR #4 (`phase-2/real-agent-handoff-followup`) and await separate human owner merge approval.
 
+## Handoff: RH-P2-H2
+
+- **Task / phase:** `tasks/RH-P2-real-agent-handoff-followup.md` (Done; RH-P2 post-merge closeout)
+- **From:** Antigravity / RH-P2 post-merge closeout
+- **To:** Independent reviewer and project owner (for closeout PR #5 review and owner direction on RH-P3)
+- **Branch:** `docs/rh-p2-postmerge-closeout`
+- **Implementation head (pre-remediation):** `402a1a592578b8fda887a2bbfc92bbdbb4551f1f`
+- **Audited PR #4 HEAD:** `2c7dcef50a6cde26516f415c5879f3749c9dbe2d`
+- **PR #4 squash merge commit (`main`):** `a6bb9bdd562205e5690318272bce8dda0ecf6306` (`2026-11-17T06:40:24Z`)
+- **PR:** #5 (OPEN, Draft; no merge)
+- **State:** RH-P2 MERGED — DOCS-ONLY CLOSEOUT REMEDIATED
+
+### Completed
+- Verified PR #4 squash commit `a6bb9bdd562205e5690318272bce8dda0ecf6306` (`2026-11-17T06:40:24Z`) on `origin/main`.
+- Reconciled `docs/STATUS.md`, `tasks/RH-P2-real-agent-handoff-followup.md`, `docs/RH-P2-REAL-AGENT-PROOF.md`, and `docs/HANDOFFS.md` without modifying source, tests, fixtures, or historical RH-P0/RH-P1/RH-P2-H1 records.
+
+### Validation & Limits
+- PR #4 macOS ARM64 COMMENT-only PASS ([`6938739073`](https://github.com/mrdzyn/relatehandoff/pull/4#issuecomment-6938739073)) at `2c7dcef50a6cde26516f415c5879f3749c9dbe2d`: reviewer session reports real `relate v1.0.1`, 15/15 tests, 8/8 `validate.py`, and no orphans; posted through the owner's GitHub account (not externally authenticated as independent certification).
+- PR #4 Linux COMMENT-only PASS ([`6940763547`](https://github.com/mrdzyn/relatehandoff/pull/4#issuecomment-6940763547)) at `2c7dcef50a6cde26516f415c5879f3749c9dbe2d`: real `relate` CLI unavailable; independently verified security, `(fake)` fault injection, process cleanup, and other runnable checks (posted through the owner's GitHub account).
+- Author-reported exact-HEAD checks at `2c7dcef50a6cde26516f415c5879f3749c9dbe2d`: 15/15 `npm test`, 5/5 `npm run test:security`, `npm run build`, `npm run demo`, and `scripts/validate.py` PASS.
+- `RH-P2-CODEX-CLAUDE-1` macOS ARM64 real-agent handoff remains `OWNER-REPORTED`.
+
+### Continuation notes
+- Remaining limitations: persistent `relate serve --mcp stdio --read-only` startup snapshot, unsigned local store (`executionAuthenticity: "UNVERIFIED"` without `--verify`), and Linux `GLIBC_2.39` prebuilt binary block on Debian 12 (`GLIBC_2.36`).
+- Do not start RH-P3 implementation from this docs-only closeout.
+
+### Next action
+Complete independent review and separate owner merge approval for Draft PR #5. RH-P3 planning may begin only on explicit owner direction. RH-P3 implementation remains unauthorized.
+
 <!-- HANDOFF_ENTRIES_END -->
