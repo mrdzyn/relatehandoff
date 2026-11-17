@@ -1,6 +1,6 @@
 # RH-P2 — Real-Agent Handoff Follow-up & MCP Reader Hardening
 
-- **Status:** Done (PR #4 squash-merged to `main` as `a6bb9bdd562205e5690318272bce8dda0ecf6306`, November 17, 2026 UTC; audited PR HEAD `2c7dcef50a6cde26516f415c5879f3749c9dbe2d`)
+- **Status:** Done (PR #4 squash-merged to `main` as `a6bb9bdd562205e5690318272bce8dda0ecf6306`, `2026-11-17T06:40:24Z`; audited PR HEAD `2c7dcef50a6cde26516f415c5879f3749c9dbe2d`)
 - **Owner/orchestrator:** Product owner
 - **Implementation agent:** Codex / Antigravity
 - **Target branch:** `main`
@@ -51,7 +51,7 @@ Document the sanitized RH-P2 real-agent Codex-to-Claude handoff proof, harden `s
 - [x] `test/e2e_mcp.test.mjs` enforces per-RPC timeout, `error`/`exit` handlers, guaranteed `SIGKILL` cleanup, fresh-resume invariant, diagnostic persistent-reader characterization, and `(fake)` fault-injection tests.
 - [x] `docs/RH-P2-REAL-AGENT-PROOF.md` removes private paths and unsupported internal claims, adds sanitized `RH-P2-CODEX-CLAUDE-1` with exact SHA, distinguishes unsigned evidence, and discloses placeholder timestamps.
 - [x] `docs/STATUS.md` and `docs/HANDOFFS.md` reconcile `Active task` (`tasks/RH-P2-real-agent-handoff-followup.md`), `Active handoff` (`RH-P2-H1` -> `RH-P2-H2`), and `OWNER-REPORTED` / `AUTHOR-REPORTED` truth labels.
-- [x] All canonical Python and Node.js validations passed on audited exact HEAD `2c7dcef50a6cde26516f415c5879f3749c9dbe2d` with zero orphan processes (`AUTHOR-REPORTED PASS`: 15/15 `npm test`, 5/5 `npm run test:security`, `npm run build`, `npm run demo`, and `scripts/validate.py` PASS; independent COMMENT-only re-audit returned PASS without independently reproducing real-CLI execution).
+- [x] All canonical Python and Node.js validations passed on audited exact HEAD `2c7dcef50a6cde26516f415c5879f3749c9dbe2d` with zero orphan processes (`AUTHOR-REPORTED PASS`: 15/15 `npm test`, 5/5 `npm run test:security`, `npm run build`, `npm run demo`, and `scripts/validate.py` PASS; PR #4 macOS ARM64 reviewer session `6938739073` posted under owner's account reports real `relate v1.0.1`, 15/15 tests, 8/8 `validate.py`, not externally authenticated; PR #4 Linux audit `6940763547` verified security, fault injection, process cleanup, and other runnable checks without real `relate` CLI).
 
 ## Security / privacy considerations
 
