@@ -272,4 +272,31 @@ Review the docs-only phase transition, run `python3 scripts/test_bootstrap.py`, 
 ### Next action
 Run independent COMMENT-only exact-HEAD re-audit on Draft PR #4 (`phase-2/real-agent-handoff-followup`) and await separate human owner merge approval.
 
+## Handoff: RH-P2-H2
+
+- **Task / phase:** `tasks/RH-P2-real-agent-handoff-followup.md` (Done; RH-P2 post-merge closeout)
+- **From:** Antigravity / RH-P2 post-merge closeout
+- **To:** Independent reviewer and project owner (for closeout PR review and RH-P3 planning)
+- **Branch:** `docs/rh-p2-postmerge-closeout`
+- **Audited PR #4 HEAD:** `2c7dcef50a6cde26516f415c5879f3749c9dbe2d`
+- **PR #4 squash merge commit (`main`):** `a6bb9bdd562205e5690318272bce8dda0ecf6306` (November 17, 2026 UTC)
+- **PR:** Docs-only closeout Draft PR against `main` (no merge)
+- **State:** RH-P2 MERGED — DOCS-ONLY CLOSEOUT PENDING REVIEW
+
+### Completed
+- Verified PR #4 squash commit `a6bb9bdd562205e5690318272bce8dda0ecf6306` on `origin/main`.
+- Reconciled `docs/STATUS.md`, `tasks/RH-P2-real-agent-handoff-followup.md`, `docs/RH-P2-REAL-AGENT-PROOF.md`, and `docs/HANDOFFS.md` without modifying source, tests, fixtures, or historical RH-P0/RH-P1/RH-P2-H1 records.
+
+### Validation & Limits
+- PR #4 independent COMMENT-only audit: PASS at `2c7dcef50a6cde26516f415c5879f3749c9dbe2d` (did not independently reproduce real-CLI execution).
+- Author-reported exact-HEAD checks at `2c7dcef50a6cde26516f415c5879f3749c9dbe2d`: 15/15 `npm test`, 5/5 `npm run test:security`, `npm run build`, `npm run demo`, and `scripts/validate.py` PASS.
+- `RH-P2-CODEX-CLAUDE-1` macOS ARM64 real-agent handoff remains `OWNER-REPORTED`.
+
+### Continuation notes
+- Remaining limitations: persistent `relate serve --mcp stdio --read-only` startup snapshot, unsigned local store (`executionAuthenticity: "UNVERIFIED"` without `--verify`), and Linux `GLIBC_2.39` prebuilt binary block on Debian 12 (`GLIBC_2.36`).
+- Do not start RH-P3 implementation from this docs-only closeout.
+
+### Next action
+Complete independent review and separate owner merge approval for this docs-only closeout Draft PR, then proceed to RH-P3 planning only (no RH-P3 implementation authorized yet).
+
 <!-- HANDOFF_ENTRIES_END -->

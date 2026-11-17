@@ -1,10 +1,10 @@
 # RH-P2 — Real-Agent Handoff Follow-up & MCP Reader Hardening
 
-- **Status:** Review
+- **Status:** Done (PR #4 squash-merged to `main` as `a6bb9bdd562205e5690318272bce8dda0ecf6306`, November 17, 2026 UTC; audited PR HEAD `2c7dcef50a6cde26516f415c5879f3749c9dbe2d`)
 - **Owner/orchestrator:** Product owner
 - **Implementation agent:** Codex / Antigravity
 - **Target branch:** `main`
-- **Working branch:** `phase-2/real-agent-handoff-followup`
+- **Working branch:** `phase-2/real-agent-handoff-followup` (merged; post-merge closeout on `docs/rh-p2-postmerge-closeout`)
 
 ## Objective
 
@@ -50,8 +50,8 @@ Document the sanitized RH-P2 real-agent Codex-to-Claude handoff proof, harden `s
 - [x] `callRelateMcpBatch` and `resumeTaskViaReadOnlyMcp` enforce bounded `timeoutMs` + `SIGKILL`, safe JSON parsing, id-based response lookup, and stderr diagnostics.
 - [x] `test/e2e_mcp.test.mjs` enforces per-RPC timeout, `error`/`exit` handlers, guaranteed `SIGKILL` cleanup, fresh-resume invariant, diagnostic persistent-reader characterization, and `(fake)` fault-injection tests.
 - [x] `docs/RH-P2-REAL-AGENT-PROOF.md` removes private paths and unsupported internal claims, adds sanitized `RH-P2-CODEX-CLAUDE-1` with exact SHA, distinguishes unsigned evidence, and discloses placeholder timestamps.
-- [x] `docs/STATUS.md` and `docs/HANDOFFS.md` reconcile `Active task` (`tasks/RH-P2-real-agent-handoff-followup.md`), `Active handoff` (`RH-P2-H1`), and `OWNER-REPORTED` / `AUTHOR-REPORTED` truth labels.
-- [ ] All canonical Python and Node.js validations pass on the final exact HEAD with zero orphan processes.
+- [x] `docs/STATUS.md` and `docs/HANDOFFS.md` reconcile `Active task` (`tasks/RH-P2-real-agent-handoff-followup.md`), `Active handoff` (`RH-P2-H1` -> `RH-P2-H2`), and `OWNER-REPORTED` / `AUTHOR-REPORTED` truth labels.
+- [x] All canonical Python and Node.js validations passed on audited exact HEAD `2c7dcef50a6cde26516f415c5879f3749c9dbe2d` with zero orphan processes (`AUTHOR-REPORTED PASS`: 15/15 `npm test`, 5/5 `npm run test:security`, `npm run build`, `npm run demo`, and `scripts/validate.py` PASS; independent COMMENT-only re-audit returned PASS without independently reproducing real-CLI execution).
 
 ## Security / privacy considerations
 
@@ -59,4 +59,4 @@ Preserves `--read-only` MCP enforcement, repository isolation, and bounded `MAX_
 
 ## Completion handoff
 
-Appended `## Handoff: RH-P2-H1` in `docs/HANDOFFS.md` and updated `Active handoff: RH-P2-H1` in `docs/STATUS.md`.
+Appended `## Handoff: RH-P2-H2` in `docs/HANDOFFS.md` (preserving `RH-P2-H1` as historical evidence) and updated `Active handoff: RH-P2-H2` in `docs/STATUS.md`.
