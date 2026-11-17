@@ -39,7 +39,7 @@ The following items go beyond the minimal P3 line in `docs/ARCHITECTURE.md` and 
   2. `npm run build` & `npm run test:security`
   3. `npm test` (`RELATE_REQUIRE_CLI=1`)
   4. `npm run demo`
-  5. `npx relatehandoff resume --store examples/example-store --task RH-P1` (verifies committed portable store opens read-only without regeneration).
+  5. `node src/cli.mjs resume --store examples/example-store --repo . --repo-id mrdzyn/relatehandoff --task RH-P1` (verifies committed portable store opens read-only without regeneration).
 
 ### 2.2 Real Relate CLI Dependencies & Linux GLIBC Compatibility
 - **Observed constraint:** Prebuilt `relate-linux-amd64` `v1.0.1` from `relatedb.ai/install.sh` requires `GLIBC_2.39` and fails on Debian 12 (`GLIBC_2.36`). Meanwhile, `@relate/relate@1.0.1` (Node.js), `relate-db@1.0.1` (Python `manylinux2014`), and source-built `relate-cli v1.0.1` run on `GLIBC_2.36`.
