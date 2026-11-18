@@ -50,6 +50,8 @@ Report actual compatibility for each test host; this project has not validated n
 
 ## Canonical exact-HEAD validation
 
+For repository development, follow [AGENTS.md](AGENTS.md), then [docs/STATUS.md](docs/STATUS.md), [config/project-profile.json](config/project-profile.json), and the active task contract. The retained [agent orchestration guide](docs/AGENT-ORCHESTRATION.md) defines one-primary-agent execution, bounded specialist work, and exact-HEAD audit responsibilities.
+
 ```bash
 git diff --check origin/main...HEAD
 python3 scripts/test_bootstrap.py
