@@ -97,7 +97,7 @@ No bundler, no framework, no `package.json` dependency changes. The only `packag
 
 ## 7. Cloudflare Pages configuration (proposal; nothing created)
 
-- **Product:** Cloudflare Pages static site. Cloudflare's Pages docs describe Git-integration setup with a build command (`exit 0` recommended) and a build output directory, and `_headers` support for static assets. Cloudflare may recommend Workers static assets for new projects; that was **not** confirmed from the pages checked, so owner decision D2 asks which product to use.
+- **Product (decision D2, open):** Cloudflare's Workers best-practices page, checked 2026-11-18, recommends **Workers Static Assets for new projects**; Pages still works, but new features are focused on Workers. A purely static site sets `assets.directory` in the Wrangler configuration and needs no Worker script. The plan's concrete settings below describe Pages (Git-integration setup with build command `exit 0` and an output directory; `_headers` support for static assets, documented on the Pages headers page). If D2 selects Workers Static Assets, the deployment steps, configuration file and header mechanism must be re-derived from current Workers documentation (the page checked did not state headers-file support) before T2/T4; the no-Functions, no-bindings, manual-deploy and no-analytics constraints are unchanged.
 - **Deployment mode:** **Direct Upload, manual, owner-run** (for example `npx wrangler pages deploy site --project-name <name>`, to be re-verified against current Wrangler docs at T4). **No Git-connected automatic production deployment** and no preview-deployment automation until the owner explicitly approves each (D3).
 - **Settings if Git integration is later approved:** production branch `main`, build command `exit 0`, output directory `site`, no environment variables, no secrets.
 - **Bindings/Functions:** none. No `functions/` directory, no `_worker.js`, no KV/D1/R2/Queues/AI. Response headers from `_headers` apply only to static assets, which is all that exists.
@@ -134,12 +134,12 @@ No bundler, no framework, no `package.json` dependency changes. The only `packag
 | Preview/prod publishes unreviewed content | Manual deploy only; no auto-deploy; owner approval |
 | Design pack restoration disturbs validation | Separate T1 PR; re-run `validate_project_profile.py` |
 | Licensing/attribution gaps | Apache-2.0 notice, Relate attribution and non-endorsement text; media original or licensed |
-| Cloudflare product guidance changes | Re-verify docs at T4 (D2) |
+| Pages versus Workers Static Assets guidance | Official docs recommend Workers Static Assets for new sites; decide D2 and re-verify docs before T2/T4 |
 
 ## 10. Owner decisions required
 
 - **D1** Approve beginning UI work and enabling `design=true`, `platforms=["web"]`.
-- **D2** Choose Cloudflare Pages versus Workers static assets after re-checking current guidance.
+- **D2** Choose Cloudflare Pages versus Workers Static Assets. Official guidance recommends Workers Static Assets for new static sites; Pages remains supported.
 - **D3** Confirm manual Direct Upload only, no Git-connected auto-deploy or preview automation.
 - **D4** Approve the provenance-label model and the "no `LIVE`" rule.
 - **D5** Approve the outbound link allowlist and the wording for the video slot.
