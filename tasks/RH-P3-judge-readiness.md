@@ -1,7 +1,7 @@
 # RH-P3 — Judge Readiness Documentation Package
 
 **Status:** Draft task for RH-P3-T1 plus RH-P3-T4 preparation; no release or submission authorized.
-**Original base:** `main@e61b84dd0e7aada50f2ea8e94e6b8f9b1cd1b0d8` (PR #6). **Latest main:** `3783f08fd78621302be3134f05d4d8d17551c287` after licensing PR #8 merged. Branch history may diverge without conflicting files.
+**Original base:** `main@e61b84dd0e7aada50f2ea8e94e6b8f9b1cd1b0d8` (PR #6). **Current main:** `07af7fee99960aec4afc56e54e3cc75660362578` after licensing PR #8 and governance PR #9 squash merges. The judge-readiness branch incorporates both by a non-force merge of main.
 **UI design gate:** Not applicable (documentation only).
 
 ## Objective
