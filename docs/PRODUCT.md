@@ -4,7 +4,7 @@
 - **Product:** RelateHandoff
 - **Tagline:** One context. Every agent.
 - **Owner:** mrdzyn
-- **Stage:** Phase 0 planning / repository initialization; implementation not started
+- **Stage:** RH-P1/RH-P2 implemented and merged; RH-P3 judge/distribution preparation in progress (no release or submission authorized)
 - **Distribution intent:** Public hackathon submission; commercial direction and license require owner decision
 
 ## Problem
@@ -15,7 +15,7 @@ AI coding agents routinely hand work to a different session or tool. Reconstruct
 - Maintainers/reviewers validating work against an exact commit
 - Hackathon judges running an offline, reproducible demo
 
-## MVP promise (Phase 1 target, not yet implemented)
+## MVP promise (implemented in RH-P1; hardened in RH-P2)
 1. Record a structured handoff: source/target agent, task, repo/branch, exact commit SHA, decisions, cited artifacts, evidence, blockers and next action.
 2. Persist a local Relate graph with typed relationships, provenance and versioned schema.
 3. Resume from another compatible MCP agent with a *bounded* query and discover relevant instructions/evidence.
@@ -43,4 +43,4 @@ Agent A explicitly writes a handoff through a validated recorder; Agent B opens 
 - Open-core/commercial options remain proposals, not selected licensing terms.
 - Local-first/offline by default; minimize data and never commit real secrets or customer information.
 - Competition project must remain new, original, and demoable; inherited scaffolding and inspiration are disclosed.
-- Phase 0 creates documentation and verification contracts only.
+- Phase 0 created documentation and verification contracts only. RH-P1/RH-P2 subsequently implemented and hardened the local recorder, persistent graph and read-only MCP client.

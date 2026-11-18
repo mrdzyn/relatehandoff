@@ -2,42 +2,49 @@
 
 **One context. Every agent.**
 
-RelateHandoff is a proposed local-first context and evidence layer for AI-assisted software development. It aims to let Codex, Claude Code, Gemini CLI, and other compatible clients resume work from a shared, provenance-aware handoff graph without reconstructing entire chat transcripts.
+RelateHandoff is an implemented local-first agent handoff and evidence graph. An authorized recorder writes structured provenance into a durable Relate store; other compatible agents read bounded graph context through **read-only MCP**. Git, canonical repository files, and executed tests remain authoritative. The graph cannot approve merges or make unsigned evidence authentic.
 
-**Current state:** Phase 0 (`#1`) and RH-P1 handoff (`#2`) are merged on `main`. On `phase-1/relate-handoff-mvp` (Draft PR #3), the Relate `v1.0.1` integration spike, schema-validated handoff recorder (`src/recorder.mjs`), exact-HEAD freshness engine (`src/freshness.mjs`), and read-only MCP stdio client (`src/mcp_client.mjs`, `src/cli.mjs`) are implemented and tested against live Relate. Sanitized example store and judge demo capture remain in progress. See [status](docs/STATUS.md), [spike findings](docs/RELATE-SPIKE.md), and the [first implementation task](tasks/RH-P1-relate-handoff-mvp.md).
+**Status:** RH-P1 and RH-P2 are merged; RH-P3 is judge-readiness preparation. See [status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), [RH-P3 plan](docs/RH-P3-PLAN.md), and the [walkthrough](docs/JUDGE-WALKTHROUGH.md). No product release or Devpost submission is authorized.
 
-## Why it exists
+## Reproducible judge quickstart
 
-Coding agents work in separate sessions and tools. Conventional handoffs lose the relationship between a requirement, a decision, a Git commit, a test result, and the agent that produced it. RelateHandoff will model those relationships and reject unsupported freshness claims.
+**Pinned project baseline:** Node.js **24 LTS**, Python **3.11+**, Git **2.30+**, separate **Relate CLI v1.0.1**, and npm `@relate/relate@1.0.1` (see `package-lock.json`). The CLI is **not** installed by `npm ci`. Get the pinned executable from [official v1.0.1 release artifacts](https://github.com/relatedb/relate/releases/tag/v1.0.1) and follow [official signature/checksum verification guidance](https://relatedb.ai/docs/get-started/install/). The convenience installer selects the **latest** release, not necessarily v1.0.1; check `relate --version` instead of mixing untested versions. If already installed outside PATH, set `RELATE_BIN` to its absolute path.
 
-It is *not* an agent orchestrator, a Git replacement, or an autonomous merge approver. Git and repository files remain authoritative; the graph is a derived local context and provenance index.
-
-## Planned Relate usage
-
-- **Mode:** persistent directory-based local Relate store, to support a writer plus read-only agent clients; not implemented in Phase 0.
-- **Engine:** [Relate](https://relatedb.ai/docs/) with Cypher relationships and a local read-only MCP surface.
-- **Graph:** Repository, Task, Requirement, Agent, Session, Handoff, Decision, Commit, Artifact, TestRun, Review and Evidence with typed provenance edges.
-- **Agent access:** `relate serve --mcp stdio --database <local-store> --read-only` once a real store exists; writes will pass through an explicit app-level ingestion and validation layer.
-- **Offline:** local Git checkout + local graph for normal retrieval; GitHub is still needed for remote PR state or cross-device Git synchronization.
-- **Judges:** Phase 1 must supply a synthetic populated **persistent** example store and reproducible commands. Neither is claimed to exist today.
-
-See [architecture](docs/ARCHITECTURE.md), [product](docs/PRODUCT.md) and [hackathon checklist](docs/HACKATHON.md).
-
-## Judge walkthrough & demo
-
-1. Install dependencies: `npm install` (pins `@relate/relate@1.0.1`), and ensure `relate` CLI `v1.0.1` is runnable (`relatedb.ai/install.sh`, or `cargo install` on `GLIBC < 2.39` Linux; see [spike findings](docs/RELATE-SPIKE.md)).
-2. Run the self-contained demo: `npm run demo` — exercises recording at `SHA-A`, read-only MCP retrieval, `VERIFIED` freshness, `SHA-A` → `SHA-B` `STALE` detection, missing-evidence `UNVERIFIED`, failed-evidence `BLOCKED`, and MCP write refusal.
-3. Inspect the committed synthetic example store ([`examples/example-store/`](examples/example-store/)) or regenerate it with `npm run generate:example`.
-
-See [judge walkthrough](docs/JUDGE-WALKTHROUGH.md) for Cypher query examples and captured CLI output.
-
-## Repository development
-
-The project is initialized from [mrdzyn/ai-native-project-template](https://github.com/mrdzyn/ai-native-project-template). Follow [AGENTS.md](AGENTS.md), then [docs/STATUS.md](docs/STATUS.md), [config/project-profile.json](config/project-profile.json), and the active task contract. The retained [agent orchestration guide](docs/AGENT-ORCHESTRATION.md) defines one-primary-agent execution, bounded specialist work, and exact-HEAD audit responsibilities.
-
-Exact-HEAD local-first validation on a clean checkout:
+On a fresh macOS ARM64 or compatible Linux x86_64 checkout:
 
 ```bash
+git clone https://github.com/mrdzyn/relatehandoff.git
+cd relatehandoff
+node --version
+python3 --version
+relate --version
+npm ci
+npm run build
+npm run test:security
+RELATE_REQUIRE_CLI=1 npm test
+npm run demo
+node src/cli.mjs resume --store examples/example-store --repo . --repo-id mrdzyn/relatehandoff --task RH-P1
+```
+
+**Expected behavior:** `npm run demo` executes real Relate with a temporary synthetic repository and store. It demonstrates a recorded handoff and connected provenance, `CURRENT` metadata but `UNVERIFIED` unsigned proof, explicit `--verify` giving `AUTHENTICATED`/`VERIFIED`, changed-HEAD `STALE`, missing/self-asserted evidence `UNVERIFIED`, failed evidence `BLOCKED`, and write refusal through read-only MCP. Do not claim any PASS that a local command did not actually produce.
+
+The final `resume` reads the committed, sanitized `examples/example-store/` **without regeneration**. An earlier owner-side real-CLI run returned `RH-P1-EXAMPLE-1`, tools `read_cypher`/`get_schema`, and expected `STALE`/`SELF_ASSERTED` for a synthetic handoff at a different Git HEAD. Verify fresh output on your own checkout, and do not present the fixture as authenticated real-world evidence.
+
+### Linux GLIBC compatibility
+
+The prebuilt Relate v1.0.1 Linux amd64 CLI was observed to require `GLIBC_2.39`, failing on Debian 12 (`GLIBC_2.36`). A source-built v1.0.1 CLI was separately reported working there. On older glibc, use the pinned upstream source and Rust/Cargo rather than replacing system glibc or introducing a fake:
+
+```bash
+cargo install --git https://github.com/relatedb/relate --tag v1.0.1 relate-cli
+relate --version
+```
+
+Report actual compatibility for each test host; this project has not validated native Windows/WSL2 judge execution. See [spike](docs/RELATE-SPIKE.md). The external long-lived `relate serve --mcp stdio --read-only` server can retain an open-time snapshot: **restart it after external writer updates**. The RelateHandoff `resume` command uses a fresh, short-lived read-only server.
+
+## Canonical exact-HEAD validation
+
+```bash
+git diff --check origin/main...HEAD
 python3 scripts/test_bootstrap.py
 python3 scripts/test_entrypoints.py
 python3 scripts/check_secret_tracking.py
@@ -45,12 +52,10 @@ python3 scripts/validate_project_profile.py --repository mrdzyn/relatehandoff
 python3 scripts/validate.py --repository mrdzyn/relatehandoff
 ```
 
-`validate.py` executes the mandatory contract in `config/validation-contract.json` (`test` via `scripts/run_p1_tests.py` with `RELATE_REQUIRE_CLI=1`, `build` via `npm run build`, and `security` via `scripts/run_p1_security.py`). Skipped MCP tests cannot pass `validate.py`. On macOS/Linux invoke `python3`; on Windows use `py -3` or `python`. The retained `scripts/test_entrypoints.py` governance regression suite runs **separately** from `scripts/validate.py`. Hosted baseline CI is manual-dispatch only.
+Run in a clean checkout of the **exact PR HEAD** and report real CLI availability, host, test counts and exit codes. `validate.py` executes the project's mandatory Node test/build/security contract; fake or skipped MCP tests cannot satisfy it. See [testing](docs/TESTING.md) and [local-first CI](docs/MANUAL-CI.md).
 
-## Distribution and attribution
+## Origin, attribution and use
 
-Hackathon entry: [Relate by Neo4j](https://relate.devpost.com/), deadline **December 11, 2026, 6:00 PM PST**. This is an independent community submission, not endorsed by Neo4j. Its concept was informed by the [jexp/relate-ideas](https://github.com/jexp/relate-ideas) collection (especially Agent Handoff Object, Judgment Ledger and Skills as Graphs); no implementation or content from it has been copied into this project.
+This repository uses the experimental Apache-2.0 [Relate engine](https://github.com/relatedb/relate). Its project scaffold came from [mrdzyn/ai-native-project-template](https://github.com/mrdzyn/ai-native-project-template), and its concept was informed by [jexp/relate-ideas](https://github.com/jexp/relate-ideas) (CC-BY-4.0 conceptual inspiration; no code or content copied). It is an independent [Relate hackathon](https://relate.devpost.com/) project, not endorsed by Neo4j.
 
-**License decision is pending owner approval.** Public visibility does not itself grant open-source redistribution rights. Do not import third-party implementation or accept contributions before the project's license and contribution terms are settled.
-
-No hosted service, payment, telemetry, agent credentials, or end-user records are part of the current foundation; implementation, distribution and release remain separately gated.
+**The RelateHandoff project's own source license has NOT been chosen.** Public visibility alone is not permission to redistribute its original code. Do not include secrets, private transcripts, customer data, or live project stores in public examples or judge videos. No hosted service, telemetry, payments, autonomous merge, deployment, or product release is included. See [video capture plan](docs/RH-P3-DEMO-CAPTURE.md).
