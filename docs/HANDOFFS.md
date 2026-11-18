@@ -362,4 +362,22 @@ Complete independent COMMENT-only review of the Draft PR and obtain explicit own
 ### Next action
 Owner-side run the full RH-P3-T1/T4 clean-checkout test contract on the new PR #7 HEAD with Relate CLI v1.0.1, capture real demo output, then request independent review. Do not merge/release/submit automatically.
 
+## Handoff: RH-P4-PLAN1
+
+- **Task:** `tasks/RH-P4-cloudflare-judge-showcase.md` (planning only)
+- **From:** Claude (planning)
+- **To:** Exact-HEAD validator, independent COMMENT-only reviewer and project owner
+- **Branch:** `docs/rh-p4-cloudflare-showcase-plan`
+- **Base:** `81e8e208eeb8a23417e18f2a8d3f379f441e6ed8`
+
+### Completed
+- Added the RH-P4 task contract, showcase plan and security review; updated STATUS; added the RH-P4 task path to the `scripts/test_bootstrap.py` active-task allowlist (fail-closed checks unchanged).
+- No UI, `site/`, Cloudflare configuration, dependency, source, test, fixture or schema change.
+
+### Open gates
+- Owner decisions D1–D8 in `docs/RH-P4-SHOWCASE-PLAN.md`; the design capability gate is closed; Cloudflare enablement, deployment, video and Devpost submission are not authorized.
+
+### Next action
+Validate the exact PR HEAD with real Relate CLI v1.0.1, obtain an independent COMMENT-only audit, and decide D1–D8 before any T1+ work.
+
 <!-- HANDOFF_ENTRIES_END -->
