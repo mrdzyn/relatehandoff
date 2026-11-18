@@ -1,6 +1,6 @@
 # RH-P5 — Multi-Project Remote MCP and Agent Handoff Platform: Plan
 
-**State:** Proposal for owner review. Baseline `main@282e10e600935ee1c1bba34522cb3e3373f3be1d`. Nothing in this document is implemented, deployed or connected. Companion documents: [D1 schema](RH-P5-D1-SCHEMA.md), [threat model](RH-P5-THREAT-MODEL.md). External facts were checked against vendor documentation on 2026-11-18 and are tagged **[verified]** or **[verify]** (must be re-checked before implementation). Source links are in §13.
+**State:** Proposal for owner review (revision 2: remediates independent audit findings P11-01 and P11-02; see [D1 schema](RH-P5-D1-SCHEMA.md)). Baseline `main@282e10e600935ee1c1bba34522cb3e3373f3be1d`. Nothing in this document is implemented, deployed or connected. Companion documents: [D1 schema](RH-P5-D1-SCHEMA.md), [threat model](RH-P5-THREAT-MODEL.md). External facts were checked against vendor documentation on 2026-11-18 and are tagged **[verified]** or **[verify]** (must be re-checked before implementation). Source links are in §13.
 
 ## 0. Scope gate (D0)
 
@@ -48,7 +48,7 @@
 - **Four Workers, least privilege.** `rh-mcp-gateway` can only call `ReadApi`; `rh-ingest` can only call `WriteApi`; only `rh-data` holds the D1 binding. This yields real privilege separation (the gateway process has no database write path), instead of relying on code discipline. Cloudflare Worker-to-Worker RPC with named entrypoints is the intended mechanism **[verify]**; fallback is one Worker per concern with the DAL's write functions compiled out of the gateway bundle plus a static test (§7).
 - **Split resource server and authorization server**, as `@cloudflare/workers-oauth-provider` recommends **[verified]**; the library stores tokens/codes/secrets only as hashes in KV, encrypts per-grant `props`, supports DCR, CIMD and RFC 8707 resource indicators, but **does not enforce scopes or tenancy itself — our handler must** **[verified]**.
 - **MCP transport:** Streamable HTTP via the Agents SDK `createMcpHandler`, stateless per request; no Durable Object is required **[verified]**. `McpAgent` is marked deprecated in Cloudflare's guide, so it is not used **[verified]**.
-- **D1** holds the project registry and sanitized index (limits **[verified]**: 10 GB/database paid, 2 MB max row, 100 bound parameters, 1,000 queries per Worker invocation paid, 30 s query, `db.batch()` runs as a SQL transaction). **R2** only if a justified need appears (e.g., sanitized artifacts over the 2 MB row limit); not in scope now (D9).
+- **D1** holds the project registry and sanitized index (limits and behavior **[verified]**: foreign keys are enforced by default and cannot be disabled by queries or migrations; 10 GB/database paid, 2 MB max row, 100 bound parameters, 1,000 queries per Worker invocation paid, 30 s query, `db.batch()` runs as a SQL transaction). **R2** only if a justified need appears (e.g., sanitized artifacts over the 2 MB row limit); not in scope now (D9).
 - **Durable Objects:** not used initially; D1 serializes writes and per-project `server_seq` is enforced by a unique index. A per-project Durable Object sequencer is the escalation path if contention appears (D10).
 - **Local engine unchanged.** `src/` (recorder, freshness, read-only stdio MCP client) is not modified by this platform. Only an opt-in `publish` command is added later (T3), reading the local store.
 - **RH-P4 separation.** The static showcase, if enabled, is a different Worker/Pages site on a different hostname with no bindings. It does not link to, embed or proxy the MCP endpoint; its "no public MCP" non-goal is unaffected.
@@ -110,9 +110,9 @@ Common rules: transport Streamable HTTP; each tool declares read-only/non-destru
 **Identity and idempotency.** Handoff identity is `handoffKey = <repository>::<taskId>::<handoffId>`, matching the local scoped keys. The server computes `payload_sha256` over canonical JSON.
 - Same key + same hash → idempotent success, no write, returns existing `server_seq`.
 - Same key + different hash → `409 CONFLICT`; nothing is overwritten; an `ingest_conflicts` row records the attempt (hash, publisher, time).
-- Handoffs are **append-only and immutable**. A correction is a new handoff with `supersedes`; the old one becomes `SUPERSEDED`. Only an admin action can set `RETRACTED` (reason required, audited); retracted rows are excluded from default reads.
-- Ordering: the server assigns a per-project monotonic `server_seq` inside the same D1 batch that inserts the handoff, its children and the audit row; a unique index on `(project_id, server_seq)` fails closed on races. Client clocks never decide order.
-- Branch heads: `project_refs` records the latest head a publisher (or, later, a read-only GitHub App) observed per branch, with source and time. Only newer `observedAt` replaces an older value from the same source. The index cannot know ancestry, so a force-push is reported as a changed head (`STALE`), never as "newer".
+- Handoffs are **append-only and immutable**; the database rejects content updates and only allows the status transitions `ACTIVE → SUPERSEDED | RETRACTED` and `SUPERSEDED → RETRACTED`, each recorded in `handoff_status_events` and the audit log. A correction is a new handoff with `supersedes`; the old one becomes `SUPERSEDED` atomically through the insert. Only an owner action can set `RETRACTED` (reason required, audited); retracted rows are excluded from default reads. Trigger support on D1 is **[verify]**; if unavailable these rules are enforced in the DAL and tested, and this plan must say so.
+- Ordering: the server assigns a per-project monotonic `server_seq` **inside the insert statement itself** (`COALESCE(MAX(server_seq),0)+1` in the same `INSERT … SELECT`, never read-then-write in application code), in the same D1 batch that inserts the handoff, its children and the audit row; a unique index on `(project_id, server_seq)` is the fail-closed backstop, with a bounded retry (3×, jittered) and then a retryable `503` with nothing written. Client clocks never decide order. Details and retry/idempotency semantics: schema document §5.2.
+- Branch heads: `project_refs` records the latest head a publisher (or, later, a read-only GitHub App) observed per branch, with source and time. The `source` is **server-derived, never client-supplied**: the ingestion path hard-codes `PUBLISHER_REPORTED` with the authenticated publisher id, and `GITHUB_APP` rows require an owner-created link and a separate server-only entrypoint (schema document §5.4). Only newer `observedAt` replaces an older value from the same source. The index cannot know ancestry, so a force-push is reported as a changed head (`STALE`), never as "newer".
 - All-or-nothing: a handoff and its decisions/evidence/artifacts commit in one batch; failure leaves nothing.
 - Quotas: per-publisher and per-project rate limits and row caps; oversized payloads rejected before parsing.
 - Schema versions: unknown major `schemaVersion` rejected; the gateway reports `schemaVersion` per row.
@@ -124,7 +124,8 @@ Common rules: transport Streamable HTTP; each tool declares read-only/non-destru
 **Unit/contract**
 - Shared-validator parity: every local validator negative test also rejects at the ingestion boundary; schema enums and ID rules mirror `src/schema.mjs`; freshness reason-code parity with `src/freshness.mjs`.
 - Tool schema tests: unknown fields rejected, bounds enforced, SHA format (`40`-hex lowercase) enforced.
-- D1 migration tests: apply all migrations from empty on local SQLite/Miniflare, check constraints, foreign keys (**do not assume D1 enforces them; test**) and `STRICT` behavior.
+- D1 migration tests: apply all migrations from empty on local SQLite/Miniflare **and a real D1 staging database**, check constraints, composite foreign keys, triggers and `STRICT` behavior. Cloudflare documents that D1 enforces foreign keys by default and that queries/migrations cannot change `PRAGMA foreign_keys`; trigger and `STRICT` support on D1 are still **[verify]** and gated in T2.
+- **Database-level negative suite (DB-01…DB-19 in the schema document §7), required in addition to application-level `ProjectScope` tests:** cross-tenant and cross-project inserts for connections, grants, publishers, handoffs, supersession, conflicts, refs and audit rows must fail at the database; valid same-project inserts must succeed; immutable-content and status-transition rules, project hard deletion (ordered, atomic, with a non-sensitive tombstone, including forced-failure rollback at each step), concurrent `server_seq` allocation with safe idempotent retries, and `PRAGMA foreign_key_check`/`integrity_check` are all asserted. A local SQLite run exists for revision 2 of the DDL (see the schema document); it does not replace the D1/Miniflare run.
 
 **Cross-project and tenant isolation negatives (mandatory, run on every PR touching `cloud/`)**
 1. Connection granted `A` only: `get_handoff(project=B, …)` → `NOT_FOUND`, identical bytes to an unknown project (no oracle).
@@ -139,6 +140,8 @@ Common rules: transport Streamable HTTP; each tool declares read-only/non-destru
 10. Publisher for A posting a payload with `repository`/headSha of B → `403`, nothing written; publisher key cannot read; reader token cannot ingest; publisher signature rejected at the gateway; OAuth token rejected at ingestion.
 11. Cross-tenant (synthetic second tenant fixture): all of the above across `tenant_id`.
 12. Output audit test: every response is scanned to ensure it contains only the requested project's ids.
+13. Ingestion negatives tied to P11-02: a payload carrying a `source`, `GITHUB_APP`, `status`, `server_seq` or any unknown field is rejected; `GITHUB_APP` observations can only be created through the separate server-controlled entrypoint; superseding or retracting is impossible through the ingestion path except by a newer same-project handoff; deletion of a project through the ingestion or gateway Workers is impossible (no entrypoint); `deleteProject` is owner-only with typed confirmation and is idempotent on retry.
+14. Concurrency: two simultaneous writers for different handoffs obtain distinct contiguous-or-gapped increasing `server_seq`; two simultaneous identical requests produce exactly one row and two successes; same key with different payloads produce one winner and one `409` plus one conflict row; a `server_seq` uniqueness failure writes nothing and is retried or returned as a retryable `503`.
 
 **Security / protocol**
 - Missing, expired, wrong-`aud`, wrong-`iss`, wrong-`resource`, stripped-scope tokens → `401`/`403` with correct `WWW-Authenticate`; no token in query strings; `Origin` validation for Streamable HTTP and a deny-by-default CORS policy; DNS-rebinding test.
@@ -179,7 +182,7 @@ Allowed runtime dependencies (minimal, pinned): `@cloudflare/workers-oauth-provi
 3. **Environments:** local Miniflare → staging (synthetic) → production (one real project first). Separate D1/KV/hostnames/secrets; no copying of production data downward.
 4. **Backfill:** `publish --backfill` replays existing local handoffs idempotently (same keys ⇒ same hashes ⇒ no-ops), so retries are safe. Every backfill is project-explicit and dry-run first.
 5. **Tenant evolution:** new tenants add rows; the optional move to database-per-tenant is a copy by `tenant_id` behind the DAL, verified by the isolation suite on both layouts.
-6. **Decommission:** disabling the platform leaves Git and local stores untouched; an export (JSON per project) and a delete-project procedure (hard delete with audit tombstone) are part of T7.
+6. **Decommission and deletion:** disabling the platform leaves Git and local stores untouched; an export (JSON per project) and the ordered, atomic `deleteProject` procedure (no cascades; retained non-sensitive `project_identities` tombstone, scrubbed publisher rows and audit rows; schema document §5.1) are part of T7, tested for crash/retry safety.
 
 ## 12. Phased implementation tasks
 
@@ -203,6 +206,8 @@ Each task: its own branch/PR, bounded allowed/forbidden scope, exact-HEAD local 
 - MCP authorization specification (2025-06-18): https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization
 - OpenAI Apps SDK authentication (ChatGPT OAuth, CIMD/DCR, PKCE, resource, mTLS, no M2M): https://developers.openai.com/apps-sdk/build/auth
 - D1 limits and batch/transactions: https://developers.cloudflare.com/d1/platform/limits/ and https://developers.cloudflare.com/d1/worker-api/d1-database/
+- D1 foreign keys (enforced by default; `defer_foreign_keys` caveat): https://developers.cloudflare.com/d1/sql-api/foreign-keys/ . Trigger and `STRICT` support on D1 were not confirmed from Cloudflare's own pages.
+- Re-check the MCP authorization baseline against the latest supported specification before T1 (the independent audit notes that Cloudflare's OAuth provider references a newer revision than the 2025-06-18 text cited here).
 - Codex remote MCP/OAuth and xAI remote MCP tools were confirmed only via secondary summaries; verify against official docs (https://developers.openai.com/docs/extend/mcp and https://docs.x.ai/developers/tools/remote-mcp).
 
 ## 14. Owner decisions required

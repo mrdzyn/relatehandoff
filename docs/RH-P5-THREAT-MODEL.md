@@ -38,6 +38,10 @@
 | B8 | Stale or forged "current" claims | `CURRENT` only on SHA equality with a caller-supplied or trusted observed head; force-push shown as changed head; unknown basis ⇒ `UNVERIFIED` | freshness matrix |
 | B9 | Resource exhaustion / cost abuse | Body, row and rate caps; bounded queries per invocation; D1 limits respected; alerts and kill switch | load/limit tests |
 | B10 | Partial writes | Single atomic `db.batch()`; unique `(project_id, server_seq)` | fault-injection test |
+| B12 | Publisher forges a server-controlled observation source (`GITHUB_APP`) or status/sequence fields | `source` derived by the server; ingestion rejects unknown fields; DB `CHECK` plus owner-created `github_app_links`; separate server-only entrypoint | payload-field and DB-07 tests |
+| B13 | Rewriting or silently deleting handoff history | DB-level immutability and status-transition triggers (**[verify]** on D1; DAL fallback), append-only events/audit, deletion only via the ordered owner-only procedure | DB-12…DB-15 |
+| B14 | Interrupted or racing project deletion leaves partial or orphan data, or loses the audit trail | Single atomic batch, no cascades, retained non-sensitive tombstone, idempotent retry, forced-failure rollback tests | DB-16, DB-17 |
+| B15 | `server_seq` races or duplicate sequence on retry | In-statement allocation, unique index backstop, bounded retry, idempotent keys | DB-18, concurrency tests |
 | B11 | Compromised publisher poisons context with false but well-formed handoffs | Cannot be eliminated by the cloud: output is labeled `UNSIGNED_CLOUD_INGESTED`/`UNVERIFIED`, never `VERIFIED`; readers must re-verify locally at their own HEAD | documented residual risk |
 
 ### C. Isolation
@@ -51,6 +55,7 @@
 | C6 | Cross-tenant leakage later | Tenant id in every key; synthetic second-tenant fixture in CI; option of DB-per-tenant | item 11 |
 | C7 | Error/timing oracle revealing other projects | Uniform denial; no differentiating messages | item 1 |
 | C8 | Shared cache poisoning | No cross-project cache; per-request lookups | cache test |
+| C9 | Application bug or direct SQL bypasses `ProjectScope` and links rows across tenants/projects (connection↔principal, grant↔project, handoff↔publisher/supersedes, audit↔project, conflict↔publisher) | Composite foreign keys that include `tenant_id`/`project_id` on every actor, publisher and project relationship (schema document §2), actor-kind `CHECK`s, repo-key trigger; defense in depth, not a replacement for authorization | DB-01…DB-09 (database level), isolation suite (application level) |
 
 ### D. Agent-facing risks
 | # | Threat | Controls | Test |

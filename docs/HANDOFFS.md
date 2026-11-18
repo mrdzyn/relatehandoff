@@ -398,4 +398,23 @@ Validate the exact PR HEAD with real Relate CLI v1.0.1, obtain an independent CO
 ### Next action
 Validate the exact PR HEAD with real Relate CLI v1.0.1, obtain an independent COMMENT-only audit, and decide D0–D14 before any T1+ work.
 
+## Handoff: RH-P5-PLAN2
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Claude (planning remediation)
+- **To:** Exact-HEAD validator, independent COMMENT-only re-auditor and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan` (Draft PR #11)
+- **Audited HEAD remediated:** `7c75899d44e14314d156a604992ca7c742e5c9fa` (review 5957032620)
+
+### Completed
+- P11-01: `docs/RH-P5-D1-SCHEMA.md` revision 2 adds scoped UNIQUE parents and composite foreign keys for every actor, publisher, tenant and project relationship, plus `project_identities`, `github_app_links` and a relationship matrix.
+- P11-02: documented and specified ordered atomic project deletion with a non-sensitive tombstone, in-statement `server_seq` allocation with idempotent retries, immutable handoff content with audited status transitions, server-controlled `GITHUB_APP` observations, and a DB-01…DB-19 database-level negative test matrix; plan and threat model updated.
+- Local SQLite verification only; no D1/Miniflare run. No Worker, wrangler, migration, dependency, deployment or production change.
+
+### Open gates
+- D0–D14, design gate, D1/Miniflare execution (T2), trigger/`STRICT` support on D1 **[verify]**, Cloudflare resources, deployment and submission remain unauthorized.
+
+### Next action
+Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT-only re-audit, then owner decisions D0–D14.
+
 <!-- HANDOFF_ENTRIES_END -->
