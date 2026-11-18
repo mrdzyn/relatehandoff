@@ -417,4 +417,23 @@ Validate the exact PR HEAD with real Relate CLI v1.0.1, obtain an independent CO
 ### Next action
 Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT-only re-audit, then owner decisions D0–D14.
 
+## Handoff: RH-P5-PLAN3
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Claude (targeted D1 status-history integrity check)
+- **To:** Exact-HEAD validator, independent COMMENT-only re-auditor and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan` (Draft PR #11)
+- **Starting HEAD:** `c0eae0f1920962c752cc39d7193f0dde8ba77b7e`
+
+### Completed
+- Reproduced that `status_reason`, `status_changed_at` and `status_actor_principal_id` could be rewritten without a new event while `status` stayed unchanged, plus forged status events and `INSERT OR REPLACE` overwrites of audit, handoff and event rows.
+- `docs/RH-P5-D1-SCHEMA.md` revision 3: frozen status attribution unless `status` changes, no backward status time, mirror-only unique status events, no-overwrite insert triggers, frozen deletion marker, DAL rule against `OR REPLACE`/`ON CONFLICT`; new matrix DB-20…DB-26 and regression record (§9). Valid ACTIVE→SUPERSEDED/RETRACTED and SUPERSEDED→RETRACTED transitions preserved.
+- Plan and threat model updated. Local SQLite verification only; D1/Miniflare not run. No Worker, wrangler, migration, dependency or production change.
+
+### Open gates
+- D0–D14, design gate, D1/Miniflare execution (T2), trigger/`STRICT` support on D1 **[verify]**, Cloudflare resources, deployment and submission remain unauthorized.
+
+### Next action
+Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT-only re-audit, then owner decisions D0–D14.
+
 <!-- HANDOFF_ENTRIES_END -->

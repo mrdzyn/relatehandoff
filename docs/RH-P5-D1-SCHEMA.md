@@ -1,13 +1,13 @@
-# RH-P5 — D1 Schema and Data-Access Rules (proposal, revision 2)
+# RH-P5 — D1 Schema and Data-Access Rules (proposal, revision 3)
 
-**State:** Design only; no database exists. Revision 2 remediates independent audit findings **P11-01** (incomplete composite-foreign-key isolation) and **P11-02** (deletion, sequencing, immutability and source-control contracts). The DDL below becomes migration `0001` only at RH-P5-T2 after owner approval. See the [platform plan](RH-P5-PLATFORM-PLAN.md) and [threat model](RH-P5-THREAT-MODEL.md).
+**State:** Design only; no database exists. Revision 3 closes a status-history integrity gap found in a targeted check of revision 2 (§9). Revision 2 remediated independent audit findings **P11-01** (incomplete composite-foreign-key isolation) and **P11-02** (deletion, sequencing, immutability and source-control contracts). The DDL below becomes migration `0001` only at RH-P5-T2 after owner approval. See the [platform plan](RH-P5-PLATFORM-PLAN.md) and [threat model](RH-P5-THREAT-MODEL.md).
 
 **What has and has not been verified.** The DDL was extracted from this file and executed on local SQLite with `PRAGMA foreign_keys=ON`; the record is in [§8](#8-local-sqlite-verification-record). Cloudflare documents that D1 enforces foreign keys by default and that `PRAGMA foreign_keys` cannot be changed by queries or migrations. **Not yet verified on D1/Miniflare:** `STRICT` tables, `CREATE TRIGGER` bodies (triggers are described as supported only in secondary sources), `randomblob()`, and multi-statement trigger handling in D1 migration files. Running this schema and the negative suite of §7 on Miniflare and on a real D1 staging database is an **explicit gate of RH-P5-T2**; until then every statement here is a proposal.
 
 ## 1. Conventions
 - Ids are opaque, server-generated, random (≥ 128 bit), never sequential, and **globally unique** (a bare id can never alias another tenant's row). Timestamps are ISO-8601 UTC text. SHAs are 40-char lowercase hex. Enums are `CHECK` constraints mirrored from `src/schema.mjs` and `src/freshness.mjs` (parity-tested).
 - **Composite-key discipline.** Every tenant-owned row carries `tenant_id`; every project-owned row carries `(tenant_id, project_id)`; every reference to a parent is a **composite foreign key that includes `tenant_id` (and `project_id` where the parent is project-owned)** and targets a `UNIQUE` constraint containing those same columns. A single-column reference to a tenant- or project-owned parent is a defect.
-- No `ON DELETE CASCADE` anywhere. Deletion is an explicit ordered procedure (§5.1). No column stores file contents, diffs, transcripts, tokens, passwords, private keys or local absolute paths.
+- No `ON DELETE CASCADE` anywhere, and the DAL never issues `INSERT OR REPLACE`, `REPLACE INTO`, `INSERT OR IGNORE` or `ON CONFLICT … DO UPDATE/DO NOTHING` (a static test scans every statement). SQLite runs `REPLACE` conflict resolution without firing `DELETE` triggers (`recursive_triggers` is off), so the no-overwrite triggers of §3 backstop this rule. Deletion is an explicit ordered procedure (§5.1). No column stores file contents, diffs, transcripts, tokens, passwords, private keys or local absolute paths.
 - Database-level defenses (composite FKs, `CHECK`s, triggers) are **defense in depth**. They do not replace the `ProjectScope` checks in the data Worker, which remain the primary authorization boundary.
 
 ## 2. Relationship matrix (every actor/tenant/project relation)
@@ -240,6 +240,7 @@ CREATE TABLE handoff_status_events (
   reason             TEXT NOT NULL,
   actor_principal_id TEXT,
   at                 TEXT NOT NULL,
+  UNIQUE (handoff_pk, to_status),
   FOREIGN KEY (tenant_id, project_id, handoff_pk) REFERENCES handoffs(tenant_id, project_id, handoff_pk),
   FOREIGN KEY (tenant_id, actor_principal_id) REFERENCES principals(tenant_id, principal_id)
 ) STRICT;
@@ -383,6 +384,68 @@ BEGIN
      NEW.status_reason, NEW.status_actor_principal_id, NEW.status_changed_at);
 END;
 
+-- Status history is frozen: the status attribution columns can change only together with a status transition
+-- (a same-status update that rewrites reason, time or actor would otherwise bypass the event trigger), and a
+-- transition cannot move the status time backwards.
+CREATE TRIGGER trg_handoffs_status_frozen BEFORE UPDATE ON handoffs
+WHEN NEW.status IS OLD.status
+ AND (NEW.status_changed_at IS NOT OLD.status_changed_at
+   OR NEW.status_reason IS NOT OLD.status_reason
+   OR NEW.status_actor_principal_id IS NOT OLD.status_actor_principal_id)
+BEGIN SELECT RAISE(ABORT, 'status history is frozen unless status changes'); END;
+
+CREATE TRIGGER trg_handoffs_status_time BEFORE UPDATE OF status ON handoffs
+WHEN NEW.status <> OLD.status AND NEW.status_changed_at < COALESCE(OLD.status_changed_at, '')
+BEGIN SELECT RAISE(ABORT, 'status time cannot move backwards'); END;
+
+-- A status event can only mirror the handoff's current state after a valid transition; with
+-- UNIQUE (handoff_pk, to_status) this makes hand-inserted, duplicated or divergent events impossible.
+CREATE TRIGGER trg_events_mirror_state BEFORE INSERT ON handoff_status_events
+WHEN NOT EXISTS (SELECT 1 FROM handoffs h
+                  WHERE h.handoff_pk = NEW.handoff_pk AND h.tenant_id = NEW.tenant_id AND h.project_id = NEW.project_id
+                    AND h.status = NEW.to_status AND h.status_changed_at IS NEW.at
+                    AND h.status_reason IS NEW.reason AND h.status_actor_principal_id IS NEW.actor_principal_id)
+  OR NOT ((NEW.from_status = 'ACTIVE' AND NEW.to_status IN ('SUPERSEDED','RETRACTED'))
+       OR (NEW.from_status = 'SUPERSEDED' AND NEW.to_status = 'RETRACTED'))
+BEGIN SELECT RAISE(ABORT, 'status event must mirror a valid handoff state change'); END;
+
+-- No overwrite by insert. BEFORE INSERT triggers fire before conflict resolution, so they also stop
+-- INSERT OR REPLACE / OR IGNORE, which SQLite executes without firing DELETE triggers (recursive_triggers is off).
+-- Idempotent ingestion therefore uses INSERT ... SELECT ... WHERE NOT EXISTS, never ON CONFLICT or OR REPLACE.
+CREATE TRIGGER trg_handoffs_no_overwrite BEFORE INSERT ON handoffs
+WHEN EXISTS (SELECT 1 FROM handoffs WHERE handoff_pk = NEW.handoff_pk
+              OR (project_id = NEW.project_id AND (handoff_key = NEW.handoff_key OR server_seq = NEW.server_seq)))
+BEGIN SELECT RAISE(ABORT, 'insert would overwrite an existing handoff'); END;
+CREATE TRIGGER trg_audit_no_overwrite BEFORE INSERT ON audit_log
+WHEN EXISTS (SELECT 1 FROM audit_log WHERE audit_id = NEW.audit_id)
+BEGIN SELECT RAISE(ABORT, 'insert would overwrite an audit row'); END;
+CREATE TRIGGER trg_events_no_overwrite BEFORE INSERT ON handoff_status_events
+WHEN EXISTS (SELECT 1 FROM handoff_status_events WHERE event_id = NEW.event_id)
+BEGIN SELECT RAISE(ABORT, 'insert would overwrite a status event'); END;
+CREATE TRIGGER trg_decisions_no_overwrite BEFORE INSERT ON decisions
+WHEN EXISTS (SELECT 1 FROM decisions WHERE handoff_pk = NEW.handoff_pk AND decision_id = NEW.decision_id)
+BEGIN SELECT RAISE(ABORT, 'insert would overwrite a decision'); END;
+CREATE TRIGGER trg_evidence_no_overwrite BEFORE INSERT ON evidence
+WHEN EXISTS (SELECT 1 FROM evidence WHERE handoff_pk = NEW.handoff_pk AND evidence_id = NEW.evidence_id)
+BEGIN SELECT RAISE(ABORT, 'insert would overwrite evidence'); END;
+CREATE TRIGGER trg_artifacts_no_overwrite BEFORE INSERT ON artifacts
+WHEN EXISTS (SELECT 1 FROM artifacts WHERE handoff_pk = NEW.handoff_pk AND path = NEW.path)
+BEGIN SELECT RAISE(ABORT, 'insert would overwrite an artifact'); END;
+CREATE TRIGGER trg_conflicts_no_overwrite BEFORE INSERT ON ingest_conflicts
+WHEN EXISTS (SELECT 1 FROM ingest_conflicts WHERE conflict_id = NEW.conflict_id)
+BEGIN SELECT RAISE(ABORT, 'insert would overwrite a conflict record'); END;
+CREATE TRIGGER trg_tasks_no_overwrite BEFORE INSERT ON tasks
+WHEN EXISTS (SELECT 1 FROM tasks WHERE project_id = NEW.project_id AND task_id = NEW.task_id)
+BEGIN SELECT RAISE(ABORT, 'insert would overwrite a task'); END;
+
+-- The deletion marker cannot be rewritten, cleared or deleted once set, and identity keys never change.
+CREATE TRIGGER trg_identities_frozen BEFORE UPDATE ON project_identities
+WHEN NEW.tenant_id IS NOT OLD.tenant_id OR NEW.project_id IS NOT OLD.project_id OR NEW.created_at IS NOT OLD.created_at
+  OR OLD.deleted_at IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'project identity is frozen'); END;
+CREATE TRIGGER trg_identities_no_delete BEFORE DELETE ON project_identities
+BEGIN SELECT RAISE(ABORT, 'project identities are never deleted'); END;
+
 -- Append-only children and audit: no UPDATE; DELETE only while the project is being hard-deleted.
 CREATE TRIGGER trg_decisions_no_update BEFORE UPDATE ON decisions BEGIN SELECT RAISE(ABORT, 'append-only'); END;
 CREATE TRIGGER trg_evidence_no_update  BEFORE UPDATE ON evidence  BEGIN SELECT RAISE(ABORT, 'append-only'); END;
@@ -415,7 +478,7 @@ WHEN (SELECT deleted_at FROM project_identities WHERE tenant_id = OLD.tenant_id 
 BEGIN SELECT RAISE(ABORT, 'delete only via project deletion'); END;
 ```
 
-Notes: supersession is applied atomically by the insert trigger, so a handoff cannot be superseded without a newer same-project handoff. `GITHUB_APP` rows require an owner-created `github_app_links` row for that project. `project_identities.deleted_at` is set only by the deletion procedure. Trigger bodies need uppercase `BEGIN`/`END` and may need single-statement handling in D1 migration files **[verify]**.
+Notes: a status change is allowed only as a transition, and `status_changed_at`, `status_reason` and `status_actor_principal_id` are frozen whenever `status` does not change (`trg_handoffs_status_frozen`); status events can only mirror the handoff's current state after a valid transition and are unique per `(handoff_pk, to_status)`; `BEFORE INSERT` triggers refuse to overwrite existing rows of append-only tables. The initial write of `project_identities.deleted_at` is allowed to any statement that can update that table (SQLite cannot tell the caller), so only `WriteApi.deleteProject` may do it (DAL rule, API-level test); once set it is frozen. Supersession is applied atomically by the insert trigger, so a handoff cannot be superseded without a newer same-project handoff. `GITHUB_APP` rows require an owner-created `github_app_links` row for that project. `project_identities.deleted_at` is set only by the deletion procedure. Trigger bodies need uppercase `BEGIN`/`END` and may need single-statement handling in D1 migration files **[verify]**.
 
 ## 4. Data-access rules (code-enforced, tested)
 1. **Only `rh-data` touches D1.** The gateway and ingest Workers use named RPC entrypoints (`ReadApi`, `WriteApi`); the gateway has no write entrypoint. Cloudflare documents named `WorkerEntrypoint` service bindings; the binding security is verified in T2/T6.
@@ -443,13 +506,13 @@ One `db.batch()` (a SQL transaction) executed by `WriteApi.deleteProject` only, 
 **Tombstone:** the `project_identities` row (opaque `tenant_id`, `project_id`, `created_at`, `deleted_at`, `deleted_by_principal_id`), the project's publisher rows in scrubbed form, and the project's `audit_log` rows. These hold ids, timestamps, action codes and counts only. **Crash/retry:** the batch is atomic; a failure at any step rolls back everything (tested with a forced failure at each step); a retry after success finds no `projects` row and returns `ALREADY_DELETED` without writing. **Concurrency:** an ingest racing the delete either commits first (and is deleted with the project) or fails its foreign key afterward; a reader finds no grant and gets `NOT_FOUND`. OAuth-library KV grant state is revoked separately, and D1 stays authoritative: a KV failure must not leave an active D1 grant.
 
 ### 5.2 Concurrent `server_seq` allocation and safe retries
-- The sequence is computed **inside the insert statement**: `INSERT INTO handoffs (…, server_seq, …) SELECT …, COALESCE((SELECT MAX(server_seq) FROM handoffs WHERE project_id = ?), 0) + 1, … ON CONFLICT (project_id, handoff_key) DO NOTHING`. The application never reads the maximum and writes it back, because a stale read is exactly the race the unique index would otherwise have to catch.
+- The sequence is computed **inside the insert statement**: `INSERT INTO handoffs (…, server_seq, …) SELECT …, COALESCE((SELECT MAX(server_seq) FROM handoffs WHERE project_id = ?), 0) + 1, … WHERE NOT EXISTS (SELECT 1 FROM handoffs WHERE project_id = ? AND handoff_key = ?)`. The idempotent path is the `WHERE NOT EXISTS` (a duplicate inserts zero rows, so no trigger fires); `ON CONFLICT` and `OR REPLACE` are not used because the no-overwrite triggers (§3) reject them. The application never reads the maximum and writes it back, because a stale read is exactly the race the unique index would otherwise have to catch.
 - D1 runs batches as transactions one after another, so concurrent writers serialize; `UNIQUE (project_id, server_seq)` is the fail-closed backstop. A `server_seq` uniqueness violation aborts the whole batch (nothing written); the data Worker retries up to 3 times with jitter, then returns a retryable `503`.
 - **Idempotent retries:** same `handoff_key` and same `payload_sha256` → success returning the existing `server_seq` with zero writes; same key, different hash → `409` plus an `ingest_conflicts` row (one batch); two simultaneous identical requests → exactly one row and both succeed.
 - Gaps are allowed (`server_seq` is an order, not a count); ordering never uses client timestamps.
 
 ### 5.3 Immutable content and audited status transitions
-Handoff content, decisions, evidence and artifacts are never updated: the DAL has no update function and triggers reject any update. Only `status`, `status_changed_at`, `status_reason` and `status_actor_principal_id` may change, along `ACTIVE → SUPERSEDED | RETRACTED` and `SUPERSEDED → RETRACTED`. Supersession happens only through the insert trigger for a newer same-project handoff. `RETRACTED` requires an owner principal of the same tenant and a reason code (`CHECK` + FK). Each transition appends a `handoff_status_events` row (trigger) and an `audit_log` row naming the actor (DAL, same batch). Trigger support in D1 is **[verify]**; if triggers prove unusable, the same rules move into the DAL plus the negative tests of §7 and this document must be changed to say so rather than claim database enforcement.
+Handoff content, decisions, evidence and artifacts are never updated: the DAL has no update function and triggers reject any update. Only `status`, `status_changed_at`, `status_reason` and `status_actor_principal_id` may change, **and only together with a status transition**: along `ACTIVE → SUPERSEDED | RETRACTED` and `SUPERSEDED → RETRACTED`, with a status time that does not move backwards. A same-status update that rewrites reason, time or actor (including `SET status = status, …`) is rejected; a same-value no-op is accepted and writes nothing, and no event. Supersession happens only through the insert trigger for a newer same-project handoff. `RETRACTED` requires an owner principal of the same tenant and a reason code (`CHECK` + FK). Each transition appends exactly one `handoff_status_events` row (trigger) that mirrors the handoff row, and an `audit_log` row naming the actor (DAL, same batch). Hand-inserted, duplicated, divergent or impossible-transition events are rejected, and inserts cannot overwrite existing history rows. Trigger support in D1 is **[verify]**; if triggers prove unusable, the same rules move into the DAL plus the negative tests of §7 and this document must be changed to say so rather than claim database enforcement.
 
 ### 5.4 Server-controlled `GITHUB_APP` observations
 The `source` of a ref observation is **derived by the server, never read from a request**. `WriteApi.ingestHandoff` accepts no `source` field (unknown fields are rejected) and hard-codes `PUBLISHER_REPORTED` with the authenticated publisher's id. A separate `WriteApi.recordAppObservation`, callable only from the future GitHub-App Worker, hard-codes `GITHUB_APP` and a stored installation id. At the database, a `GITHUB_APP` row needs a `github_app_links` row for the same project that only the owner can create, and a publisher id on such a row (or an installation id on a publisher row) violates the `CHECK`. Honest limit: SQLite cannot know which Worker issued a statement, so the structural defenses are the `CHECK`, the owner-created link, the separate entrypoints and the API-level negative tests; they are not cryptographic proof of origin.
@@ -479,12 +542,28 @@ Fixture: tenants `t1`, `t2`; principals `u1∈t1`, `u2∈t2`; projects `p1`,`p2�
 | DB-15 | `UPDATE`/`DELETE` of `audit_log`; `DELETE` of handoffs, decisions, evidence, artifacts, tasks, events, conflicts or projects outside the deletion procedure; recreate a deleted project | `ABORT` each |
 | DB-16 | project deletion procedure on `p1` | succeeds; `p1` content gone, `p2`/`p3` untouched, tombstone and audit retained, publishers scrubbed, `foreign_key_check` empty |
 | DB-17 | deletion batch with a forced failure at each step | full rollback (row counts unchanged) |
-| DB-18 | concurrent writers allocating `server_seq`; stale-read allocation | contiguous unique sequence; stale read rejected by `UNIQUE` |
+| DB-18 | concurrent writers allocating `server_seq`; stale-read allocation; idempotent retry via `WHERE NOT EXISTS`; `ON CONFLICT DO NOTHING` on a guarded table | contiguous unique sequence; stale read rejected by `UNIQUE`; retry writes nothing and raises nothing; `ON CONFLICT` rejected |
 | DB-19 | `PRAGMA foreign_key_check`; `PRAGMA integrity_check` after the suite | empty / `ok` |
+| DB-20 | same-status rewrite of `status_reason`, `status_changed_at` or `status_actor_principal_id` on RETRACTED/SUPERSEDED/ACTIVE rows; `SET status = status, …`; same-value `status` with other attribution changed; clearing attribution | `ABORT`; row and event count unchanged (×8) |
+| DB-21 | no-op updates (`SET status = status`, `SET x = x`, re-assert identical values, `SET summary = summary`) | accepted; nothing changes; no event |
+| DB-22 | valid transitions: `ACTIVE→SUPERSEDED` (insert), `ACTIVE→RETRACTED`, `SUPERSEDED→RETRACTED` with later time and new actor; `SUPERSEDED→RETRACTED` with a time before the supersession | first three **succeed** with exactly one mirroring event each; backward time `ABORT` |
+| DB-23 | hand-inserted status event for an ACTIVE handoff; duplicate of a genuine event; wrong actor; impossible transition; cross-tenant/project reference | `ABORT`/`UNIQUE`/FK; event count unchanged (×5) |
+| DB-24 | `INSERT OR REPLACE`/`OR IGNORE` on audit, handoffs (same pk and same key), events, decisions, evidence, tasks; `ON CONFLICT DO UPDATE` on handoffs | `ABORT`; original rows intact |
+| DB-25 | clear, rewrite or delete the `project_identities` deletion marker; change identity keys | `ABORT` (×5) |
+| DB-26 | `PRAGMA foreign_key_check`/`integrity_check` on the regression fixture | empty / `ok` |
 
 ## 8. Local SQLite verification record
-Revision 2's §3 DDL was extracted from this file and executed on fresh databases with `PRAGMA foreign_keys=ON` on 2026-11-18: SQLite 3.54.1 (Python `sqlite3`) and SQLite 3.50.6 (command-line `sqlite3`). The script loads 19 tables and 22 triggers with exit code 0; `PRAGMA foreign_key_check` is empty and `PRAGMA integrity_check` is `ok`.
+Revision 3's §3 DDL was extracted from this file and executed on fresh databases with `PRAGMA foreign_keys=ON` on 2026-11-18: SQLite 3.54.1 (Python `sqlite3`) and SQLite 3.50.6 (command-line `sqlite3`). The script loads 19 tables and 35 triggers with exit code 0; `PRAGMA foreign_key_check` is empty and `PRAGMA integrity_check` is `ok`.
 
-The matrix of §7 was run as 79 assertions (each DB-01…DB-19 case, plus valid same-project inserts that must succeed): all behave as specified. The same five audited cases (DB-01…DB-05) were replayed against revision 1's DDL and were **accepted** there, reproducing the finding, and are **rejected** by revision 2. The harness is a throwaway script and is not part of this planning PR; its cases are the DB-xx table above and become committed tests in RH-P5-T2.
+The matrix of §7 was run as 119 assertions (DB-01…DB-26, including valid inserts and transitions that must succeed): all behave as specified. The five originally audited cross-project cases (DB-01…DB-05) were replayed on revision 1's DDL and accepted there; revision 2 and 3 reject them. The harness is a throwaway script, not part of this planning PR; its cases are the DB-xx table above and become committed tests in RH-P5-T2.
 
 This is **local SQLite evidence only**. Executing §3 and §7 on Miniflare and on a real D1 staging database (including trigger support, `STRICT`, `randomblob()` and migration handling) remains an explicit T2 gate.
+
+## 9. Regression record: status-history integrity (revision 2 → 3)
+**Finding (targeted check of revision 2, reproduced on SQLite 3.54.1 with the revision-2 DDL).** `trg_handoffs_status_event` fires only when `status` changes and the content-immutability trigger deliberately excludes the four status columns, so after a retraction or supersession the attribution could be rewritten with **no new event**:
+- `UPDATE handoffs SET status_reason = 'FORGED'` on a RETRACTED row (also `status_changed_at`, and `status_actor_principal_id` reassigned to another same-tenant owner), including `SET status = status, status_reason = …`; the same on SUPERSEDED rows. Events stayed at 1 while the row diverged.
+- While reproducing it, the same invariant (history cannot change without an event) was found to be bypassable by: hand-inserting a status event for an ACTIVE handoff (the table had no insert guard); and `INSERT OR REPLACE` into `audit_log`, `handoffs` (same primary key) or `handoff_status_events`, which SQLite executes without firing `DELETE` triggers (`recursive_triggers` = 0), silently overwriting audit, handoff and event rows. `ON CONFLICT DO UPDATE` was already stopped by the immutability trigger.
+
+**Fix (revision 3).** `trg_handoffs_status_frozen` (attribution frozen unless `status` changes), `trg_handoffs_status_time` (no backward time), `trg_events_mirror_state` plus `UNIQUE (handoff_pk, to_status)` (events must mirror a valid transition and cannot be forged or duplicated), `BEFORE INSERT` no-overwrite triggers on handoffs, audit, events, decisions, evidence, artifacts, conflicts and tasks, frozen/undeletable `project_identities` deletion marker, and the DAL/ingestion rule of §1 and §5.2 (`INSERT … WHERE NOT EXISTS`, no `OR REPLACE`/`ON CONFLICT`). Valid `ACTIVE → SUPERSEDED | RETRACTED` and `SUPERSEDED → RETRACTED` transitions, supersession by insert, and idempotent retries are preserved (DB-14, DB-18, DB-21, DB-22).
+
+**Verification.** The new cases DB-20…DB-26 fail against the revision-2 DDL (28 of 119 assertions fail there, including all reproduced bypasses) and pass against revision 3 (119/119). One residual, by design: SQLite cannot identify the calling Worker, so the *first* write of `deleted_at` is permitted to any statement allowed to update `project_identities`; it is restricted to `deleteProject` by the DAL and an API-level test, and is frozen afterwards.
