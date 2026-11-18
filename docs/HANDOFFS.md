@@ -301,4 +301,28 @@ Run independent COMMENT-only exact-HEAD re-audit on Draft PR #4 (`phase-2/real-a
 ### Next action
 Complete independent review and separate owner merge approval for Draft PR #5. RH-P3 planning may begin only on explicit owner direction. RH-P3 implementation remains unauthorized.
 
+## Handoff: RH-P3-PLAN1
+
+- **Task / phase:** `docs/RH-P3-PLAN.md` (RH-P3 planning proposal; implementation unauthorized)
+- **From:** Antigravity / RH-P3 planner
+- **To:** Independent reviewer and project owner
+- **Branch:** `docs/rh-p3-planning`
+- **Verified `main` baseline:** `f451b75acb3b85191886da3b2504822dcc60c2f5` (PR #5 squash merge)
+- **PR:** Docs-only Draft PR against `main` (no merge)
+- **State:** PLANNING PROPOSAL READY — OWNER DECISIONS REQUIRED BEFORE IMPLEMENTATION
+
+### Completed
+- Reconciled `docs/STATUS.md` with PR #5 squash merge (`f451b75acb3b85191886da3b2504822dcc60c2f5`).
+- Drafted `docs/RH-P3-PLAN.md` covering clean-machine setup, Linux `GLIBC` compatibility, persistent MCP reader architecture evaluation (Options A/B/C), security/authenticity invariants, judge demo criteria, licensing, proposed phased tasks (`RH-P3-T1`–`RH-P3-T4`), stale `PRODUCT.md`/`ARCHITECTURE.md` corrections, and owner decisions.
+
+### Validation
+- See Draft PR description and `docs/STATUS.md` for exact-HEAD canonical checks (`git diff --check`, `test_bootstrap.py`, `test_entrypoints.py`, `check_secret_tracking.py`, `validate_project_profile.py`, `validate.py`).
+
+### Continuation notes
+- No source, tests, dependencies, fixtures, or schema changed.
+- Do not start RH-P3 implementation, submission, release, or merge without explicit owner direction.
+
+### Next action
+Complete independent COMMENT-only review of the Draft PR and obtain explicit owner decisions on license, MCP reader strategy (`Option B` vs `Option C`), `PRODUCT.md`/`ARCHITECTURE.md` sync (`S2`), and submission gating.
+
 <!-- HANDOFF_ENTRIES_END -->
