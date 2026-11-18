@@ -2,17 +2,17 @@
 
 ## Project
 - **Name:** RelateHandoff
-- **Current phase:** RH-P4 Cloudflare judge showcase planning (docs-only Draft; no site, deployment or submission)
-- **Status:** RH-P3 judge-readiness (PR #7) is squash-merged to `main` (`81e8e208eeb8a23417e18f2a8d3f379f441e6ed8`, `2026-11-18T11:46:41Z`), following PR #6 planning (`e61b84dd0e7aada50f2ea8e94e6b8f9b1cd1b0d8`), PR #8 Apache-2.0 licensing (`3783f08fd78621302be3134f05d4d8d17551c287`) and PR #9 governance (`07af7fee99960aec4afc56e54e3cc75660362578`). This branch (`docs/rh-p4-cloudflare-showcase-plan`, Draft PR #10) is RH-P4 planning only: no UI, site, Cloudflare resource, deployment, video or Devpost submission. The required GitHub topic `relate`, the original demo video and submission remain owner-gated.
+- **Current phase:** RH-P5 multi-project remote MCP platform planning (docs-only Draft; no implementation, Cloudflare resource, deployment or submission)
+- **Status:** RH-P4 planning is squash-merged to `main` (`282e10e600935ee1c1bba34522cb3e3373f3be1d`, PR #10), after RH-P3 PRs #6–#9. This branch (`docs/rh-p5-remote-mcp-platform-plan`) is RH-P5 planning only: a multi-project, authenticated, read-only remote MCP platform (Cloudflare Workers + D1) beside the unchanged local-first engine. It is a material scope expansion that conflicts with the current `PRODUCT.md`/`ARCHITECTURE.md` non-goals until owner decision D0 is approved. No `cloud/` code, Worker, D1/KV/R2 resource, OAuth client, DNS, deployment, video or Devpost action exists or is authorized. The RH-P4 static showcase stays optional and separate.
 - **Primary branch:** `main`
 - **Approved Phase 0 merged baseline:** `7e21fcebc0192ee6f6fecd553ef3619b9ea7465b` (PR #1 squash merge, audited input PR HEAD `3a32213394d762ab33928ed939fc65756d2320db`)
 - **Phase 1 handoff merged baseline:** `7c7d4e9c1efc4911d1250fa9e4e7cef09edd94cf` (PR #2 squash merge)
 - **Approved Phase 1 merged baseline:** `f759f40ef19ecd3ca5ee5e7cc42152561ccddfcd` (PR #3 squash merge, `tasks/RH-P1-relate-handoff-mvp.md`, `2026-11-16T17:23:22Z`)
 - **Approved Phase 2 merged baseline:** `a6bb9bdd562205e5690318272bce8dda0ecf6306` (PR #4 squash merge, audited PR HEAD `2c7dcef50a6cde26516f415c5879f3749c9dbe2d`, `2026-11-17T06:40:24Z`)
 - **Approved Phase 2 closeout merged baseline:** `f451b75acb3b85191886da3b2504822dcc60c2f5` (PR #5 squash merge, audited PR HEAD `4e67d5ac0952901c313536a7e4af0fe3065cf692`)
-- **Working branch:** `docs/rh-p4-cloudflare-showcase-plan`
-- **Active task:** `tasks/RH-P4-cloudflare-judge-showcase.md` (planning only; UI design gate closed)
-- **Active handoff:** RH-P4-PLAN1
+- **Working branch:** `docs/rh-p5-remote-mcp-platform-plan`
+- **Active task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only; UI design gate closed)
+- **Active handoff:** RH-P5-PLAN1
 
 ## Completed foundation
 - Created a new project-mode repository from `mrdzyn/ai-native-project-template`; pruned unselected optional packs and inherited master history.
@@ -40,14 +40,17 @@
 - Keep consumer MCP read-only, local Git canonical, source/evidence provenance explicit, and all private code, transcripts and secrets outside public demo fixtures.
 - Apache-2.0 product licensing complete (PR #8 merged); installed/native package license review still remains before any bundled distribution. Required GitHub topic `relate`, actual video, optional hosted CI/ruleset and Devpost submission remain owner actions. Official hackathon rules rechecked 2026-11-18.
 
-## RH-P4 planning (Draft)
+## RH-P4 planning (merged, PR #10)
 - `docs/RH-P4-SHOWCASE-PLAN.md` and `docs/RH-P4-SECURITY-REVIEW.md` propose a static, no-backend Cloudflare Pages showcase from baseline `main@81e8e208eeb8a23417e18f2a8d3f379f441e6ed8`, with `RECORDED` vs `ILLUSTRATIVE` provenance labels and no live Relate execution. The design capability is still `false`; no UI, `site/` directory, Cloudflare resource, deployment or Devpost action exists or is authorized. `scripts/test_bootstrap.py` allowlists the RH-P4 task path and remains fail-closed.
 
+## RH-P5 planning (Draft)
+- `docs/RH-P5-PLATFORM-PLAN.md`, `docs/RH-P5-D1-SCHEMA.md` and `docs/RH-P5-THREAT-MODEL.md` plan four privilege-separated Workers (read-only MCP gateway, signed-publisher ingestion, OAuth authorization server, sole-D1 data Worker), a per-project-scoped D1 index, read-only project-scoped tools, immutable idempotent sync with conflict rules, and mandatory cross-project isolation negatives. Cloud evidence trust is capped at `UNVERIFIED`; Git and local Relate remain authoritative. Owner decisions D0–D14 are open; `scripts/test_bootstrap.py` allowlists the RH-P5 task path and remains fail-closed.
+
 ## Next authorized action
-RH-P4 (Draft PR #10): validate the planning PR on a clean exact-HEAD checkout, obtain a focused COMMENT-only re-audit, and obtain owner answers to decisions D1–D8 before any design or site work. Do not enable the Cloudflare site without explicit approval. Separately owner-gated from RH-P3: set the required GitHub topic `relate`, capture an original demo, complete distribution license diligence, and authorize Devpost submission. S1 persistent wrapper and S3 hosted CI are not implemented.
+RH-P5 (Draft PR): validate the planning PR on a clean exact-HEAD checkout with the real Relate CLI v1.0.1, obtain an independent COMMENT-only audit, and obtain owner answers to D0–D14 before any implementation, design-gate opening or Cloudflare resource creation. Do not connect production infrastructure. Separately owner-gated from RH-P3/RH-P4: required GitHub topic `relate`, original demo video, distribution license diligence, optional static showcase (RH-P4-T1+), and Devpost submission.
 
 ## Verification truth
-- GitHub PR #1–#9 merges, latest `main` baseline `81e8e208eeb8a23417e18f2a8d3f379f441e6ed8` (PR #7 squash merge, `2026-11-18T11:46:41Z`): VERIFIED from GitHub. PR #8 licensing and attribution merged after COMMENT-only focused re-audit PASS at `08234ea0b84b6363bac4be8420e830d32ea73ef8`; PR #9 governance P7-01 correction merged after COMMENT-only source audit PASS at `49be3d7685cb12af7c0f5637edb8c6878b92a090`. RH-P4 Draft PR #10 is unmerged; its owner-side exact-HEAD validation and independent review are tracked on the PR.
+- GitHub PR #1–#10 merges, latest `main` baseline `282e10e600935ee1c1bba34522cb3e3373f3be1d` (PR #10 squash merge; PR #7 merged earlier as `81e8e208eeb8a23417e18f2a8d3f379f441e6ed8`): VERIFIED from GitHub. PR #8 licensing and attribution merged after COMMENT-only focused re-audit PASS at `08234ea0b84b6363bac4be8420e830d32ea73ef8`; PR #9 governance P7-01 correction merged after COMMENT-only source audit PASS at `49be3d7685cb12af7c0f5637edb8c6878b92a090`. PR #10 (RH-P4 planning) squash-merged as `282e10e600935ee1c1bba34522cb3e3373f3be1d`; RH-P5 Draft PR validation and independent review are tracked on that PR.
 - PR #4 macOS ARM64 COMMENT-only PASS ([`6938739073`](https://github.com/mrdzyn/relatehandoff/pull/4#issuecomment-6938739073)) at `2c7dcef50a6cde26516f415c5879f3749c9dbe2d`: reviewer session reports real `relate v1.0.1`, 15/15 `npm test`, 8/8 `scripts/validate.py`, and no orphans; posted through the owner's GitHub account, so not externally authenticated as independent certification.
 - PR #4 Linux COMMENT-only PASS ([`6940763547`](https://github.com/mrdzyn/relatehandoff/pull/4#issuecomment-6940763547)) at `2c7dcef50a6cde26516f415c5879f3749c9dbe2d`: real `relate` CLI unavailable on that host; independently verified security, `(fake)` fault injection, process cleanup, and other runnable checks (posted through the owner's GitHub account).
 - Owner-reported macOS ARM64 RH-P2 real-agent Codex-to-Claude handoff (`RH-P2-CODEX-CLAUDE-1`) using Relate `v1.0.1` + read-only MCP: `OWNER-REPORTED` (sanitized summary in `docs/RH-P2-REAL-AGENT-PROOF.md`; distinct from PR #4 macOS reviewer-session execution `6938739073`).

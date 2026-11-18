@@ -380,4 +380,22 @@ Owner-side run the full RH-P3-T1/T4 clean-checkout test contract on the new PR #
 ### Next action
 Validate the exact PR HEAD with real Relate CLI v1.0.1, obtain an independent COMMENT-only audit, and decide D1–D8 before any T1+ work.
 
+## Handoff: RH-P5-PLAN1
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Claude (planning)
+- **To:** Exact-HEAD validator, independent COMMENT-only reviewer and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan`
+- **Base:** `282e10e600935ee1c1bba34522cb3e3373f3be1d`
+
+### Completed
+- Added the RH-P5 task contract, platform plan, D1 schema/data-access rules and threat model; updated STATUS; added the RH-P5 task path to the `scripts/test_bootstrap.py` allowlist (fail-closed checks unchanged).
+- No code, `cloud/` directory, Worker, wrangler/D1/KV/R2 configuration, migration, dependency, source, test, fixture, workflow, profile or PRODUCT/ARCHITECTURE change.
+
+### Open gates
+- Owner decisions D0–D14 (notably D0: scope expansion versus the PRODUCT/ARCHITECTURE non-goals). UI design gate closed. Cloudflare resources, OAuth clients, deployment, production connection and submission are not authorized.
+
+### Next action
+Validate the exact PR HEAD with real Relate CLI v1.0.1, obtain an independent COMMENT-only audit, and decide D0–D14 before any T1+ work.
+
 <!-- HANDOFF_ENTRIES_END -->
