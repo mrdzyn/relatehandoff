@@ -8,7 +8,7 @@
 Bring README and walkthrough to accurate pinned judge commands; propose S2 stale PRODUCT/ARCHITECTURE status sync; reflect current Devpost rules; prepare a truthful original real-Relate video capture guide.
 
 ## Allowed files
-`README.md`, `docs/JUDGE-WALKTHROUGH.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/HACKATHON.md`, `docs/RH-P3-DEMO-CAPTURE.md`, `docs/STATUS.md`, append-only `docs/HANDOFFS.md`, this task.
+`README.md`, `docs/JUDGE-WALKTHROUGH.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/HACKATHON.md`, `docs/RH-P3-DEMO-CAPTURE.md`, `docs/RH-P3-SUBMISSION-DRAFT.md`, `docs/STATUS.md`, append-only `docs/HANDOFFS.md`, this task.
 
 ## Forbidden files/actions
 No source, tests, fixtures, dependencies, schema, workflows, or store data changes. No licensing decision, GitHub topic edit, S1 wrapper, S3 CI change, merge, deploy, release, video upload, or Devpost submission.
