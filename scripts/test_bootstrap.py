@@ -20,7 +20,8 @@ assert active_task_path in {
     "tasks/RH-P1-relate-handoff-mvp.md",
     "tasks/RH-P2-real-agent-handoff-followup.md",
     "tasks/RH-P3-judge-readiness.md",
-}, "Unexpected active task in P0/P1/P2/P3 foundation"
+    "tasks/RH-P4-cloudflare-judge-showcase.md",
+}, "Unexpected active task in P0/P1/P2/P3/P4 foundation"
 assert (ROOT / active_task_path).is_file(), "STATUS active task file not found"
 assert "tasks/RH-P1-relate-handoff-mvp.md" in status
 assert "RelateHandoff" in status
