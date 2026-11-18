@@ -11,18 +11,20 @@
 
 ## Required judge evidence (not yet complete)
 - [x] Public GitHub repository exists.
-- [ ] Confirm official GitHub topic requirement at submission time (current rules text contains placeholders); add `relate` and appropriate event topic in GitHub settings.
-- [ ] Decide and add a compatible license after owner review.
+- [x] Official rules reviewed November 18, 2026: GitHub topic `relate` is **required** through judging and winner announcement; `relate-neo4j-hackathon` is recommended, not required.
+- [ ] Owner sets repository GitHub topic `relate` (optionally `relate-neo4j-hackathon`) and verifies the public repository displays it.
+- [x] Owner approved **Apache-2.0** for original RelateHandoff code; PR #8 merged `LICENSE`, `NOTICE`, and dependency-attribution inventory into `main` (`3783f08`). Open-source licensing is encouraged, not mandatory, under the rules.
+- [ ] Confirm installed/native dependency notice preservation and any bundled redistribution obligations before release.
 - [ ] Real Relate program and persistent store (directory or single file) in repository or reliably reproducible judge setup.
 - [ ] Demonstrate meaningful Relate graph traversal, read-only MCP use, persistence across process restart and stale-evidence detection.
 - [ ] README includes prerequisites, versions, install, commands, expected outputs and graph path.
 - [ ] No private project, credentials, transcript or customer data in demo files or screen recording.
-- [ ] Working 1–2 minute video showing Relate actively running.
-- [ ] Submission credits, third-party tools/licenses and AI-assisted development disclosure completed.
+- [ ] Original **video ≤2 minutes** or eligible working demo, accessible without login or payment. Video must show actual execution and use licensed/original assets (see `docs/RH-P3-DEMO-CAPTURE.md`).
+- [ ] Accurately disclose Relate capabilities, third-party tools, significant AI use, inherited project scaffold and conceptual inspiration.
 - [ ] Independent audit, owner-approved merge/release scope, final submission reviewed.
 
 ## Demo story
 Agent A finishes a task at full SHA A and writes provenance with an evidence path. Agent B starts fresh, queries the same local Relate graph via MCP, identifies the next task. On a subsequent commit SHA B, the graph queries expose stale evidence and refuse to call the change audit-ready. Git remains authoritative.
 
 ## Competition gates
-Review https://relate.devpost.com/rules and https://relate.devpost.com/ before submission, because official rules currently contain placeholders in some sections. Never infer open-source licensing requirements or specific topic identifiers from an unfinalized placeholder.
+The [official rules](https://relate.devpost.com/rules) were checked on **November 18, 2026**: the GitHub topic `relate` is required, licensing is encouraged, and the video limit is 2 minutes. Verify them again before submission. **No release or submission without express owner approval.**

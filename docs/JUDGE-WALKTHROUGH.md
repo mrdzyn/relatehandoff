@@ -2,16 +2,15 @@
 
 This walkthrough demonstrates the complete RH-P1 local-first handoff and evidence freshness workflow using the real Relate `v1.0.1` engine (`@relate/relate@1.0.1` + `relate serve --mcp stdio --read-only`), with zero mocks and zero private data.
 
-## Prerequisites
+## Prerequisites (pinned project judge baseline)
 
-1. Node.js 18+ (`node --version`) and Git (`git --version`).
-2. Install Node.js dependencies:
-   ```bash
-   npm install
-   ```
-3. Ensure a runnable `relate` `v1.0.1` CLI binary is available (`relate --version`):
-   - macOS / Windows / Linux (`GLIBC >= 2.39`): `curl -sSfL https://relatedb.ai/install.sh | bash`
-   - Linux (`GLIBC < 2.39`, e.g. Debian 12 `GLIBC 2.36`): build from source with Cargo (`cargo install --git https://github.com/relatedb/relate --tag v1.0.1 relate-cli`) or set `RELATE_BIN` to the built binary.
+1. Node.js **24 LTS**, Python **3.11+**, Git **2.30+**, real **Relate CLI v1.0.1**. Check `node --version`, `python3 --version`, `git --version`, and `relate --version` first.
+2. Install project packages with `npm ci` (pinned `@relate/relate@1.0.1`). This does **not** install the separate Relate CLI. See [official v1.0.1 release artifacts](https://github.com/relatedb/relate/releases/tag/v1.0.1) and [signed-install guidance](https://relatedb.ai/docs/get-started/install/). The convenience installer selects the latest release; verify v1.0.1 rather than silently mixing versions.
+3. Linux `GLIBC_2.36` (for example, Debian 12) cannot run the observed prebuilt v1.0.1 Linux amd64 CLI requiring `GLIBC_2.39`. A pinned Rust/Cargo source-build fallback is `cargo install --git https://github.com/relatedb/relate --tag v1.0.1 relate-cli`; then verify the resulting version. Do not upgrade host glibc to bypass the constraint.
+4. In a clean clone run `npm run build`, `npm run test:security`, `RELATE_REQUIRE_CLI=1 npm test`, and `npm run demo`. Missing CLI must fail closed, not become a mock PASS.
+
+The committed `examples/example-store/` is synthetic. On a later Git HEAD, a read-only `resume` returning `STALE`/`SELF_ASSERTED` is expected, not a successful authentication of old test claims. A long-lived external MCP process must be restarted after another process writes new handoffs; `src/cli.mjs resume` starts fresh short-lived read-only sessions.
+
 
 ## 1. Run the Self-Contained Demo
 

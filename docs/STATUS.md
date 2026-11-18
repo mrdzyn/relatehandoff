@@ -2,17 +2,17 @@
 
 ## Project
 - **Name:** RelateHandoff
-- **Current phase:** RH-P3 planning proposal (post-PR #5 merge; implementation unauthorized)
-- **Status:** PR #4 (`a6bb9bdd562205e5690318272bce8dda0ecf6306`, `2026-11-17T06:40:24Z`) and PR #5 (`f451b75acb3b85191886da3b2504822dcc60c2f5`) are squash-merged to `main`. Current branch `docs/rh-p3-planning` adds the bounded RH-P3 planning proposal (`docs/RH-P3-PLAN.md`) and reconciles post-PR #5 status. RH-P3 implementation, publication, release, and submission remain unauthorized pending owner review and decisions.
+- **Current phase:** RH-P3 judge-readiness documentation preparation (review pending; no release/submission)
+- **Status:** PR #6 RH-P3 planning is squash-merged to `main` (`e61b84dd0e7aada50f2ea8e94e6b8f9b1cd1b0d8`). Working branch `docs/rh-p3-judge-readiness-01` proposes RH-P3-T1 reproducible judge setup, S2 historical docs sync, and RH-P3-T4 capture-guide preparation. No validation was executed by this documentation authoring session. Apache-2.0 source licensing is owner-approved and merged in PR #8 (`3783f08fd78621302be3134f05d4d8d17551c287`); real video, required GitHub topic, PR #7 merge and hackathon submission remain owner-gated.
 - **Primary branch:** `main`
 - **Approved Phase 0 merged baseline:** `7e21fcebc0192ee6f6fecd553ef3619b9ea7465b` (PR #1 squash merge, audited input PR HEAD `3a32213394d762ab33928ed939fc65756d2320db`)
 - **Phase 1 handoff merged baseline:** `7c7d4e9c1efc4911d1250fa9e4e7cef09edd94cf` (PR #2 squash merge)
 - **Approved Phase 1 merged baseline:** `f759f40ef19ecd3ca5ee5e7cc42152561ccddfcd` (PR #3 squash merge, `tasks/RH-P1-relate-handoff-mvp.md`, `2026-11-16T17:23:22Z`)
 - **Approved Phase 2 merged baseline:** `a6bb9bdd562205e5690318272bce8dda0ecf6306` (PR #4 squash merge, audited PR HEAD `2c7dcef50a6cde26516f415c5879f3749c9dbe2d`, `2026-11-17T06:40:24Z`)
 - **Approved Phase 2 closeout merged baseline:** `f451b75acb3b85191886da3b2504822dcc60c2f5` (PR #5 squash merge, audited PR HEAD `4e67d5ac0952901c313536a7e4af0fe3065cf692`)
-- **Working branch:** `docs/rh-p3-planning`
-- **Active task:** `tasks/RH-P2-real-agent-handoff-followup.md` (Done; no active RH-P3 implementation task)
-- **Active handoff:** RH-P3-PLAN1
+- **Working branch:** `docs/rh-p3-judge-readiness-01`
+- **Active task:** `tasks/RH-P3-judge-readiness.md` (docs-only readiness draft; review pending)
+- **Active handoff:** RH-P3-READINESS2
 
 ## Completed foundation
 - Created a new project-mode repository from `mrdzyn/ai-native-project-template`; pruned unselected optional packs and inherited master history.
@@ -30,21 +30,21 @@
 - Updated `config/validation-contract.json` so mandatory `test`, `build`, and `security` categories execute real Node.js + Relate + MCP checks without allowing skipped MCP tests to pass.
 - Added reproducible fixture generator (`examples/generate_example.mjs`, `examples/synthetic_handoff.json`), committed portable synthetic store (`examples/example-store/`), demo script (`scripts/demo.mjs`), and judge walkthrough (`docs/JUDGE-WALKTHROUGH.md`).
 - **RH-P2 real-agent follow-up (merged PR #4 & closeout PR #5):** Documented sanitized `OWNER-REPORTED` macOS ARM64 Codex-to-Claude handoff (`RH-P2-CODEX-CLAUDE-1` in `docs/RH-P2-REAL-AGENT-PROOF.md`), hardened `src/mcp_client.mjs` and `test/e2e_mcp.test.mjs` with bounded timeouts/cleanup and `(fake)` fault-injection tests, and characterized persistent `relate serve --mcp stdio --read-only` snapshot behavior.
-- **RH-P3 planning proposal (`docs/rh-p3-planning`):** Drafted `docs/RH-P3-PLAN.md` covering clean-machine setup, Linux `GLIBC` compatibility, persistent MCP reader evaluation, security/authenticity invariants, judge demo criteria, licensing, and proposed phased tasks.
-- No release, hosted deployment, or RelateHandoff product licensing decision included.
+- **RH-P3 planning proposal (PR #6 merged):** `docs/RH-P3-PLAN.md` covers clean-machine setup, Linux `GLIBC` compatibility, persistent MCP reader evaluation, security/authenticity invariants, judge demo criteria, licensing and phased tasks. The new readiness branch proposes documentation only; no demo video or new exact-HEAD test claim.
+- No release or hosted deployment. RelateHandoff's Apache-2.0 source-license decision was subsequently approved and merged in PR #8.
 
 ## Active scope and blockers
 - **Linux GLIBC finding:** prebuilt `relate-linux-amd64` `v1.0.1` from `relatedb.ai/install.sh` requires `GLIBC_2.39` and fails on Debian 12 (`GLIBC_2.36`). `@relate/relate@1.0.1` (Node.js), `relate-db@1.0.1` (Python manylinux2014), and source-built `relate-cli` work on `GLIBC_2.36`.
 - **Long-lived read-only MCP snapshot limit:** `relate serve --mcp stdio --database <store> --read-only` behavior is consistent with an open-time snapshot and does not reload external disk writes until restarted. `src/mcp_client.mjs` spawns a fresh short-lived MCP process per `resume` with bounded timeouts, but persistent MCP host sessions must restart to observe newly recorded handoffs.
 - **Unsigned local store limit:** The local Relate directory store is unsigned; read-only `resume` without `--verify` reports `executionAuthenticity: "UNVERIFIED"` (`UNSIGNED_LOCAL_STORE_EVIDENCE`) even when `metadataFreshness` is `"CURRENT"`. Independent cryptographic verification of persisted evidence requires an external signing authority (out of RH-P1/RH-P2 scope).
 - Keep consumer MCP read-only, local Git canonical, source/evidence provenance explicit, and all private code, transcripts and secrets outside public demo fixtures.
-- Product licensing, hackathon packaging, optional hosted CI and repository ruleset remain unverified or pending owner action.
+- Apache-2.0 product licensing complete (PR #8 merged); installed/native package license review still remains before any bundled distribution. Required GitHub topic `relate`, actual video, optional hosted CI/ruleset and Devpost submission remain owner actions. Official hackathon rules rechecked 2026-11-18.
 
 ## Next authorized action
-Complete independent review and owner decisions on `docs/RH-P3-PLAN.md` (Draft PR on `docs/rh-p3-planning`). RH-P3 implementation, publication, release, and submission remain unauthorized until explicit owner approval. No automatic merge, deployment, publication, or release.
+Validate this RH-P3 judge-readiness Draft PR in a clean exact-HEAD checkout using real CLI v1.0.1, obtain COMMENT-only independent audit and separate owner merge approval. Reconfirm the merged Apache-2.0 licensing baseline, set the required GitHub topic `relate`, capture an original demo and authorize submission separately. S1 persistent wrapper and S3 hosted CI are not implemented.
 
 ## Verification truth
-- GitHub PR #1 (`7e21fcebc0192ee6f6fecd553ef3619b9ea7465b`), PR #2 (`7c7d4e9c1efc4911d1250fa9e4e7cef09edd94cf`), PR #3 (`f759f40ef19ecd3ca5ee5e7cc42152561ccddfcd`), PR #4 (`a6bb9bdd562205e5690318272bce8dda0ecf6306`, `2026-11-17T06:40:24Z`), and PR #5 (`f451b75acb3b85191886da3b2504822dcc60c2f5`) merges and `main` baseline: VERIFIED.
+- GitHub PR #1–#9 merges (except Draft #7), latest `main` baseline `07af7fee99960aec4afc56e54e3cc75660362578`: VERIFIED from GitHub. PR #8 licensing and attribution merged after COMMENT-only focused re-audit PASS at `08234ea0b84b6363bac4be8420e830d32ea73ef8`; PR #9 governance P7-01 correction merged after COMMENT-only source audit PASS at `49be3d7685cb12af7c0f5637edb8c6878b92a090`. PR #7's new exact-HEAD real CLI validation and independent review remain open.
 - PR #4 macOS ARM64 COMMENT-only PASS ([`6938739073`](https://github.com/mrdzyn/relatehandoff/pull/4#issuecomment-6938739073)) at `2c7dcef50a6cde26516f415c5879f3749c9dbe2d`: reviewer session reports real `relate v1.0.1`, 15/15 `npm test`, 8/8 `scripts/validate.py`, and no orphans; posted through the owner's GitHub account, so not externally authenticated as independent certification.
 - PR #4 Linux COMMENT-only PASS ([`6940763547`](https://github.com/mrdzyn/relatehandoff/pull/4#issuecomment-6940763547)) at `2c7dcef50a6cde26516f415c5879f3749c9dbe2d`: real `relate` CLI unavailable on that host; independently verified security, `(fake)` fault injection, process cleanup, and other runnable checks (posted through the owner's GitHub account).
 - Owner-reported macOS ARM64 RH-P2 real-agent Codex-to-Claude handoff (`RH-P2-CODEX-CLAUDE-1`) using Relate `v1.0.1` + read-only MCP: `OWNER-REPORTED` (sanitized summary in `docs/RH-P2-REAL-AGENT-PROOF.md`; distinct from PR #4 macOS reviewer-session execution `6938739073`).

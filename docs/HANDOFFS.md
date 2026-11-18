@@ -325,4 +325,41 @@ Complete independent review and separate owner merge approval for Draft PR #5. R
 ### Next action
 Complete independent COMMENT-only review of the Draft PR and obtain explicit owner decisions on license, MCP reader strategy (`Option B` vs `Option C`), `PRODUCT.md`/`ARCHITECTURE.md` sync (`S2`), and submission gating.
 
+## Handoff: RH-P3-READINESS1
+
+- **Task:** `tasks/RH-P3-judge-readiness.md`
+- **From:** ChatGPT documentation preparer
+- **To:** Exact-HEAD reviewer and owner-side CLI tester
+- **Branch:** `docs/rh-p3-judge-readiness-01`
+- **Base:** `e61b84dd0e7aada50f2ea8e94e6b8f9b1cd1b0d8` (PR #6 squash)
+- **State:** Unvalidated documentation proposal; no merge/release/submission authorization
+
+### Completed
+- Prepared pinned setup, documented GLIBC/long-lived MCP caveats, proposed S2 status corrections, updated verified hackathon rule checklist, and drafted original video capture guidance.
+- Only docs/task files are intended to change. Prior handoff entries remain intact.
+
+### Verification limitations and next action
+- This shell lacks Node 24 and real Relate CLI and could not clone directly via GitHub DNS. No exact-HEAD canonical test or demo was executed.
+- Run fresh macOS ARM64 / Linux x86_64 canonical tests and real CLI demo at final PR HEAD, independently audit, and obtain separate owner merge approval.
+- License, GitHub topic, original video, release and submission remain owner decisions. S1 persistent MCP wrapper and S3 hosted CI have not been authorized or implemented.
+
+## Handoff: RH-P3-READINESS2
+
+- **Task:** RH-P3-T1/T4 judge-readiness documentation reconciliation
+- **From:** ChatGPT RH-P3 follow-up
+- **To:** Owner-side exact-HEAD validator, independent COMMENT-only reviewer and project owner
+- **Branch:** `docs/rh-p3-judge-readiness-01`
+- **Initial reviewed baseline:** `e61b84dd0e7aada50f2ea8e94e6b8f9b1cd1b0d8` (PR #6)
+- **Latest verified `main`:** `3783f08fd78621302be3134f05d4d8d17551c287` (PR #8 squash)
+
+### Changes and gate status
+- Reconciled the now-approved, merged Apache-2.0 license in README, PRODUCT, STATUS, HACKATHON, video guide and Devpost draft; no original RH-P3-READINESS1 handoff text modified.
+- Added an explicit persistent Relate directory-store / graph relationship explanation for judges.
+- Devpost official rules rechecked 2026-11-18; public GitHub topic `relate` is required.
+- **No exact-HEAD real Relate CLI or canonical tests executed by this documentation agent.** Earlier owner-side validation belongs to earlier PRs and does not transfer.
+- PR #7 still needs independent COMMENT-only review and separate owner authorization to merge. Actual video, GitHub topic configuration, distribution license diligence and submission remain open. No source, dependencies, tests, fixtures or schema changed.
+
+### Next action
+Owner-side run the full RH-P3-T1/T4 clean-checkout test contract on the new PR #7 HEAD with Relate CLI v1.0.1, capture real demo output, then request independent review. Do not merge/release/submit automatically.
+
 <!-- HANDOFF_ENTRIES_END -->
