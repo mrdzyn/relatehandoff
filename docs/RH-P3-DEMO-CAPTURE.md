@@ -34,6 +34,7 @@ Verify it reads `RH-P1-EXAMPLE-1` from the committed synthetic store without reg
 - [ ] Review original video for accurate text, secrets, local paths, accessibility and third-party rights.
 - [ ] Upload owner-approved public demo URL.
 - [ ] Verify required GitHub topic `relate` on the repository.
-- [ ] Choose RelateHandoff license and complete third-party notice review.
+- [x] RelateHandoff original code is Apache-2.0 licensed (PR #8 merged).
+- [ ] Complete final notices review if bundling third-party packages or native binaries.
 - [ ] Review submission description and significant AI-assisted development disclosure.
 - [ ] Obtain separate explicit release and **Devpost submission** authorization.

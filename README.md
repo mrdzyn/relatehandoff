@@ -6,6 +6,13 @@ RelateHandoff is an implemented local-first agent handoff and evidence graph. An
 
 **Status:** RH-P1 and RH-P2 are merged; RH-P3 is judge-readiness preparation. See [status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), [RH-P3 plan](docs/RH-P3-PLAN.md), and the [walkthrough](docs/JUDGE-WALKTHROUGH.md). No product release or Devpost submission is authorized.
 
+## How Relate is used
+
+- **Mode:** A persistent local **directory store** (`examples/example-store/` is the committed synthetic fixture). Directory persistence lets the validated recorder write a handoff and a later agent resume from the same graph after a process restart.
+- **Connected graph:** Repository → Task ← Handoff → Commit, with linked Agent, Evidence, Artifact and Decision nodes. Bounded, parameterized Cypher lets an agent traverse provenance instead of searching unstructured transcripts.
+- **Why Relate:** An embedded local graph provides relationships and provenance through real read-only MCP, without provisioning a cloud server or making the graph authoritative over Git or live verification.
+- **Safety:** A controlled writer handles validation; readers use `relate serve --mcp stdio --read-only`. External long-lived MCP readers may hold a stale open-time snapshot; restart those processes after writes. The `resume` CLI starts a fresh short-lived reader.
+
 ## Reproducible judge quickstart
 
 **Pinned project baseline:** Node.js **24 LTS**, Python **3.11+**, Git **2.30+**, separate **Relate CLI v1.0.1**, and npm `@relate/relate@1.0.1` (see `package-lock.json`). The CLI is **not** installed by `npm ci`. Get the pinned executable from [official v1.0.1 release artifacts](https://github.com/relatedb/relate/releases/tag/v1.0.1) and follow [official signature/checksum verification guidance](https://relatedb.ai/docs/get-started/install/). The convenience installer selects the **latest** release, not necessarily v1.0.1; check `relate --version` instead of mixing untested versions. If already installed outside PATH, set `RELATE_BIN` to its absolute path.
@@ -58,4 +65,4 @@ Run in a clean checkout of the **exact PR HEAD** and report real CLI availabilit
 
 This repository uses the experimental Apache-2.0 [Relate engine](https://github.com/relatedb/relate). Its project scaffold came from [mrdzyn/ai-native-project-template](https://github.com/mrdzyn/ai-native-project-template), and its concept was informed by [jexp/relate-ideas](https://github.com/jexp/relate-ideas) (CC-BY-4.0 conceptual inspiration; no code or content copied). It is an independent [Relate hackathon](https://relate.devpost.com/) project, not endorsed by Neo4j.
 
-**The RelateHandoff project's own source license has NOT been chosen.** Public visibility alone is not permission to redistribute its original code. Do not include secrets, private transcripts, customer data, or live project stores in public examples or judge videos. No hosted service, telemetry, payments, autonomous merge, deployment, or product release is included. See [video capture plan](docs/RH-P3-DEMO-CAPTURE.md).
+**License:** RelateHandoff original code is licensed under **Apache-2.0** following owner approval and the merged [PR #8](https://github.com/mrdzyn/relatehandoff/pull/8). See [LICENSE](LICENSE), [NOTICE](NOTICE), and [third-party attribution](docs/RH-P3-THIRD-PARTY-ATTRIBUTION.md). Distribution of dependencies and bundled native binaries still requires respecting their applicable notices. Do not include secrets, private transcripts, customer data, or live project stores in public examples or judge videos. No hosted service, telemetry, payments, autonomous merge, deployment, or product release is included. See [video capture plan](docs/RH-P3-DEMO-CAPTURE.md).

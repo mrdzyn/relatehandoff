@@ -13,7 +13,8 @@
 - [x] Public GitHub repository exists.
 - [x] Official rules reviewed November 18, 2026: GitHub topic `relate` is **required** through judging and winner announcement; `relate-neo4j-hackathon` is recommended, not required.
 - [ ] Owner sets repository GitHub topic `relate` (optionally `relate-neo4j-hackathon`) and verifies the public repository displays it.
-- [ ] Owner explicitly selects a RelateHandoff license and approves `LICENSE`/third-party attribution. An open-source license is encouraged by the rules, **not mandatory**.
+- [x] Owner approved **Apache-2.0** for original RelateHandoff code; PR #8 merged `LICENSE`, `NOTICE`, and dependency-attribution inventory into `main` (`3783f08`). Open-source licensing is encouraged, not mandatory, under the rules.
+- [ ] Confirm installed/native dependency notice preservation and any bundled redistribution obligations before release.
 - [ ] Real Relate program and persistent store (directory or single file) in repository or reliably reproducible judge setup.
 - [ ] Demonstrate meaningful Relate graph traversal, read-only MCP use, persistence across process restart and stale-evidence detection.
 - [ ] README includes prerequisites, versions, install, commands, expected outputs and graph path.

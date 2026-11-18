@@ -5,7 +5,7 @@
 - **Tagline:** One context. Every agent.
 - **Owner:** mrdzyn
 - **Stage:** RH-P1/RH-P2 implemented and merged; RH-P3 judge/distribution preparation in progress (no release or submission authorized)
-- **Distribution intent:** Public hackathon submission; commercial direction and license require owner decision
+- **Distribution intent:** Public hackathon submission proposed; original RelateHandoff code is Apache-2.0 licensed (PR #8 merged). Commercialization direction and actual submission remain separate owner decisions
 
 ## Problem
 AI coding agents routinely hand work to a different session or tool. Reconstructing context from chat logs, Git history, STATUS, and PRs is slow; an unsupported statement such as "tests passed" can accidentally apply to a newer commit. A locally queryable graph can preserve concise provenance, context and freshness signals.

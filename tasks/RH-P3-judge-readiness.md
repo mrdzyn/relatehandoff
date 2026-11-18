@@ -1,7 +1,7 @@
 # RH-P3 — Judge Readiness Documentation Package
 
 **Status:** Draft task for RH-P3-T1 plus RH-P3-T4 preparation; no release or submission authorized.
-**Base:** `main@e61b84dd0e7aada50f2ea8e94e6b8f9b1cd1b0d8`.
+**Original base:** `main@e61b84dd0e7aada50f2ea8e94e6b8f9b1cd1b0d8` (PR #6). **Latest main:** `3783f08fd78621302be3134f05d4d8d17551c287` after licensing PR #8 merged. Branch history may diverge without conflicting files.
 **UI design gate:** Not applicable (documentation only).
 
 ## Objective
@@ -21,7 +21,8 @@ No source, tests, fixtures, dependencies, schema, workflows, or store data chang
 - [ ] Fresh macOS ARM64 and risk-appropriate Linux validation: `git diff --check`, `scripts/validate.py` 8/8, real Relate `npm test`, `npm run demo`, `npm run test:security`, fixture `resume`; disclose GLIBC limits.
 - [ ] Independent COMMENT-only audit at exact final HEAD.
 - [ ] Owner explicitly approves merge.
-- [ ] RH-P3-T3 license selection and attribution approved separately.
+- [x] RH-P3-T3 original-code Apache-2.0 license and attribution inventory merged in PR #8.
+- [ ] Preserve third-party native/package license notices for any actual distribution.
 - [ ] RH-P3-T4 original video captured, sanitized and reviewed; submission separately approved.
 
 **Testing objective:** A new judge can use actual pinned commands on a clean checkout, see the documented statuses without misrepresenting fixture authenticity, and reproduce the demo.

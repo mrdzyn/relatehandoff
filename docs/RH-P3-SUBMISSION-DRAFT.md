@@ -42,7 +42,7 @@ Agent memory must be treated as a **derived index**, not an authority. A graph i
 
 ## What's next
 
-Complete cross-platform judge setup verification, approve the project's open-source license, produce an original ≤2-minute real-Relate demo, and evaluate an optional persistent read-only MCP wrapper only if host UX merits the additional attack surface and test burden. Wider reuse in our own repositories remains a later, independently tested adoption task.
+Complete cross-platform judge setup verification, finish release-distribution license diligence (Apache-2.0 for original code was approved in merged PR #8), produce an original ≤2-minute real-Relate demo, and evaluate an optional persistent read-only MCP wrapper only if host UX merits the additional attack surface and test burden. Wider reuse in our own repositories remains a later, independently tested adoption task.
 
 ## Built with / attribution (verify before publishing)
 
@@ -50,7 +50,8 @@ Relate by Neo4j (Relate CLI v1.0.1 and `@relate/relate@1.0.1`), Cypher, read-onl
 
 ## Final submission controls
 
-- [ ] Owner chooses and approves RelateHandoff license and third-party notices.
+- [x] Owner approved Apache-2.0 for RelateHandoff original code; PR #8 merged `LICENSE` and `NOTICE`.
+- [ ] Complete installed/native dependency licensing review for any bundled distribution.
 - [ ] Required GitHub topic `relate` is set and visible on the public repo (optional `relate-neo4j-hackathon`).
 - [ ] README commands and demo reproduced on a clean **final exact HEAD** using pinned versions; all failures/environmental limitations disclosed.
 - [ ] Video or working demo is accessible to judges; video is original, ≤2 minutes, and shows actual execution (no fabricated UI/test claims).
