@@ -1,6 +1,6 @@
 # RH-P3-T3 — Third-party license and attribution review
 
-**Status:** Proposed for owner review, not final legal clearance. This document accompanies a Draft PR proposing Apache-2.0 for RelateHandoff. The project owner has **not yet approved** that choice.
+**Status:** **Apache-2.0 explicitly selected by the owner on November 18, 2026.** The licensing files are staged in Draft PR #8; copyright holder attribution, complete dependency review, exact-HEAD validation, independent audit, and separate merge/release authorization remain pending. Selecting a license does **not** authorize merging or public release.
 
 | Component | Relationship | Known terms/evidence | Release validation |
 |---|---|---|---|
@@ -11,7 +11,7 @@
 
 ## Owner approval gate
 
-- [ ] Owner explicitly selects Apache-2.0 for **RelateHandoff original code** (or requests a different license).
+- [x] Owner explicitly selected **Apache-2.0** for RelateHandoff original code (November 18, 2026).
 - [ ] Confirm copyright holder name/year and whether any employer/client intellectual-property restrictions apply.
 - [ ] Compare the proposed `LICENSE` with the canonical Apache-2.0 text; review the `NOTICE` wording and applicable upstream notices.
 - [ ] Check direct and transitive dependencies, bundled native artifacts, media/visuals and any copied files using exact pinned versions. Do not claim a complete license scan without executing one.
