@@ -456,4 +456,23 @@ Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT
 ### Next action
 Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT-only re-audit, then owner decisions D0–D14 and the R-1 decision.
 
+## Handoff: RH-P5-PLAN5
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Claude (owner-directed remediation of residual R-1; review 5988533009)
+- **To:** Exact-HEAD validator, independent COMMENT-only re-auditor and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan` (Draft PR #11)
+- **Starting HEAD:** `61188d97570e3b51cd7fcc44cb40d77dd2d9d1eb` (verified equal to the remote branch; no drift)
+
+### Completed
+- Reproduced R-1 on the revision-4 DDL (REPLACE key swap plus revoked-publisher reset, UPDATE un-revoke, REPLACE clearing a revoked grant).
+- `docs/RH-P5-D1-SCHEMA.md` revision 5: no-overwrite guards, immutable identity and key material, permanent one-way revocation (connection revocation cascades), delete guards and credential-use checks for `publishers`, `oauth_connections`, `connection_project_grants`, `github_app_links`; `UNIQUE (provider_grant_id)`; grants re-keyed by `grant_id` with `granted_by_principal_id` and a partial unique index of active grants; rotation by a new publisher and re-authorization by a new grant row (§5.5); matrix DB-30…DB-37; regression record §11. Ordinary mutable tables are not blanket-locked.
+- Plan decision D15 (credential lifecycle and grant-key change), threat model B18/B19, STATUS updated. Local SQLite verification only; D1/Miniflare UNVERIFIED. No Worker, wrangler, migration, dependency, workflow, profile or production change.
+
+### Open gates
+- D0–D15, design gate, D1/Miniflare execution (T2), residual R-2…R-6 (R-4: remaining mutable tables DAL-only), Cloudflare resources, deployment and submission remain unauthorized.
+
+### Next action
+Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT-only re-audit, then owner decisions D0–D15.
+
 <!-- HANDOFF_ENTRIES_END -->

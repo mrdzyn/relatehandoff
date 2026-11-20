@@ -40,8 +40,9 @@ RH-P5-T0 this plan · T1 decisions, repository layout and shared-schema extracti
 ## Acceptance (this PR)
 - [ ] Architecture, D1 schema, MCP tool contracts, sync/conflict rules, OAuth/ingestion threat model, tests (including cross-project isolation negatives), migration strategy and phases are documented and mutually consistent.
 - [ ] The conflict with `PRODUCT.md`/`ARCHITECTURE.md` non-goals is explicit and gated (D0).
+- [ ] Residual R-1 (credential-table overwrite, revocation resurrection, key swap) is closed at the database in schema revision 5 per owner direction, with rotation and re-authorization semantics, DB-30…DB-37, and residual R-4/R-5/R-6 recorded; D15 owner-gated.
 - [ ] Audit findings P11-03 (project-identity tombstone overwrite) and P11-04 (alternate-key status-event overwrite) are remediated in schema revision 4 with an exhaustive overwrite-path inventory and probe; residual risks R-1…R-3 are recorded; D1/Miniflare remains UNVERIFIED.
 - [ ] Audit findings P11-01 (composite-FK isolation) and P11-02 (deletion, sequencing, immutability, server-controlled sources) are remediated in the schema, plan and threat model, with a database-level negative test matrix and a local SQLite verification record; D1/Miniflare execution remains a T2 gate.
 - [ ] STATUS names this task active; `scripts/test_bootstrap.py` allows it and still rejects unknown or missing task files.
 - [ ] Exact-HEAD canonical validation with real Relate CLI v1.0.1, truthfully reported; independent COMMENT-only audit; separate owner merge approval.
-- [ ] Owner answers D0–D14 before any T1+ work. No deployment, publication or submission follows automatically.
+- [ ] Owner answers D0–D15 before any T1+ work. No deployment, publication or submission follows automatically.
