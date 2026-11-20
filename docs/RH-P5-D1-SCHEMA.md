@@ -1,6 +1,6 @@
 # RH-P5 — D1 Schema and Data-Access Rules (proposal, revision 5)
 
-**State:** Design only; no database exists. Revision 5 closes residual risk R-1 (credential tables) by owner decision: database-level no-overwrite protection, one-way revocation and key/identity immutability for `publishers`, `oauth_connections`, `connection_project_grants` and `github_app_links`, with explicit key-rotation and re-authorization semantics (§5.5, §11). Revision 4 closed two further overwrite paths reported by independent review of revision 3, P11-03 (project-identity tombstone clearable through `INSERT OR REPLACE`) and P11-04 (status event replaceable through its second unique key), and records an exhaustive overwrite-path inventory (§3.1, §10). Revision 3 closed a status-history integrity gap (§9). Revision 2 remediated independent audit findings **P11-01** (incomplete composite-foreign-key isolation) and **P11-02** (deletion, sequencing, immutability and source-control contracts). The DDL below becomes migration `0001` only at RH-P5-T2 after owner approval. See the [platform plan](RH-P5-PLATFORM-PLAN.md) and [threat model](RH-P5-THREAT-MODEL.md).
+**State:** Design only; no database exists. Revision 6 remediates independent audit findings P11-05/P11-06 with active-project guards for new publishers and GitHub App links; it also closes R-4's repository-identity mutation paths while retaining editable project metadata (§3, §5.6, §12). Revision 5 closes residual risk R-1 for credential tables with no-overwrite protection, one-way revocation and immutable identity/key material (§5.5, §11). Revision 4 closed P11-03/P11-04; revision 3 closed a status-history integrity gap; revision 2 remediated P11-01/P11-02. The DDL below becomes migration `0001` only at RH-P5-T2 after owner approval. See the [platform plan](RH-P5-PLATFORM-PLAN.md) and [threat model](RH-P5-THREAT-MODEL.md).
 
 **What has and has not been verified.** The DDL was extracted from this file and executed on local SQLite with `PRAGMA foreign_keys=ON`; the record is in [§8](#8-local-sqlite-verification-record). Cloudflare documents that D1 enforces foreign keys by default and that `PRAGMA foreign_keys` cannot be changed by queries or migrations. **Not yet verified on D1/Miniflare:** `STRICT` tables, `CREATE TRIGGER` bodies (triggers are described as supported only in secondary sources), `randomblob()`, and multi-statement trigger handling in D1 migration files. Running this schema and the negative suite of §7 on Miniflare and on a real D1 staging database is an **explicit gate of RH-P5-T2**; until then every statement here is a proposal.
 
@@ -91,6 +91,9 @@ CREATE TABLE projects (
   UNIQUE (tenant_id, project_id),
   FOREIGN KEY (tenant_id, project_id) REFERENCES project_identities(tenant_id, project_id)
 ) STRICT;
+
+-- Repository identity is the provider-scoped immutable repo_id. Display name, slug, status and
+-- default branch remain mutable. Triggers protect identity and reject REPLACE-style rebinding.
 
 CREATE TABLE oauth_connections (
   connection_id     TEXT PRIMARY KEY,
@@ -336,6 +339,17 @@ CREATE TRIGGER trg_projects_no_resurrect BEFORE INSERT ON projects
 WHEN (SELECT deleted_at FROM project_identities WHERE tenant_id = NEW.tenant_id AND project_id = NEW.project_id) IS NOT NULL
 BEGIN SELECT RAISE(ABORT, 'project identity is deleted'); END;
 
+CREATE TRIGGER trg_projects_no_overwrite BEFORE INSERT ON projects
+WHEN EXISTS (SELECT 1 FROM projects
+              WHERE project_id = NEW.project_id
+                 OR (tenant_id = NEW.tenant_id AND slug = NEW.slug)
+                 OR (tenant_id = NEW.tenant_id AND repo_id = NEW.repo_id))
+BEGIN SELECT RAISE(ABORT, 'insert would overwrite an existing project'); END;
+
+CREATE TRIGGER trg_projects_repository_identity_immutable BEFORE UPDATE ON projects
+WHEN NEW.provider IS NOT OLD.provider OR NEW.repo_id IS NOT OLD.repo_id
+BEGIN SELECT RAISE(ABORT, 'canonical repository identity is immutable'); END;
+
 CREATE TRIGGER trg_projects_guard_delete BEFORE DELETE ON projects
 WHEN (SELECT deleted_at FROM project_identities WHERE tenant_id = OLD.tenant_id AND project_id = OLD.project_id) IS NULL
 BEGIN SELECT RAISE(ABORT, 'project deletion requires the ordered procedure'); END;
@@ -508,6 +522,12 @@ CREATE TRIGGER trg_publishers_no_overwrite BEFORE INSERT ON publishers
 WHEN EXISTS (SELECT 1 FROM publishers
               WHERE publisher_id = NEW.publisher_id OR (project_id = NEW.project_id AND key_fpr = NEW.key_fpr))
 BEGIN SELECT RAISE(ABORT, 'insert would overwrite or reuse a publisher credential'); END;
+CREATE TRIGGER trg_publishers_project_active BEFORE INSERT ON publishers
+WHEN NOT EXISTS (SELECT 1 FROM projects p JOIN project_identities i
+                   ON i.tenant_id = p.tenant_id AND i.project_id = p.project_id
+                  WHERE p.tenant_id = NEW.tenant_id AND p.project_id = NEW.project_id
+                    AND p.status = 'ACTIVE' AND i.deleted_at IS NULL)
+BEGIN SELECT RAISE(ABORT, 'publisher registration requires an ACTIVE, non-deleted project'); END;
 CREATE TRIGGER trg_publishers_immutable BEFORE UPDATE ON publishers
 WHEN NEW.publisher_id IS NOT OLD.publisher_id OR NEW.tenant_id IS NOT OLD.tenant_id OR NEW.project_id IS NOT OLD.project_id
   OR NEW.agent_kind IS NOT OLD.agent_kind OR NEW.key_fpr IS NOT OLD.key_fpr
@@ -587,6 +607,12 @@ WHEN NOT EXISTS (SELECT 1 FROM principals
                     AND role = 'OWNER' AND status = 'ACTIVE')
   OR NEW.revoked_at IS NOT NULL
 BEGIN SELECT RAISE(ABORT, 'an app link must be created active by an active owner'); END;
+CREATE TRIGGER trg_app_links_project_active BEFORE INSERT ON github_app_links
+WHEN NOT EXISTS (SELECT 1 FROM projects p JOIN project_identities i
+                   ON i.tenant_id = p.tenant_id AND i.project_id = p.project_id
+                  WHERE p.tenant_id = NEW.tenant_id AND p.project_id = NEW.project_id
+                    AND p.status = 'ACTIVE' AND i.deleted_at IS NULL)
+BEGIN SELECT RAISE(ABORT, 'app link registration requires an ACTIVE, non-deleted project'); END;
 CREATE TRIGGER trg_app_links_immutable BEFORE UPDATE ON github_app_links
 WHEN NEW.tenant_id IS NOT OLD.tenant_id OR NEW.project_id IS NOT OLD.project_id OR NEW.installation_id IS NOT OLD.installation_id
   OR NEW.created_by_principal_id IS NOT OLD.created_by_principal_id OR NEW.created_at IS NOT OLD.created_at
@@ -637,7 +663,7 @@ Notes (revision 5): the four credential tables are protected by `trg_publishers_
 | `connection_project_grants` (credential) | PK `grant_id` (new); **partial `UNIQUE (connection_id, project_id) WHERE revoked_at IS NULL`** | `trg_grants_no_overwrite` (revision 5) |
 | `github_app_links` (credential) | PK `(project_id, installation_id)`; `(tenant_id, project_id, installation_id)` (subsumed) | `trg_app_links_no_overwrite` (revision 5) |
 
-Remaining mutable administrative tables (`tenants`, `principals`, `projects`, `publisher_nonces`, `project_refs`, `schema_meta`) have **no** overwrite guard by design: their rows legitimately change and they hold no credential, so they are deliberately not blanket-locked; the control is the DAL rule of §1 (no `OR REPLACE`, no `ON CONFLICT`, static scan of every statement). The probe of §10/§11 shows that `REPLACE` can still mutate rows of `projects`, `project_refs` and `schema_meta` if that DAL rule were violated (residual R-4).
+Remaining mutable administrative tables (`tenants`, `principals`, `project_refs`, `schema_meta`, `publisher_nonces`) remain DAL-guarded only; their rows legitimately change and they are deliberately not blanket-locked. `projects` remains mutable for metadata updates, but canonical repository identity is immutable and `INSERT OR REPLACE` collisions are blocked across its declared unique paths (§5.6). `project_refs` and `schema_meta` can still be changed by REPLACE if DAL rules are violated; this is the narrowed residual R-4.
 
 ## 4. Data-access rules (code-enforced, tested)
 1. **Only `rh-data` touches D1.** The gateway and ingest Workers use named RPC entrypoints (`ReadApi`, `WriteApi`); the gateway has no write entrypoint. Cloudflare documents named `WorkerEntrypoint` service bindings; the binding security is verified in T2/T6.
@@ -683,7 +709,13 @@ The `source` of a ref observation is **derived by the server, never read from a 
 - **Re-authorization is an explicit new decision.** A revoked grant stays as history. Re-authorizing the same connection for the same project inserts a **new grant row** (new `grant_id`) with `granted_by_principal_id` an active OWNER of the tenant, only for an unrevoked connection and an ACTIVE project; at most one active grant per (connection, project) exists (partial unique index). A revoked connection cannot be revived: the client must obtain a **new connection** through a fresh OAuth consent. A revoked GitHub App link is never re-linked; the owner registers the new installation id.
 - **Revoked credentials cannot act.** A handoff insert requires an ACTIVE publisher; a ref observation requires an ACTIVE publisher or an unrevoked app link. (Expiry against the clock stays an application check; `expires_at` is immutable.)
 - **Grant-key model change (needs owner approval, recorded as D15 in the platform plan).** Revision 4 keyed grants by `(connection_id, project_id)`, which made a legitimate re-authorization impossible without overwriting the revoked row. Revision 5 introduces `grant_id` as the primary key, `granted_by_principal_id`, and a partial unique index for active grants.
-- **Scope.** Only these four credential tables are locked. Principals, tenants, projects, `project_refs`, `publisher_nonces` and `schema_meta` stay ordinary mutable tables (DB-36).
+- **Scope.** The four credential tables have lifecycle guards. Principals, tenants, `project_refs`, `publisher_nonces` and `schema_meta` stay ordinary mutable tables (DB-36); projects retain mutable metadata but protect repository identity and replacement paths (§5.6).
+
+### 5.6 Project lifecycle and canonical repository identity (P11-05, P11-06, R-4)
+- **New credentials require an active project.** `publishers` and `github_app_links` inserts require a matching `projects` row with `status='ACTIVE'` joined to a `project_identities` row with `deleted_at IS NULL`. Missing, archived and deleted projects are rejected. Valid publisher registration/key rotation and owner-created app links remain available for active projects. Existing project reads/writes continue to use the archive denial rule (§4.4).
+- **Registration/deletion race:** writes serialize within the database transaction model. If registration commits first, ordered deletion then revokes and scrubs that publisher/removes the app link. If deletion commits first, its tombstone and missing `projects` row make registration abort. The T2 gate tests both serializations and verifies the selected D1 batch behavior.
+- **Canonical identity:** `(provider, repo_id)` is immutable. The `BEFORE UPDATE` trigger rejects changing either field while leaving `slug`, `repo_full_name` (GitHub rename display), `default_branch`, and other metadata mutable. A `BEFORE INSERT` guard rejects collisions on `project_id`, `(tenant_id, slug)`, and `(tenant_id, repo_id)`, preventing `INSERT OR REPLACE` from deleting/rebinding a project through any declared UNIQUE key. Ordinary metadata updates remain available.
+- **Owner decision:** none is introduced for P11-05/P11-06; active-project denial follows existing archive/deletion policy. R-4 protection expresses the canonical repository identity boundary. If a future product requires moving a project to a different provider/repository, that requires a separately approved migration/re-registration flow; this plan does not silently permit identity mutation.
 
 ## 6. Migration notes
 Numbered forward-only files under `cloud/migrations/`; `0001` creates this schema and writes `schema_meta('schema_version','1')`. Any change is expand → backfill → contract with updated isolation tests. Fixtures are synthetic only. Rollback uses D1 point-in-time recovery/export (30 days paid / 7 days free per the independent audit; re-verify), rehearsed in staging. A future database-per-tenant layout keeps the same DDL.
@@ -730,11 +762,14 @@ Fixture: tenants `t1`, `t2`; principals `u1∈t1`, `u2∈t2`; projects `p1`,`p2�
 | DB-35 | Project deletion with credential triggers: grants/links removed, publishers scrubbed and revoked (an already revoked publisher keeps its `revoked_at`), other projects untouched, connections survive, scrubbed publisher still cannot be reactivated | succeeds; `foreign_key_check` empty |
 | DB-36 | No blanket lock: `UPDATE` of `projects`, `principals`, `tenants`, `schema_meta`, a valid `project_refs` update, `publisher_nonces` insert/prune | all **succeed** |
 | DB-37 | `PRAGMA foreign_key_check`/`integrity_check` on the credential fixtures | empty / `ok` |
+| DB-38 | **P11-05.** Register publisher after deletion (tombstone survives, no project row), with missing project, and with ARCHIVED project; registration/deletion in both serialized orders. Valid registration and new-key rotation for ACTIVE project | rejected for deleted/missing/archived; registration-first is scrubbed/revoked by deletion, deletion-first registration aborts; active registration/rotation succeed |
+| DB-39 | **P11-06.** Register a GitHub App link for ARCHIVED, deleted, or missing project; valid active-owner link for ACTIVE project; non-owner remains rejected | rejected for archived/deleted/missing or non-owner; valid ACTIVE owner link succeeds |
+| DB-40 | **R-4.** `UPDATE` provider/repo_id; `INSERT OR REPLACE` collisions on project id, `(tenant_id, slug)`, and `(tenant_id, repo_id)`; ordinary `UPDATE` of slug, `repo_full_name`, `default_branch`, status | identity changes and replacement collisions `ABORT` without row reassignment; metadata updates succeed |
 
 ## 8. Local SQLite verification record
-Revision 5's §3 DDL was extracted from this file and executed on fresh databases with `PRAGMA foreign_keys=ON` and `PRAGMA recursive_triggers=OFF` (the default) on 2026-11-20: SQLite 3.54.1 (Python `sqlite3`) and SQLite 3.50.6 (command-line `sqlite3`). It loads 19 tables and 61 triggers with exit code 0; `PRAGMA foreign_key_check` is empty and `PRAGMA integrity_check` is `ok`.
+Revision 6's §3 DDL was extracted from this file and executed on fresh databases with `PRAGMA foreign_keys=ON` and `PRAGMA recursive_triggers=OFF` (the default) on 2026-11-20. The observed SQLite version, table/trigger counts, foreign-key check, integrity check and DB-01…DB-40 totals are recorded below after exact-source execution.
 
-The matrix of §7 (DB-01…DB-37, including valid inserts, transitions, rotations and re-authorizations that must succeed) ran as **259 assertions: 259 pass** with `recursive_triggers=OFF`, and also 259/259 with `recursive_triggers=ON` (informational only; the schema does not rely on it). The three R-1 attacks (a `REPLACE` that swaps a revoked publisher's key and resets it to ACTIVE, a plain `UPDATE` that un-revokes a publisher, a `REPLACE` that clears a revoked grant) were **accepted** by the revision-4 DDL and are **rejected** by revision 5. The earlier differentials stand: P11-03/P11-04 (revision 3) and the five cross-project cases of revision 1. The harness is a throwaway script, not part of this planning PR (its working copy was rebuilt on 2026-11-20 after a scratch cleanup); its cases are the DB-xx table above and become committed tests in RH-P5-T2.
+The documented DB-01…DB-40 case rows were exercised against the verbatim extracted §3 DDL using a temporary Python harness: **40/40 case scenarios passed, 174/174 assertions**, SQLite 3.54.1, `foreign_keys=ON`, `recursive_triggers=OFF`, 19 tables and 65 triggers. `foreign_key_check` returned no rows and `integrity_check` returned `ok`. This is case-row coverage, not a rerun of the prior 259-assertion scratch harness: the temporary harness was not present, and exhaustive DB-27/DB-29 unique-key permutation coverage was not recreated. Treat the prior 259/259 as earlier owner-reported evidence, not current exact-run evidence. The focused regressions for P11-05/P11-06/R-4 are included in DB-38…DB-40. The harness remains outside this planning PR; committed database tests remain part of RH-P5-T2.
 
 This is **local SQLite evidence only**. Executing §3 and §7 on Miniflare and on a real D1 staging database (including trigger support, `STRICT`, `randomblob()`, partial unique indexes, migration handling, and D1's `recursive_triggers` setting) remains an explicit T2 gate and is **UNVERIFIED**.
 
@@ -770,6 +805,15 @@ This is **local SQLite evidence only**. Executing §3 and §7 on Miniflare and o
 
 **Residual risks after revision 5.**
 - **R-2** and **R-3** are unchanged (§10).
-- **R-4:** the remaining ordinary mutable tables (`projects`, `project_refs`, `schema_meta`, `tenants`, `principals`, `publisher_nonces`) remain DAL-guarded only; `REPLACE` still mutates `projects`, `project_refs` and `schema_meta` in the probe. `projects.repo_id`/`repo_full_name` swaps are the most security-relevant; a no-overwrite trigger for `projects` is a candidate for T2 (owner decision).
+- **R-4 (narrowed by revision 6):** `projects.provider` and `projects.repo_id` are database-immutable; a no-overwrite trigger blocks `INSERT OR REPLACE` conflicts on its primary and unique keys while ordinary metadata UPDATEs remain allowed. `project_refs` and `schema_meta` can still be replaced if the DAL ban on REPLACE/upsert is violated. `tenants`, `principals`, `publisher_nonces` and these ordinary tables otherwise remain DAL-guarded; no blanket lock was added.
 - **R-5:** expiry (`expires_at`) is enforced by the application against the clock, not by the database. A `DISABLED` owner principal does not automatically revoke existing credentials; the data layer does that on disabling.
 - **R-6 (design change, needs owner approval D15):** the grant primary key changed to `grant_id`; the OAuth-library KV grant state remains application-authoritative for token validity, with D1 authoritative for project authorization.
+
+## 12. Regression record: project lifecycle and repository identity (revision 5 → 6)
+**P11-05 reproduced against the complete revision-5 source DDL** (Python SQLite 3.54.1; `foreign_keys=ON`, `recursive_triggers=OFF`): after marking the identity deleted and deleting its `projects` row, an ACTIVE publisher insert referencing the surviving identity was accepted; FK check remained empty and integrity was `ok`. **P11-06 reproduced against the same DDL:** inserting an owner-created link for a project with `status='ARCHIVED'` was accepted. Both were schema-only local reproductions; no deployed D1 exists.
+
+**R-4 reproduced against revision 5:** `UPDATE projects SET repo_id=...` was accepted, and `INSERT OR REPLACE` replaced the project's `repo_id` and default branch while an associated publisher remained attached to the same `project_id`.
+
+**Fix (revision 6).** `trg_publishers_project_active` and `trg_app_links_project_active` require an existing ACTIVE project joined to a non-deleted identity. The publisher and GitHub App insert checks are in the DDL transaction, so serialized registration/deletion orders either result in deletion scrubbing/revocation or fail registration. `trg_projects_repository_identity_immutable` freezes only `provider` and `repo_id`; `trg_projects_no_overwrite` rejects collisions on the project primary key, `(tenant_id, slug)`, and `(tenant_id, repo_id)` before REPLACE conflict handling. `slug`, `repo_full_name`, `default_branch`, status and other project metadata remain mutable. R-4 is narrowed to DAL-only replace/upsert risks on `project_refs`, `schema_meta` and remaining mutable administrative tables.
+
+**Verification boundary.** Revision 6's exact extracted DDL loads with 19 tables and 65 triggers and passes the case-row harness (40/40, 174 assertions), but exhaustive DB-27/DB-29 permutations were not rerun; that is a residual local-validation limitation before independent re-audit. D1/Miniflare behavior, trigger parity and actual concurrent transaction behavior remain UNVERIFIED and gated on T2. No new owner decision was added: P11-05/P11-06 follow the existing active/archive/delete policy; future transfer to a different repository needs a separately approved product flow.

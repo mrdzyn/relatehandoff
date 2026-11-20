@@ -470,9 +470,30 @@ Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT
 - Plan decision D15 (credential lifecycle and grant-key change), threat model B18/B19, STATUS updated. Local SQLite verification only; D1/Miniflare UNVERIFIED. No Worker, wrangler, migration, dependency, workflow, profile or production change.
 
 ### Open gates
-- D0–D15, design gate, D1/Miniflare execution (T2), residual R-2…R-6 (R-4: remaining mutable tables DAL-only), Cloudflare resources, deployment and submission remain unauthorized.
+- D0–D15, design gate, D1/Miniflare execution (T2), residual R-2/R-3/R-5/R-6, Cloudflare resources, deployment and submission remain unauthorized.
 
 ### Next action
 Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT-only re-audit, then owner decisions D0–D15.
+
+## Handoff: RH-P5-PLAN6
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Codex (remediation after independent audit 5991551668)
+- **To:** exact-HEAD validator, focused independent COMMENT-only re-auditor and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan` (Draft PR #11)
+- **Starting HEAD:** `88875144e9cc73b90f43b664ea1d84cfdddc17ff`; local worktree and origin-tracking ref matched. Live `git fetch` was blocked by the read-only `.git` boundary; GitHub audit reported this exact audited HEAD.
+
+### Completed
+- Revision 6 adds active, non-deleted project guards for new publisher registrations and GitHub App links; fixes P11-05/P11-06 while preserving active-project registration, rotation and owner-created link paths.
+- R-4 fix protects `(provider, repo_id)` against UPDATE and project-row replacement collisions while leaving `slug`, `repo_full_name`, `default_branch` and other metadata mutable. No unrelated mutable table was locked and no new owner decision was introduced.
+- Reproduced P11-05, P11-06 and R-4 against the complete revision-5 DDL. Revision-6 exact-source SQLite run: 19 tables, 65 triggers, DB-01…DB-40 case rows 40/40, 174/174 assertions, `foreign_key_check=[]`, `integrity_check=ok` (Python SQLite 3.54.1; FKs on; recursive triggers off).
+- The previous 259-assertion throwaway harness was absent. This run does not recreate exhaustive DB-27/DB-29 alternate-unique-key permutations; do not characterize it as equivalent. D1/Miniflare and true concurrent D1 transaction behavior are UNVERIFIED.
+
+### Open gates
+- Run the repository's full exact-HEAD canonical validation, including real Relate CLI v1.0.1 if available; address any result honestly.
+- Recover/re-run exhaustive DB-27/DB-29 probes before re-audit. D0–D15 and design gate remain owner-gated; no cloud resource, deployment, merge or publication is authorized.
+
+### Next action
+Finish exact-HEAD validation, verify the remote PR head before normal push, update the Draft PR description with evidence/limitations, and request a focused independent COMMENT-only re-audit. Keep PR #11 Draft.
 
 <!-- HANDOFF_ENTRIES_END -->
