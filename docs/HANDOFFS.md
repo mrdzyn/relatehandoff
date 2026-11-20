@@ -488,9 +488,10 @@ Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT
 - R-4 fix protects `(provider, repo_id)` against UPDATE and project-row replacement collisions while leaving `slug`, `repo_full_name`, `default_branch` and other metadata mutable. No unrelated mutable table was locked and no new owner decision was introduced.
 - Reproduced P11-05, P11-06 and R-4 against the complete revision-5 DDL. Revision-6 exact-source SQLite run: 19 tables, 65 triggers, DB-01…DB-40 case rows 40/40, 174/174 assertions, `foreign_key_check=[]`, `integrity_check=ok` (Python SQLite 3.54.1; FKs on; recursive triggers off).
 - The previous 259-assertion throwaway harness was absent. This run does not recreate exhaustive DB-27/DB-29 alternate-unique-key permutations; do not characterize it as equivalent. D1/Miniflare and true concurrent D1 transaction behavior are UNVERIFIED.
+- At exact commit `7f5887ea15812f03fd5d6d04ff7a05653c2b0185`, canonical checks passed on macOS ARM64/Python 3.15.2/Node 26.7.0 with real Relate v1.0.1: bootstrap, entrypoints, secret tracking, profile validation, `validate.py` 8/8, `RELATE_REQUIRE_CLI=1 npm test` 15/15 (0 skipped), security 5/5 and build. This validates existing local engine behavior, not D1.
 
 ### Open gates
-- Run the repository's full exact-HEAD canonical validation, including real Relate CLI v1.0.1 if available; address any result honestly.
+- Re-run canonical validation on the final post-evidence commit; address any result honestly.
 - Recover/re-run exhaustive DB-27/DB-29 probes before re-audit. D0–D15 and design gate remain owner-gated; no cloud resource, deployment, merge or publication is authorized.
 
 ### Next action
