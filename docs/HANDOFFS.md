@@ -436,4 +436,24 @@ Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT
 ### Next action
 Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT-only re-audit, then owner decisions D0–D14.
 
+## Handoff: RH-P5-PLAN4
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Claude (remediation of independent review findings P11-03 and P11-04)
+- **To:** Exact-HEAD validator, independent COMMENT-only re-auditor and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan` (Draft PR #11)
+- **Starting HEAD:** `3ab7b2fd05d20bc086ec4f872c04228f69e4ed37` (verified equal to the remote branch; no drift)
+
+### Completed
+- Reproduced P11-03 and P11-04 on the revision-3 DDL, plus six further `project_identities` overwrite variants and a resurrection of a deleted project.
+- `docs/RH-P5-D1-SCHEMA.md` revision 4: `trg_identities_no_overwrite`, `trg_events_no_overwrite` on both unique paths, a previous-status provenance check on status events, overwrite-path inventory (§3.1), matrix DB-27…DB-29 and regression record (§10). Valid transitions and tombstone behavior preserved.
+- Inventory of all other immutable-table unique paths found no further gap. Mutable credential tables (`publishers`, grants, connections, app links) remain unguarded and were demonstrated to allow revocation reset through `REPLACE`/`UPDATE`; recorded as residual R-1, not remediated.
+- Local SQLite verification only (`recursive_triggers` OFF; ON informational); D1/Miniflare UNVERIFIED. No Worker, wrangler, migration, dependency, workflow, profile or production change.
+
+### Open gates
+- D0–D14, design gate, D1/Miniflare execution (T2), R-1 decision, Cloudflare resources, deployment and submission remain unauthorized.
+
+### Next action
+Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT-only re-audit, then owner decisions D0–D14 and the R-1 decision.
+
 <!-- HANDOFF_ENTRIES_END -->
