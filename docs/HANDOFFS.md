@@ -602,4 +602,23 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Independent COMMENT-only re-audit on the new exact HEAD.
 - Keep PR #13 Draft; do not merge or deploy.
 
+## Handoff: RH-LOCAL-ONLY-1
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (owner decision: **LOCAL-ONLY FOR NOW**, 2026-11-23)
+- **From:** Antigravity (local-only direction & RH-P5 hold documentation)
+- **To:** focused independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `docs/local-only-direction`
+- **Merged baseline:** `main@45865fe6c3f0c5bce128fe9d7599fa9fc015930c` (PR #13 squash merge)
+
+### Verified evidence
+- Updated `docs/STATUS.md` to reflect the active **LOCAL-ONLY FOR NOW** direction (2026-11-23) and placed the hosted RH-P5 roadmap **ON HOLD** (`RH-P5-T1` through `T8` not executed).
+- Added a dated `ON HOLD (2026-11-23)` supersession note to `docs/RH-P5-PLATFORM-PLAN.md` while preserving its approved D0–D6 architecture proposals as historical reference.
+- Preserved `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` local-only restrictions untouched.
+- Proposed a focused local-only improvement roadmap in `docs/LOCAL-ONLY-ROADMAP.md` covering CLI reliability, agent handoffs, local stdio MCP, testing, and installation.
+
+### Remaining
+- Independent COMMENT-only review of this Draft PR and owner merge approval.
+- Owner selection and task-contract approval before implementing any item in `docs/LOCAL-ONLY-ROADMAP.md`.
+- Keep `RH-P5-T1`–`T8`, `cloud/`, Cloudflare resources, and deployment on hold / blocked.
+
 <!-- HANDOFF_ENTRIES_END -->
