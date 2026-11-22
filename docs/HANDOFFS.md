@@ -497,4 +497,22 @@ Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT
 ### Next action
 Finish exact-HEAD validation, verify the remote PR head before normal push, update the Draft PR description with evidence/limitations, and request a focused independent COMMENT-only re-audit. Keep PR #11 Draft.
 
+## Handoff: RH-P5-PLAN7
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Codex (revision-6 overwrite-evidence recovery)
+- **To:** exact-HEAD validator, focused independent reviewer and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan` (Draft PR #11)
+- **Input HEAD:** `a1146e462459ce000980208d09306e1ad006cb22`; local and origin-tracking heads matched; worktree was clean.
+
+### Verified evidence
+- Verbatim extracted revision-6 DDL, SQLite 3.54.1, 19 tables/65 triggers, FKs on and recursive triggers off. Focused local run passed 32 DB-27, 8 DB-28 and 120 DB-29 overwrite probes with 532 assertions, plus 10 positive lifecycle/metadata assertions; final FK check empty and integrity check `ok`. Exact specifications, index inventory scope, assertion breakdown and limitations are in schema §8.
+- Canonical validation at input HEAD: bootstrap, entrypoints, secret tracking, profile validation passed; `scripts/validate.py` 8/8; real Relate CLI v1.0.1; `RELATE_REQUIRE_CLI=1 npm test` 15/15, 0 skipped; security 5/5; build exited 0.
+- The old 259-assertion scratch harness is unavailable. DB-27's 32 historical permutations were recreated; DB-29 current scope has 30 physical paths / 120 probes versus the historical 132. The implied remaining 12 probes are not mapped, so historical equivalence and closure verdict are PARTIAL. Do not request re-audit as complete until resolved.
+- No previous-head differential or D1/Miniflare/concurrent D1 execution was performed. D1/Miniflare remains UNVERIFIED; D0–D15 remain owner-gated.
+
+### Remaining
+- Canonical exact-HEAD validation must be repeated after committing the evidence record.
+- Keep PR #11 Draft; no merge, deployment or production changes. Preserve planning-only allowlist. Owner decisions and implementation gates remain unchanged.
+
 <!-- HANDOFF_ENTRIES_END -->
