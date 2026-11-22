@@ -533,4 +533,23 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Focused independent COMMENT-only re-audit on the resulting exact HEAD.
 - D1/Miniflare execution and D0–D15 remain gated. Keep PR #11 Draft; do not merge, deploy, or push without owner direction.
 
+## Handoff: RH-P5-PLAN9
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Antigravity (evidence-attribution clarification for PR #11 COMMENT-only review)
+- **To:** focused independent COMMENT-only reviewer and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan` (Draft PR #11)
+- **Input HEAD:** `780cc1e92b0d111be1c445c5e99f32d28c6c143d`
+
+### Verified evidence
+- Addressed PR #11 COMMENT-only review wording finding in `docs/RH-P5-D1-SCHEMA.md` (§8, §12) and `docs/STATUS.md` with no schema or application changes:
+  - **38/38 unique paths were inventoried** (confirmed by independent source-level review at `780cc1e92b0d111be1c445c5e99f32d28c6c143d`);
+  - **30 protected paths were tested locally** in owner/implementer-side SQLite runs (**172 probes / 516 assertions**: 120 baseline + 52 revoked-credential/archived-project state variants; not independently re-executed by the external reviewer);
+  - **8 mutable administrative paths remain DAL-controlled** (inventoried, intentionally not DB overwrite-denial tested);
+  - Historical 259-assertion equivalence remains **unproven**.
+
+### Remaining
+- Focused independent COMMENT-only re-audit on the new exact HEAD.
+- D1/Miniflare parity, actual concurrent D1 transaction/race behavior, and D0–D15 owner gates remain UNVERIFIED / gated. Keep PR #11 Draft; do not merge or deploy.
+
 <!-- HANDOFF_ENTRIES_END -->
