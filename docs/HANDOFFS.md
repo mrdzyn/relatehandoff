@@ -568,4 +568,21 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Owner review and answers to **D0–D15** before authorizing **RH-P5-T1**.
 - All `cloud/` implementation, Cloudflare resources (Workers/D1/KV/R2), OAuth client creation, UI design-gate opening (`D7`), deployment and production changes remain **blocked** until separately approved.
 
+## Handoff: RH-P5-D0-D6
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (owner decisions D0–D6 & proposed scope amendments)
+- **From:** Antigravity (RH-P5 decisions D0–D6 documentation)
+- **To:** focused independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `docs/rh-p5-decisions-d0-d6`
+- **Merged baseline:** `main@bab22382194da309c051d27444faf2384ce0ecb5` (PR #12 squash merge)
+
+### Verified evidence
+- Recorded owner-approved core local-first architecture decisions **D0–D6** in `docs/RH-P5-PLATFORM-PLAN.md` (§0, §14): local-first and offline functionality preserved; hosted index strictly opt-in and future-only; 4-Worker privilege separation; GitHub numeric-id allowlist; reader-only ChatGPT; per-project Ed25519 publisher keys; digest-only sync; separate `cloud/` lockfile.
+- Staged proposed `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` scope amendments in `docs/RH-P5-PLATFORM-PLAN.md` §15 for review without modifying `PRODUCT.md` or `ARCHITECTURE.md`.
+- Kept **D7–D15** explicitly **PENDING**; updated `docs/STATUS.md` and appended this handoff.
+
+### Remaining
+- Independent COMMENT-only review of this Draft PR and owner merge approval.
+- Owner decisions **D7–D15** and separate approval before **RH-P5-T1** implementation, `cloud/` creation, Cloudflare resource creation, or deployment.
+
 <!-- HANDOFF_ENTRIES_END -->
