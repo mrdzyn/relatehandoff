@@ -1,6 +1,9 @@
 # RH-P5 — Multi-Project Remote MCP and Agent Handoff Platform: Plan
 
-**State:** Proposal for owner review (revision 5: remediates independent audit findings P11-01 to P11-04 and, by owner decision, residual R-1 on credential tables; see [D1 schema](RH-P5-D1-SCHEMA.md) §3.1, §5.5, §9–§11). Baseline `main@282e10e600935ee1c1bba34522cb3e3373f3be1d`. Nothing in this document is implemented, deployed or connected. Companion documents: [D1 schema](RH-P5-D1-SCHEMA.md), [threat model](RH-P5-THREAT-MODEL.md). External facts were checked against vendor documentation on 2026-11-18 and are tagged **[verified]** or **[verify]** (must be re-checked before implementation). Source links are in §13.
+> **STATUS: ON HOLD (2026-11-23) — Owner decision: LOCAL-ONLY FOR NOW.**
+> This hosted RH-P5 roadmap is **on hold** and **RH-P5-T1 through T8 must not be executed**. Its approved D0–D6 architecture proposals and schema/threat-model artifacts are preserved here and in `docs/RH-P5-D1-SCHEMA.md` / `docs/RH-P5-THREAT-MODEL.md` as **historical reference only**. `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` local-only restrictions remain authoritative and unchanged. See [`docs/LOCAL-ONLY-ROADMAP.md`](LOCAL-ONLY-ROADMAP.md) for the active local-only improvement roadmap.
+
+**State:** Historical planning reference (on hold 2026-11-23; previously revision 5/6 planning with D0–D6 recorded and D7–D15 pending). Baseline `main@282e10e600935ee1c1bba34522cb3e3373f3be1d` (merged via PR #11 `19fcf51f7f8d362b9fd25b57bdb842f1c0583546`, PR #12 `bab22382194da309c051d27444faf2384ce0ecb5`, PR #13 `45865fe6c3f0c5bce128fe9d7599fa9fc015930c`). Nothing in this document is implemented, deployed or connected. Companion documents: [D1 schema](RH-P5-D1-SCHEMA.md), [threat model](RH-P5-THREAT-MODEL.md). External facts were checked against vendor documentation on 2026-11-18 and are tagged **[verified]** or **[verify]** (must be re-checked before any future resumption). Source links are in §13.
 
 ## 0. Scope gate (D0)
 
