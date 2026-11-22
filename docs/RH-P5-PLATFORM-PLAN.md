@@ -4,7 +4,7 @@
 
 ## 0. Scope gate (D0)
 
-`docs/PRODUCT.md` (MVP non-goals: no "cloud synchronization … or team tenancy") and `docs/ARCHITECTURE.md` ("store is local-only by default and is not automatically synchronized"; "no production deployment, hosted account … is planned") conflict with this platform. They stay authoritative until the owner approves **D0: expand product scope to an opt-in hosted index**. If approved, a separate docs PR amends those two files; this PR does not. Local-only use must remain fully functional with no cloud account.
+`docs/PRODUCT.md` (MVP non-goals: no "cloud synchronization … or team tenancy") and `docs/ARCHITECTURE.md` ("store is local-only by default and is not automatically synchronized"; "no production deployment, hosted account … is planned") stay authoritative until their scope amendments are reviewed and merged. Owner decision **D0** (along with **D1–D6**, see §14) is **APPROVED**: expand product scope to an **opt-in, future-only hosted index** while **preserving full local-first and offline functionality** with no cloud account required. Proposed amendments to `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` are prepared for review in **§15**; neither file is modified in this documentation PR. **D7–D15 remain pending**, and all RH-P5-T1+ implementation, cloud resources, and deployment remain blocked.
 
 ## 1. Goals and non-goals
 
@@ -211,19 +211,42 @@ Each task: its own branch/PR, bounded allowed/forbidden scope, exact-HEAD local 
 - Codex remote MCP/OAuth and xAI remote MCP tools were confirmed only via secondary summaries; verify against official docs (https://developers.openai.com/docs/extend/mcp and https://docs.x.ai/developers/tools/remote-mcp).
 
 ## 14. Owner decisions required
-- **D0** Approve expanding scope to an opt-in hosted index and amending `PRODUCT.md`/`ARCHITECTURE.md` (§0).
-- **D1** Confirm the four-Worker privilege-separated architecture versus a simpler two-Worker variant.
-- **D2** Owner sign-in: GitHub identity with numeric-id allowlist (recommended) versus Cloudflare Access.
-- **D3** Confirm reader-only ChatGPT; writers only via signed publishers.
-- **D4** Approve the publisher model (one project per key, Ed25519 signed requests) and key rotation/expiry policy.
-- **D5** Approve the digest field list (§6) and the explicit exclusion of contents/transcripts.
-- **D6** Whether `cloud/` tests join the mandatory validation contract (changes `config/validation-contract.json`) and whether `cloud/` uses its own lockfile (recommended).
-- **D7** Open the UI design gate for the consent/connection page (enables `design=true`, `platforms=["web"]`).
-- **D8** Optional read-only GitHub App for observed heads/PR state (later) — yes/no.
-- **D9** R2: confirm "not initially".
-- **D10** Durable Object sequencer: confirm "not initially".
-- **D11** Data retention, export and deletion policy; audit-log retention.
-- **D12** Optional GitHub Actions OIDC publisher (later) — yes/no, noting local-first and manual-CI policy.
-- **D13** Hostnames/domain, Cloudflare plan and cost ceiling; confirmation of ChatGPT plan/developer-mode availability **[verify]**.
-- **D14** Which agents are in the first client matrix and the acceptance bar for "supported" (including how to treat Grok).
-- **D15** Approve the credential lifecycle and grant model of schema revision 5: immutable credential identity and keys, permanent one-way revocation, key rotation by registering a **new** publisher, re-authorization as a **new grant row** (`grant_id` primary key, `granted_by_principal_id`, one active grant per connection and project), revoked connections replaced by a new OAuth consent, and revoked app links replaced by a new installation id. Owner direction to fix R-1 was given; this decision confirms the semantics and the grant-key change.
+
+### Approved core local-first architecture decisions (D0–D6)
+- **D0 [APPROVED]:** Expand product scope to an **opt-in, future-only** hosted index while **preserving local-first and offline functionality** with no cloud account required. Proposed `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` amendments are staged for review in §15.
+- **D1 [APPROVED]:** Confirm the **four-Worker privilege-separated architecture** (OAuth, MCP reader, ingestion, and data Worker, per §2) over a two-Worker variant.
+- **D2 [APPROVED]:** Owner sign-in uses **GitHub identity with a numeric-id allowlist** (not Cloudflare Access).
+- **D3 [APPROVED]:** Confirm **reader-only ChatGPT** (and other MCP reader clients); writes occur **only** via signed publisher credentials.
+- **D4 [APPROVED]:** Approve the **publisher model** (one project per key, Ed25519 signed requests) with key rotation by new publisher registration and expiry policy.
+- **D5 [APPROVED]:** Approve the **digest field list (§6)** and the **explicit exclusion of file contents and chat transcripts**.
+- **D6 [APPROVED]:** `cloud/` uses its **own lockfile** and `cloud/` tests join the mandatory validation contract (`config/validation-contract.json`) when implementation begins in T2+, keeping local-first validation isolated and fail-closed.
+
+### Pending owner decisions (D7–D15)
+- **D7 [PENDING]:** Open the UI design gate for the consent/connection page (enables `design=true`, `platforms=["web"]`; keep closed until T5).
+- **D8 [PENDING]:** Optional read-only GitHub App for observed heads/PR state (later) — yes/no.
+- **D9 [PENDING]:** R2: confirm "not initially".
+- **D10 [PENDING]:** Durable Object sequencer: confirm "not initially".
+- **D11 [PENDING]:** Data retention, export and deletion policy; audit-log retention.
+- **D12 [PENDING]:** Optional GitHub Actions OIDC publisher (later) — yes/no, noting local-first and manual-CI policy.
+- **D13 [PENDING]:** Hostnames/domain, Cloudflare plan and cost ceiling; confirmation of ChatGPT plan/developer-mode availability **[verify]**.
+- **D14 [PENDING]:** Which agents are in the first client matrix and the acceptance bar for "supported" (including how to treat Grok).
+- **D15 [PENDING]:** Approve the credential lifecycle and grant model of schema revision 5: immutable credential identity and keys, permanent one-way revocation, key rotation by registering a **new** publisher, re-authorization as a **new grant row** (`grant_id` primary key, `granted_by_principal_id`, one active grant per connection and project), revoked connections replaced by a new OAuth consent, and revoked app links replaced by a new installation id. Owner direction to fix R-1 was given; this decision confirms the semantics and the grant-key change.
+
+## 15. Proposed `PRODUCT.md` and `ARCHITECTURE.md` scope amendments (for review only)
+
+Per D0, the following minimal amendments are proposed for a separate review/merge before RH-P5-T1+ implementation; `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` are **not** modified in this PR.
+
+### Proposed amendment to `docs/PRODUCT.md`
+- Under `## Non-goals for MVP`:
+  - **Current:** `- No general chat transcript ingest, unrestricted personal memory, cloud synchronization, billing, or team tenancy.`
+  - **Proposed:** `- No general chat transcript ingest, unrestricted personal memory, automatic/background cloud synchronization, billing, or multi-user team tenancy. (An opt-in, future-only hosted digest index for cross-session/remote MCP read-only access is scoped in RH-P5; local-first and offline functionality remain complete without any cloud account.)`
+  - **Current:** `- No public REST/MCP endpoint or arbitrary agent-command execution.`
+  - **Proposed:** `- No unauthenticated public REST/MCP endpoint or arbitrary agent-command execution. (Any future remote MCP endpoint in RH-P5 is owner-authenticated, read-only, and opt-in.)`
+
+### Proposed amendment to `docs/ARCHITECTURE.md`
+- Under `## Consistency model`:
+  - **Current:** `- The store is local-only by default and is **not automatically synchronized** Mac ↔ Windows ↔ cloud.`
+  - **Proposed:** `- The store is local-first and offline-capable by default and is **not automatically synchronized** Mac ↔ Windows ↔ cloud. Any future hosted digest index (RH-P5) is strictly opt-in, derived, and non-authoritative relative to local Git and canonical repository files.`
+- Under `## Release`:
+  - **Current:** `No production deployment, hosted account, signing, secret or billing integration is planned. Deliver source and local installation instructions only after objective-based tests and human approval.`
+  - **Proposed:** `Local-first source and installation remain the default deliverable. Any future hosted RH-P5 deployment is strictly opt-in, future-only, and gated on explicit owner approvals (D0–D15) and phase gates.`
