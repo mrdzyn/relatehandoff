@@ -380,4 +380,176 @@ Owner-side run the full RH-P3-T1/T4 clean-checkout test contract on the new PR #
 ### Next action
 Validate the exact PR HEAD with real Relate CLI v1.0.1, obtain an independent COMMENT-only audit, and decide D1–D8 before any T1+ work.
 
+## Handoff: RH-P5-PLAN1
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Claude (planning)
+- **To:** Exact-HEAD validator, independent COMMENT-only reviewer and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan`
+- **Base:** `282e10e600935ee1c1bba34522cb3e3373f3be1d`
+
+### Completed
+- Added the RH-P5 task contract, platform plan, D1 schema/data-access rules and threat model; updated STATUS; added the RH-P5 task path to the `scripts/test_bootstrap.py` allowlist (fail-closed checks unchanged).
+- No code, `cloud/` directory, Worker, wrangler/D1/KV/R2 configuration, migration, dependency, source, test, fixture, workflow, profile or PRODUCT/ARCHITECTURE change.
+
+### Open gates
+- Owner decisions D0–D14 (notably D0: scope expansion versus the PRODUCT/ARCHITECTURE non-goals). UI design gate closed. Cloudflare resources, OAuth clients, deployment, production connection and submission are not authorized.
+
+### Next action
+Validate the exact PR HEAD with real Relate CLI v1.0.1, obtain an independent COMMENT-only audit, and decide D0–D14 before any T1+ work.
+
+## Handoff: RH-P5-PLAN2
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Claude (planning remediation)
+- **To:** Exact-HEAD validator, independent COMMENT-only re-auditor and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan` (Draft PR #11)
+- **Audited HEAD remediated:** `7c75899d44e14314d156a604992ca7c742e5c9fa` (review 5957032620)
+
+### Completed
+- P11-01: `docs/RH-P5-D1-SCHEMA.md` revision 2 adds scoped UNIQUE parents and composite foreign keys for every actor, publisher, tenant and project relationship, plus `project_identities`, `github_app_links` and a relationship matrix.
+- P11-02: documented and specified ordered atomic project deletion with a non-sensitive tombstone, in-statement `server_seq` allocation with idempotent retries, immutable handoff content with audited status transitions, server-controlled `GITHUB_APP` observations, and a DB-01…DB-19 database-level negative test matrix; plan and threat model updated.
+- Local SQLite verification only; no D1/Miniflare run. No Worker, wrangler, migration, dependency, deployment or production change.
+
+### Open gates
+- D0–D14, design gate, D1/Miniflare execution (T2), trigger/`STRICT` support on D1 **[verify]**, Cloudflare resources, deployment and submission remain unauthorized.
+
+### Next action
+Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT-only re-audit, then owner decisions D0–D14.
+
+## Handoff: RH-P5-PLAN3
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Claude (targeted D1 status-history integrity check)
+- **To:** Exact-HEAD validator, independent COMMENT-only re-auditor and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan` (Draft PR #11)
+- **Starting HEAD:** `c0eae0f1920962c752cc39d7193f0dde8ba77b7e`
+
+### Completed
+- Reproduced that `status_reason`, `status_changed_at` and `status_actor_principal_id` could be rewritten without a new event while `status` stayed unchanged, plus forged status events and `INSERT OR REPLACE` overwrites of audit, handoff and event rows.
+- `docs/RH-P5-D1-SCHEMA.md` revision 3: frozen status attribution unless `status` changes, no backward status time, mirror-only unique status events, no-overwrite insert triggers, frozen deletion marker, DAL rule against `OR REPLACE`/`ON CONFLICT`; new matrix DB-20…DB-26 and regression record (§9). Valid ACTIVE→SUPERSEDED/RETRACTED and SUPERSEDED→RETRACTED transitions preserved.
+- Plan and threat model updated. Local SQLite verification only; D1/Miniflare not run. No Worker, wrangler, migration, dependency or production change.
+
+### Open gates
+- D0–D14, design gate, D1/Miniflare execution (T2), trigger/`STRICT` support on D1 **[verify]**, Cloudflare resources, deployment and submission remain unauthorized.
+
+### Next action
+Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT-only re-audit, then owner decisions D0–D14.
+
+## Handoff: RH-P5-PLAN4
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Claude (remediation of independent review findings P11-03 and P11-04)
+- **To:** Exact-HEAD validator, independent COMMENT-only re-auditor and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan` (Draft PR #11)
+- **Starting HEAD:** `3ab7b2fd05d20bc086ec4f872c04228f69e4ed37` (verified equal to the remote branch; no drift)
+
+### Completed
+- Reproduced P11-03 and P11-04 on the revision-3 DDL, plus six further `project_identities` overwrite variants and a resurrection of a deleted project.
+- `docs/RH-P5-D1-SCHEMA.md` revision 4: `trg_identities_no_overwrite`, `trg_events_no_overwrite` on both unique paths, a previous-status provenance check on status events, overwrite-path inventory (§3.1), matrix DB-27…DB-29 and regression record (§10). Valid transitions and tombstone behavior preserved.
+- Inventory of all other immutable-table unique paths found no further gap. Mutable credential tables (`publishers`, grants, connections, app links) remain unguarded and were demonstrated to allow revocation reset through `REPLACE`/`UPDATE`; recorded as residual R-1, not remediated.
+- Local SQLite verification only (`recursive_triggers` OFF; ON informational); D1/Miniflare UNVERIFIED. No Worker, wrangler, migration, dependency, workflow, profile or production change.
+
+### Open gates
+- D0–D14, design gate, D1/Miniflare execution (T2), R-1 decision, Cloudflare resources, deployment and submission remain unauthorized.
+
+### Next action
+Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT-only re-audit, then owner decisions D0–D14 and the R-1 decision.
+
+## Handoff: RH-P5-PLAN5
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Claude (owner-directed remediation of residual R-1; review 5988533009)
+- **To:** Exact-HEAD validator, independent COMMENT-only re-auditor and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan` (Draft PR #11)
+- **Starting HEAD:** `61188d97570e3b51cd7fcc44cb40d77dd2d9d1eb` (verified equal to the remote branch; no drift)
+
+### Completed
+- Reproduced R-1 on the revision-4 DDL (REPLACE key swap plus revoked-publisher reset, UPDATE un-revoke, REPLACE clearing a revoked grant).
+- `docs/RH-P5-D1-SCHEMA.md` revision 5: no-overwrite guards, immutable identity and key material, permanent one-way revocation (connection revocation cascades), delete guards and credential-use checks for `publishers`, `oauth_connections`, `connection_project_grants`, `github_app_links`; `UNIQUE (provider_grant_id)`; grants re-keyed by `grant_id` with `granted_by_principal_id` and a partial unique index of active grants; rotation by a new publisher and re-authorization by a new grant row (§5.5); matrix DB-30…DB-37; regression record §11. Ordinary mutable tables are not blanket-locked.
+- Plan decision D15 (credential lifecycle and grant-key change), threat model B18/B19, STATUS updated. Local SQLite verification only; D1/Miniflare UNVERIFIED. No Worker, wrangler, migration, dependency, workflow, profile or production change.
+
+### Open gates
+- D0–D15, design gate, D1/Miniflare execution (T2), residual R-2/R-3/R-5/R-6, Cloudflare resources, deployment and submission remain unauthorized.
+
+### Next action
+Exact-HEAD validation with real Relate CLI v1.0.1, a focused independent COMMENT-only re-audit, then owner decisions D0–D15.
+
+## Handoff: RH-P5-PLAN6
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Codex (remediation after independent audit 5991551668)
+- **To:** exact-HEAD validator, focused independent COMMENT-only re-auditor and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan` (Draft PR #11)
+- **Starting HEAD:** `88875144e9cc73b90f43b664ea1d84cfdddc17ff`; local worktree and origin-tracking ref matched. Live `git fetch` was blocked by the read-only `.git` boundary; GitHub audit reported this exact audited HEAD.
+
+### Completed
+- Revision 6 adds active, non-deleted project guards for new publisher registrations and GitHub App links; fixes P11-05/P11-06 while preserving active-project registration, rotation and owner-created link paths.
+- R-4 fix protects `(provider, repo_id)` against UPDATE and project-row replacement collisions while leaving `slug`, `repo_full_name`, `default_branch` and other metadata mutable. No unrelated mutable table was locked and no new owner decision was introduced.
+- Reproduced P11-05, P11-06 and R-4 against the complete revision-5 DDL. Revision-6 exact-source SQLite run: 19 tables, 65 triggers, DB-01…DB-40 case rows 40/40, 174/174 assertions, `foreign_key_check=[]`, `integrity_check=ok` (Python SQLite 3.54.1; FKs on; recursive triggers off).
+- The previous 259-assertion throwaway harness was absent. This run does not recreate exhaustive DB-27/DB-29 alternate-unique-key permutations; do not characterize it as equivalent. D1/Miniflare and true concurrent D1 transaction behavior are UNVERIFIED.
+- At exact commit `7f5887ea15812f03fd5d6d04ff7a05653c2b0185`, canonical checks passed on macOS ARM64/Python 3.15.2/Node 26.7.0 with real Relate v1.0.1: bootstrap, entrypoints, secret tracking, profile validation, `validate.py` 8/8, `RELATE_REQUIRE_CLI=1 npm test` 15/15 (0 skipped), security 5/5 and build. This validates existing local engine behavior, not D1.
+
+### Open gates
+- Re-run canonical validation on the final post-evidence commit; address any result honestly.
+- Recover/re-run exhaustive DB-27/DB-29 probes before re-audit. D0–D15 and design gate remain owner-gated; no cloud resource, deployment, merge or publication is authorized.
+
+### Next action
+Finish exact-HEAD validation, verify the remote PR head before normal push, update the Draft PR description with evidence/limitations, and request a focused independent COMMENT-only re-audit. Keep PR #11 Draft.
+
+## Handoff: RH-P5-PLAN7
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Codex (revision-6 overwrite-evidence recovery)
+- **To:** exact-HEAD validator, focused independent reviewer and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan` (Draft PR #11)
+- **Input HEAD:** `a1146e462459ce000980208d09306e1ad006cb22`; local and origin-tracking heads matched; worktree was clean.
+
+### Verified evidence
+- Verbatim extracted revision-6 DDL, SQLite 3.54.1, 19 tables/65 triggers, FKs on and recursive triggers off. Focused local run passed 32 DB-27, 8 DB-28 and 120 DB-29 overwrite probes with 532 assertions, plus 10 positive lifecycle/metadata assertions; final FK check empty and integrity check `ok`. Exact specifications, index inventory scope, assertion breakdown and limitations are in schema §8.
+- Canonical validation at input HEAD: bootstrap, entrypoints, secret tracking, profile validation passed; `scripts/validate.py` 8/8; real Relate CLI v1.0.1; `RELATE_REQUIRE_CLI=1 npm test` 15/15, 0 skipped; security 5/5; build exited 0.
+- The old 259-assertion scratch harness is unavailable. DB-27's 32 historical permutations were recreated; DB-29 current scope has 30 physical paths / 120 probes versus the historical 132. The implied remaining 12 probes are not mapped, so historical equivalence and closure verdict are PARTIAL. Do not request re-audit as complete until resolved.
+- No previous-head differential or D1/Miniflare/concurrent D1 execution was performed. D1/Miniflare remains UNVERIFIED; D0–D15 remain owner-gated.
+
+### Remaining
+- Canonical exact-HEAD validation and the focused SQL matrix were repeated after the evidence commit; results are recorded in schema §8.
+- Keep PR #11 Draft; no merge, deployment or production changes. Preserve planning-only allowlist. Owner decisions and implementation gates remain unchanged.
+
+## Handoff: RH-P5-PLAN8
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Antigravity (12-probe DB-29 reconciliation & current-schema unique-path coverage)
+- **To:** focused independent COMMENT-only reviewer and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan` (Draft PR #11)
+- **Input HEAD:** `8b520036c076266639b86e82b7658ba8a02dbbc2`
+
+### Verified evidence
+- Independent `sqlite_master` + `PRAGMA index_list`/`index_xinfo` comparison of revision 5 (`88875144e9cc73b90f43b664ea1d84cfdddc17ff`: 19 tables, 61 triggers, 6 explicit indexes, 38 unique paths) and revision 6 (`8b520036c076266639b86e82b7658ba8a02dbbc2`: 19 tables, 65 triggers, 6 explicit indexes, 38 unique paths) confirms **0** unique-path changes (only 4 triggers added in rev 6).
+- All 38/38 physical unique paths in revision 6 are mapped in `docs/RH-P5-D1-SCHEMA.md` §8 (30 guarded paths across 14 immutable/credential/project tables + 8 intentional mutable/DAL-guarded administrative paths across 5 tables, correcting the earlier `42/12` note).
+- Executed 120 baseline DB-29 probes (360 assertions) + 52 revoked-credential/archived-project state-variant probes (156 assertions) = **172 probes / 516 assertions** on verbatim revision-6 DDL (SQLite 3.54.1, `foreign_keys=ON`, `recursive_triggers=OFF`), with 0 row mutations, 0 FK/integrity errors, and 0 credential/project resurrections.
+- Historical 132-probe / 259-assertion equivalence is **not claimed** (lost rev-5 scratch harness; historical counting discrepancy documented), while **complete current-schema unique-path coverage (38/38)** is independently demonstrated.
+
+### Remaining
+- Focused independent COMMENT-only re-audit on the resulting exact HEAD.
+- D1/Miniflare execution and D0–D15 remain gated. Keep PR #11 Draft; do not merge, deploy, or push without owner direction.
+
+## Handoff: RH-P5-PLAN9
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Antigravity (evidence-attribution clarification for PR #11 COMMENT-only review)
+- **To:** focused independent COMMENT-only reviewer and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan` (Draft PR #11)
+- **Input HEAD:** `780cc1e92b0d111be1c445c5e99f32d28c6c143d`
+
+### Verified evidence
+- Addressed PR #11 COMMENT-only review wording finding in `docs/RH-P5-D1-SCHEMA.md` (§8, §12) and `docs/STATUS.md` with no schema or application changes:
+  - **38/38 unique paths were inventoried** (confirmed by independent source-level review at `780cc1e92b0d111be1c445c5e99f32d28c6c143d`);
+  - **30 protected paths were tested locally** in owner/implementer-side SQLite runs (**172 probes / 516 assertions**: 120 baseline + 52 revoked-credential/archived-project state variants; not independently re-executed by the external reviewer);
+  - **8 mutable administrative paths remain DAL-controlled** (inventoried, intentionally not DB overwrite-denial tested);
+  - Historical 259-assertion equivalence remains **unproven**.
+
+### Remaining
+- Focused independent COMMENT-only re-audit on the new exact HEAD.
+- D1/Miniflare parity, actual concurrent D1 transaction/race behavior, and D0–D15 owner gates remain UNVERIFIED / gated. Keep PR #11 Draft; do not merge or deploy.
+
 <!-- HANDOFF_ENTRIES_END -->
