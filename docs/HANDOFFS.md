@@ -585,4 +585,21 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Independent COMMENT-only review of this Draft PR and owner merge approval.
 - Owner decisions **D7–D15** and separate approval before **RH-P5-T1** implementation, `cloud/` creation, Cloudflare resource creation, or deployment.
 
+## Handoff: RH-P5-D0-D6-R1
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (PR #13 COMMENT-only audit remediation)
+- **From:** Antigravity (DOC-13-01 & DOC-13-02 documentation fixes)
+- **To:** focused independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `docs/rh-p5-decisions-d0-d6` (Draft PR #13)
+- **Input HEAD:** `be76fec8fccfc6c147bb8b153b2b2603f879625a`
+
+### Verified evidence
+- **DOC-13-01:** Updated `docs/STATUS.md` to clarify that **D0–D6 are approved architecture decisions**, while **D7–D15 remain pending**, and preserved all D1/Miniflare verification limitations.
+- **DOC-13-02:** Updated `docs/RH-P5-PLATFORM-PLAN.md` §14 D1 description to OAuth, MCP reader, ingestion, and data Worker, consistent with §2.
+- No architecture decisions, implementation, or infrastructure modified.
+
+### Remaining
+- Independent COMMENT-only re-audit on the new exact HEAD.
+- Keep PR #13 Draft; do not merge or deploy.
+
 <!-- HANDOFF_ENTRIES_END -->

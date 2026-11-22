@@ -214,7 +214,7 @@ Each task: its own branch/PR, bounded allowed/forbidden scope, exact-HEAD local 
 
 ### Approved core local-first architecture decisions (D0–D6)
 - **D0 [APPROVED]:** Expand product scope to an **opt-in, future-only** hosted index while **preserving local-first and offline functionality** with no cloud account required. Proposed `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` amendments are staged for review in §15.
-- **D1 [APPROVED]:** Confirm the **four-Worker privilege-separated architecture** (separate OAuth, MCP reader, ingestion, and admin Workers) over a two-Worker variant.
+- **D1 [APPROVED]:** Confirm the **four-Worker privilege-separated architecture** (OAuth, MCP reader, ingestion, and data Worker, per §2) over a two-Worker variant.
 - **D2 [APPROVED]:** Owner sign-in uses **GitHub identity with a numeric-id allowlist** (not Cloudflare Access).
 - **D3 [APPROVED]:** Confirm **reader-only ChatGPT** (and other MCP reader clients); writes occur **only** via signed publisher credentials.
 - **D4 [APPROVED]:** Approve the **publisher model** (one project per key, Ed25519 signed requests) with key rotation by new publisher registration and expiry policy.
