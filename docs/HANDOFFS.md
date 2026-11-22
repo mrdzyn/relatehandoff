@@ -512,7 +512,7 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - No previous-head differential or D1/Miniflare/concurrent D1 execution was performed. D1/Miniflare remains UNVERIFIED; D0–D15 remain owner-gated.
 
 ### Remaining
-- Canonical exact-HEAD validation must be repeated after committing the evidence record.
+- Canonical exact-HEAD validation and the focused SQL matrix were repeated after the evidence commit; results are recorded in schema §8.
 - Keep PR #11 Draft; no merge, deployment or production changes. Preserve planning-only allowlist. Owner decisions and implementation gates remain unchanged.
 
 <!-- HANDOFF_ENTRIES_END -->
