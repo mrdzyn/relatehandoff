@@ -515,4 +515,22 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Canonical exact-HEAD validation and the focused SQL matrix were repeated after the evidence commit; results are recorded in schema §8.
 - Keep PR #11 Draft; no merge, deployment or production changes. Preserve planning-only allowlist. Owner decisions and implementation gates remain unchanged.
 
+## Handoff: RH-P5-PLAN8
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (planning only)
+- **From:** Antigravity (12-probe DB-29 reconciliation & current-schema unique-path coverage)
+- **To:** focused independent COMMENT-only reviewer and project owner
+- **Branch:** `docs/rh-p5-remote-mcp-platform-plan` (Draft PR #11)
+- **Input HEAD:** `8b520036c076266639b86e82b7658ba8a02dbbc2`
+
+### Verified evidence
+- Independent `sqlite_master` + `PRAGMA index_list`/`index_xinfo` comparison of revision 5 (`88875144e9cc73b90f43b664ea1d84cfdddc17ff`: 19 tables, 61 triggers, 6 explicit indexes, 38 unique paths) and revision 6 (`8b520036c076266639b86e82b7658ba8a02dbbc2`: 19 tables, 65 triggers, 6 explicit indexes, 38 unique paths) confirms **0** unique-path changes (only 4 triggers added in rev 6).
+- All 38/38 physical unique paths in revision 6 are mapped in `docs/RH-P5-D1-SCHEMA.md` §8 (30 guarded paths across 14 immutable/credential/project tables + 8 intentional mutable/DAL-guarded administrative paths across 5 tables, correcting the earlier `42/12` note).
+- Executed 120 baseline DB-29 probes (360 assertions) + 52 revoked-credential/archived-project state-variant probes (156 assertions) = **172 probes / 516 assertions** on verbatim revision-6 DDL (SQLite 3.54.1, `foreign_keys=ON`, `recursive_triggers=OFF`), with 0 row mutations, 0 FK/integrity errors, and 0 credential/project resurrections.
+- Historical 132-probe / 259-assertion equivalence is **not claimed** (lost rev-5 scratch harness; historical counting discrepancy documented), while **complete current-schema unique-path coverage (38/38)** is independently demonstrated.
+
+### Remaining
+- Focused independent COMMENT-only re-audit on the resulting exact HEAD.
+- D1/Miniflare execution and D0–D15 remain gated. Keep PR #11 Draft; do not merge, deploy, or push without owner direction.
+
 <!-- HANDOFF_ENTRIES_END -->
