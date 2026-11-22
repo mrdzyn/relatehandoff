@@ -552,4 +552,20 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Focused independent COMMENT-only re-audit on the new exact HEAD.
 - D1/Miniflare parity, actual concurrent D1 transaction/race behavior, and D0–D15 owner gates remain UNVERIFIED / gated. Keep PR #11 Draft; do not merge or deploy.
 
+## Handoff: RH-P5-CLOSEOUT
+
+- **Task:** `tasks/RH-P5-remote-mcp-platform.md` (RH-P5 planning post-merge closeout)
+- **From:** Antigravity (post-merge synchronization & owner-decision packet)
+- **To:** project owner (`mrdzyn`) and next authorized RH-P5-T1 agent (after D0–D15 approval)
+- **Branch:** `docs/rh-p5-post-merge-closeout`
+- **Merged baseline:** `main@19fcf51f7f8d362b9fd25b57bdb842f1c0583546` (PR #11 squash merge, `2026-11-22T16:39:56Z`)
+
+### Verified evidence
+- Verified `origin/main` at `19fcf51f7f8d362b9fd25b57bdb842f1c0583546` and GitHub PR #11 `MERGED` state.
+- Synchronized `docs/STATUS.md` and `docs/HANDOFFS.md` for post-merge closeout: RH-P5 planning (T0) is complete and merged; `PRODUCT.md` and `ARCHITECTURE.md` remain unchanged pending owner decision **D0**.
+
+### Remaining
+- Owner review and answers to **D0–D15** before authorizing **RH-P5-T1**.
+- All `cloud/` implementation, Cloudflare resources (Workers/D1/KV/R2), OAuth client creation, UI design-gate opening (`D7`), deployment and production changes remain **blocked** until separately approved.
+
 <!-- HANDOFF_ENTRIES_END -->
