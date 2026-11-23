@@ -12,7 +12,7 @@
     "demo": "node scripts/demo.mjs",
     "doctor": "node src/cli.mjs doctor",
     "generate:example": "node examples/generate_example.mjs",
-    "test": "RELATE_REQUIRE_CLI=1 node --test --test-timeout=30000 spike/relate_spike.test.mjs test/e2e_mcp.test.mjs test/security.test.mjs test/doctor.test.mjs test/resume_output.test.mjs test/lifecycle.test.mjs",
+    "test": "RELATE_REQUIRE_CLI=1 node --test --test-timeout=30000 spike/relate_spike.test.mjs test/e2e_mcp.test.mjs test/security.test.mjs test/doctor.test.mjs test/resume_output.test.mjs test/lifecycle.test.mjs test/mcp_integration.test.mjs",
     "test:spike": "node --test spike/relate_spike.test.mjs",
     "test:e2e": "RELATE_REQUIRE_CLI=1 node --test --test-timeout=30000 test/e2e_mcp.test.mjs",
     "test:security": "node --test test/security.test.mjs"
