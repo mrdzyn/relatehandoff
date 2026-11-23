@@ -2,13 +2,28 @@
 import fs from "node:fs";
 import path from "node:path";
 import { recordHandoff } from "./recorder.mjs";
-import { resumeTaskViaReadOnlyMcp } from "./mcp_client.mjs";
+import { listHandoffsViaReadOnlyMcp, resumeTaskViaReadOnlyMcp } from "./mcp_client.mjs";
 import { formatDoctorReport, runDoctor } from "./doctor.mjs";
-import { formatResumeMarkdown } from "./resume_format.mjs";
+import { formatHandoffListMarkdown, formatResumeMarkdown } from "./resume_format.mjs";
+import { ID_RE, MAX_DETAIL_ROWS } from "./schema.mjs";
 
 const BOOLEAN_FLAGS = new Set(["help", "json", "strict"]);
 const DOCTOR_ALLOWED_FLAGS = new Set(["help", "json", "strict", "repo", "store", "relate-bin"]);
-const RESUME_ALLOWED_FORMATS = new Set(["json", "markdown"]);
+const RESUME_ALLOWED_FLAGS = new Set(["help", "store", "repo", "task", "handoff", "repo-id", "verify", "format"]);
+const LIST_ALLOWED_FLAGS = new Set([
+  "help",
+  "store",
+  "repo",
+  "task",
+  "repo-id",
+  "status",
+  "branch",
+  "agent",
+  "limit",
+  "format",
+]);
+const ALLOWED_FORMATS = new Set(["json", "markdown"]);
+const ALLOWED_LIST_STATUSES = new Set(["active", "superseded", "all"]);
 
 class CliUsageError extends Error {
   constructor(message) {
@@ -43,12 +58,21 @@ function parseArgs(argv) {
   return { command, flags };
 }
 
+function assertAllowedFlags(flags, allowed, commandName) {
+  for (const key of Object.keys(flags)) {
+    if (!allowed.has(key)) {
+      throw new CliUsageError(`Unsupported flag for ${commandName}: --${key}`);
+    }
+  }
+}
+
 function printHelp() {
   console.log(`RelateHandoff CLI
 
 Usage:
-  node src/cli.mjs record --store <dir> --repo <dir> --input <json-file> [--repo-id <owner/repo>] [--verify <profile>]
-  node src/cli.mjs resume --store <dir> --repo <dir> --task <taskId> [--repo-id <owner/repo>] [--verify <profile>] [--format json|markdown]
+  node src/cli.mjs record --store <dir> --repo <dir> --input <json-file> [--repo-id <owner/repo>] [--verify <profile>] [--supersedes <handoffId>] [--supersession-reason <text>]
+  node src/cli.mjs resume --store <dir> --repo <dir> --task <taskId> [--handoff <handoffId>] [--repo-id <owner/repo>] [--verify <profile>] [--format json|markdown]
+  node src/cli.mjs list --store <dir> --repo <dir> [--task <taskId>] [--repo-id <owner/repo>] [--status active|superseded|all] [--branch <name>] [--agent <name>] [--limit <1..100>] [--format json|markdown]
   node src/cli.mjs doctor [--repo <dir>] [--store <dir>] [--relate-bin <path>] [--json] [--strict]
   node src/cli.mjs --help`);
 }
@@ -65,6 +89,20 @@ function main() {
       throw new Error("record requires --store, --repo, and --input");
     }
     const raw = JSON.parse(fs.readFileSync(path.resolve(flags.input), "utf8"));
+    if (flags.supersedes !== undefined) {
+      if (raw.supersedesHandoffId !== undefined && raw.supersedesHandoffId !== null && raw.supersedesHandoffId !== flags.supersedes) {
+        throw new Error("Supersession conflict: CLI --supersedes differs from payload supersedesHandoffId");
+      }
+      raw.supersedesHandoffId = flags.supersedes;
+    }
+    if (flags["supersession-reason"] !== undefined) {
+      if (raw.supersessionReason !== undefined && raw.supersessionReason !== null && raw.supersessionReason !== flags["supersession-reason"]) {
+        throw new Error(
+          "Supersession conflict: CLI --supersession-reason differs from payload supersessionReason"
+        );
+      }
+      raw.supersessionReason = flags["supersession-reason"];
+    }
     const recorded = recordHandoff({
       storeDir: flags.store,
       repoRoot: flags.repo,
@@ -77,9 +115,13 @@ function main() {
   }
 
   if (command === "resume") {
+    assertAllowedFlags(flags, RESUME_ALLOWED_FLAGS, "resume");
     const format = flags.format ?? "json";
-    if (!RESUME_ALLOWED_FORMATS.has(format)) {
+    if (!ALLOWED_FORMATS.has(format)) {
       throw new CliUsageError(`Invalid --format '${format}': expected 'json' or 'markdown'`);
+    }
+    if (flags.handoff !== undefined && !ID_RE.test(flags.handoff.trim())) {
+      throw new CliUsageError("Invalid --handoff: must match ^[A-Za-z0-9._-]{1,128}$");
     }
     if (!flags.store || !flags.repo || !flags.task) {
       throw new Error("resume requires --store, --repo, and --task");
@@ -88,6 +130,7 @@ function main() {
       storeDir: flags.store,
       repoRoot: flags.repo,
       taskId: flags.task,
+      handoffId: flags.handoff ?? null,
       repository: flags["repo-id"],
       verifyProfile: flags.verify ?? null,
     });
@@ -99,12 +142,58 @@ function main() {
     return;
   }
 
-  if (command === "doctor") {
-    for (const key of Object.keys(flags)) {
-      if (!DOCTOR_ALLOWED_FLAGS.has(key)) {
-        throw new CliUsageError(`Unsupported flag for doctor: --${key}`);
+  if (command === "list") {
+    assertAllowedFlags(flags, LIST_ALLOWED_FLAGS, "list");
+    const format = flags.format ?? "json";
+    if (!ALLOWED_FORMATS.has(format)) {
+      throw new CliUsageError(`Invalid --format '${format}': expected 'json' or 'markdown'`);
+    }
+    const status = flags.status ?? "all";
+    if (!ALLOWED_LIST_STATUSES.has(status)) {
+      throw new CliUsageError(`Invalid --status '${status}': expected 'active', 'superseded', or 'all'`);
+    }
+    let limit = MAX_DETAIL_ROWS;
+    if (flags.limit !== undefined) {
+      if (!/^\d+$/.test(flags.limit)) {
+        throw new CliUsageError(`Invalid --limit '${flags.limit}': must be an integer between 1 and ${MAX_DETAIL_ROWS}`);
+      }
+      limit = Number(flags.limit);
+      if (limit < 1 || limit > MAX_DETAIL_ROWS) {
+        throw new CliUsageError(`Invalid --limit '${flags.limit}': must be an integer between 1 and ${MAX_DETAIL_ROWS}`);
       }
     }
+    if (flags.task !== undefined && !ID_RE.test(flags.task.trim())) {
+      throw new CliUsageError("Invalid --task: must match ^[A-Za-z0-9._-]{1,128}$");
+    }
+    if (flags.branch !== undefined && flags.branch.trim().length === 0) {
+      throw new CliUsageError("Invalid --branch: must be a non-empty string");
+    }
+    if (flags.agent !== undefined && flags.agent.trim().length === 0) {
+      throw new CliUsageError("Invalid --agent: must be a non-empty string");
+    }
+    if (!flags.store || !flags.repo) {
+      throw new CliUsageError("list requires --store and --repo");
+    }
+    const result = listHandoffsViaReadOnlyMcp({
+      storeDir: flags.store,
+      repoRoot: flags.repo,
+      taskId: flags.task ?? null,
+      repository: flags["repo-id"],
+      status,
+      branch: flags.branch ?? null,
+      agent: flags.agent ?? null,
+      limit,
+    });
+    if (format === "markdown") {
+      console.log(formatHandoffListMarkdown(result));
+    } else {
+      console.log(JSON.stringify(result, null, 2));
+    }
+    return;
+  }
+
+  if (command === "doctor") {
+    assertAllowedFlags(flags, DOCTOR_ALLOWED_FLAGS, "doctor");
     const report = runDoctor({
       repo: flags.repo,
       store: flags.store,

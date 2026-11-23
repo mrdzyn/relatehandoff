@@ -3,7 +3,7 @@ import { isFullSha, validateRepoRelativePath } from "./git.mjs";
 export const SCHEMA_VERSION = "1.0.0";
 export const MAX_DETAIL_ROWS = 100;
 
-const ID_RE = /^[A-Za-z0-9._-]{1,128}$/;
+export const ID_RE = /^[A-Za-z0-9._-]{1,128}$/;
 const EVIDENCE_STATUSES = new Set(["PASS", "FAIL", "UNVERIFIED"]);
 
 // Best-effort regex guard for common token/key formats (not a comprehensive secret scanner).
@@ -218,6 +218,25 @@ export function validateHandoffPayload(raw, repoRoot) {
     throw new Error("Invalid field 'createdAt': must be ISO-8601 timestamp");
   }
 
+  let supersedesHandoffId = null;
+  if (raw.supersedesHandoffId !== undefined && raw.supersedesHandoffId !== null) {
+    supersedesHandoffId = assertNonEmptyString(raw.supersedesHandoffId, "supersedesHandoffId", 128);
+    if (!ID_RE.test(supersedesHandoffId)) {
+      throw new Error("Invalid field 'supersedesHandoffId': must match ^[A-Za-z0-9._-]{1,128}$");
+    }
+    if (supersedesHandoffId === handoffId) {
+      throw new Error("SupersessionError: Handoff cannot supersede itself");
+    }
+  }
+
+  let supersessionReason = null;
+  if (raw.supersessionReason !== undefined && raw.supersessionReason !== null) {
+    if (supersedesHandoffId === null) {
+      throw new Error("Invalid field 'supersessionReason': requires 'supersedesHandoffId'");
+    }
+    supersessionReason = assertNonEmptyString(raw.supersessionReason, "supersessionReason", 500);
+  }
+
   return {
     schemaVersion,
     handoffId,
@@ -233,5 +252,7 @@ export function validateHandoffPayload(raw, repoRoot) {
     artifacts,
     evidence,
     createdAt,
+    supersedesHandoffId,
+    supersessionReason,
   };
 }

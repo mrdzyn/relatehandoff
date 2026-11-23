@@ -708,4 +708,40 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Focused independent COMMENT-only re-audit on the new exact HEAD.
 - Keep PR #16 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
 
+## Handoff: RH-LOCAL-T2B-1
+
+- **Task:** `tasks/RH-LOCAL-T2B-handoff-lifecycle.md` (RH-LOCAL-T2B: Handoff Lifecycle)
+- **From:** Antigravity (implementation & local validation)
+- **To:** independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t2b-lifecycle`
+- **Base:** `main@176e5c2005bf63583c4f33a918bd12e5d6005fb2` (PR #16 squash merge)
+
+### Verified evidence
+- Added fail-closed validation of `supersedesHandoffId` and `supersessionReason` in `src/schema.mjs` (rejects self-supersession and orphan reasons).
+- Added immutable `[:SUPERSEDES]` edge creation in `src/recorder.mjs` (verifies same-repo/same-task target existence, rejects double supersession with `HandoffConflictError`, never mutates prior nodes, and preserves pre-T2B fingerprints).
+- Updated `src/mcp_client.mjs` (`resumeTaskViaReadOnlyMcp` defaults to latest `ACTIVE` handoff and accepts `handoffId`, plus new `listHandoffsViaReadOnlyMcp` with `--task`, `--status`, `--branch`, `--agent`, `--limit`, strict repo isolation, and 100-row bounds) and `src/resume_format.mjs` (`formatHandoffListMarkdown` and lifecycle display in `formatResumeMarkdown`).
+- Wired `record --supersedes / --supersession-reason`, `resume --handoff`, and `list` into `src/cli.mjs` with exit code `2` for invalid usage.
+- Added `test/lifecycle.test.mjs` covering real Relate v1.0.1 supersession chains, conflict/error rejections, filtering, repo isolation, Markdown escaping, invalid CLI usage, and fake overflow/write-tool rejection.
+
+### Remaining
+- Independent COMMENT-only audit and owner merge approval on the Draft PR before proceeding to `RH-LOCAL-T3`.
+- Keep `RH-P5-T1`–`T8`, `cloud/`, Cloudflare resources, and deployment on hold / blocked.
+
+## Handoff: RH-LOCAL-T2B-2
+
+- **Task:** `tasks/RH-LOCAL-T2B-handoff-lifecycle.md` (PR #17 audit remediation RH17-01 & RH17-02)
+- **From:** Antigravity (CLI conflict-error redaction & selector exit-code remediation)
+- **To:** focused independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t2b-lifecycle` (Draft PR #17)
+- **Input HEAD:** `8b8f4d26e29f1e872a1bfda9b92762508c350bfb`
+
+### Verified evidence
+- **RH17-01 (`src/cli.mjs`):** Replaced `--supersedes` conflict error with a generic field-level conflict message (`Supersession conflict: CLI --supersedes differs from payload supersedesHandoffId`) that never prints raw user-controlled values before payload secret validation; added negative test with fictional `ghp_` tokens in `test/lifecycle.test.mjs`.
+- **RH17-02 (`src/cli.mjs`):** Validated `resume --handoff` (`ID_RE`), `list --task` (`ID_RE`), and non-empty `list --branch` / `list --agent` with `CliUsageError` (exit code `2`) while retaining library-side validation in `src/mcp_client.mjs` and exit code `1` for actual repository/MCP retrieval failures; added regression tests in `test/lifecycle.test.mjs`.
+- Preserved all T2B lifecycle behavior (immutable supersession, idempotency, repository isolation, JSON compatibility, Markdown safety, and read-only MCP).
+
+### Remaining
+- Focused independent COMMENT-only re-audit on the new exact HEAD.
+- Keep PR #17 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
+
 <!-- HANDOFF_ENTRIES_END -->
