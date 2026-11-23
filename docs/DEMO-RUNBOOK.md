@@ -268,9 +268,12 @@ Sanitized observed output (`Relate v1.0.1`):
 
 ---
 
-## 4. Complete 7-Act Multi-Agent Storyline (Copy-Paste & Sanitized Outputs)
+## 4. Complete 7-Act Synthetic Agent-Handoff Simulation (Copy-Paste & Sanitized Outputs)
 
-Run the full 7-act storyline from the RelateHandoff repository root inside a clean temporary directory (`DEMO_ROOT`). Everything cleans up automatically on shell exit.
+> [!NOTE]
+> **Provenance class — Synthetic Simulation:** Every step below is a **synthetic shell-based handoff simulation using the real Relate v1.0.1 engine**. Payload labels (`codex-writer`, `claude-reviewer`, `gemini-auditor`) and "Simulated Agent A / Agent B" steps represent roles in a single-operator reproduction script; they do **not** execute Codex, Claude, or Gemini and never prove independent multi-agent activity. See Section 1 and [`docs/RH-P2-REAL-AGENT-PROOF.md`](RH-P2-REAL-AGENT-PROOF.md) for historical owner-reported real-agent execution.
+
+Run the full 7-act simulation from the RelateHandoff repository root inside a clean temporary directory (`DEMO_ROOT`). Everything cleans up automatically on shell exit.
 
 ### Setup (Run Once Before Act 1)
 
@@ -282,9 +285,9 @@ STORE="$DEMO_ROOT/store"
 mkdir -p "$REPO"
 ```
 
-### Act 1 — Agent A Completes a Bounded Coding Task
+### Act 1 — Simulated Agent A Step: Bounded Coding Task
 
-Agent A (`codex-writer`) initializes a repo, implements `add(a, b)` in `math.mjs`, writes `math.test.mjs`, and commits at `SHA_A`.
+This synthetic step commits `add(a, b)` in `math.mjs` and `math.test.mjs` at `SHA_A` using the synthetic source-agent label `codex-writer`.
 
 ```bash
 git -C "$REPO" init -q
@@ -318,9 +321,9 @@ Observed output:
 ACT 1 SHA_A=8fd9c56485cb294ea531fd682647a4da7f9c30b2 BRANCH=main
 ```
 
-### Act 2 — RelateHandoff Records Decisions, Evidence, Artifacts, Agents, and Git HEAD
+### Act 2 — Record Synthetic Handoff Decisions, Evidence, Artifacts, Agent Labels, and Git HEAD
 
-Agent A records `RH-DEMO-1` with `--verify node-test-suite` (running `node --test` against the clean `SHA_A` checkout) and verifies environment health via `doctor`.
+The script records `RH-DEMO-1` with `--verify node-test-suite` (running `node --test` against the clean `SHA_A` checkout) and checks environment health via `doctor`.
 
 ```bash
 cat > "$DEMO_ROOT/h1.json" << EOF
@@ -407,9 +410,9 @@ RelateHandoff Doctor (darwin, read-only) — PASS
 Summary: 6 PASS, 0 WARN, 0 FAIL (exit 0)
 ```
 
-### Act 3 — Agent B Retrieves the Handoff Through Read-Only Local MCP
+### Act 3 — Simulated Agent B Step: Retrieve Handoff Through Read-Only Local MCP
 
-Agent B (`claude-reviewer`) retrieves bounded context through `relate serve --mcp stdio --read-only` without executing tests (`Metadata freshness: CURRENT`, `Execution authenticity: UNVERIFIED` because the persisted local store is unsigned).
+This step simulates a receiving agent (`claude-reviewer` label) retrieving bounded context through `relate serve --mcp stdio --read-only` without executing tests (`Metadata freshness: CURRENT`, `Execution authenticity: UNVERIFIED` because the persisted local store is unsigned).
 
 ```bash
 node "$REPO_ROOT/src/cli.mjs" resume --store "$STORE" --repo "$REPO" --task DEMO-TASK-1 --format markdown
@@ -455,9 +458,9 @@ Observed output:
 - math.test.mjs
 ```
 
-### Act 4 — Agent B Continues Work, Supersedes `RH-DEMO-1`, and Lists Handoffs
+### Act 4 — Simulated Agent B Step: Continue Work, Supersede `RH-DEMO-1`, and List Handoffs
 
-Agent B adds `subtract(a, b)` at `SHA_B`, records `RH-DEMO-2` with an immutable `[:SUPERSEDES]` edge (`--supersedes RH-DEMO-1`), and lists task handoffs (`RH-DEMO-2` `ACTIVE`, `RH-DEMO-1` `SUPERSEDED`).
+The simulation adds `subtract(a, b)` at `SHA_B`, records `RH-DEMO-2` (`claude-reviewer` -> `gemini-auditor`) with an immutable `[:SUPERSEDES]` edge (`--supersedes RH-DEMO-1`), and lists task handoffs (`RH-DEMO-2` `ACTIVE`, `RH-DEMO-1` `SUPERSEDED`).
 
 ```bash
 cat >> "$REPO/math.mjs" << 'EOF'
@@ -799,42 +802,99 @@ rm -rf "$DEMO_ROOT"
 
 ## 5. Shot-by-Shot Screen Capture Sequence (<= 120 seconds)
 
-Use a clean terminal window (16:9, 1080p, large readable monospace font, custom minimal prompt `$ ` with no username/hostname/home-directory path, notifications disabled).
+Use a clean terminal window (16:9, 1080p, large readable monospace font, custom minimal prompt `$ ` with no username/hostname/home-directory path, notifications disabled). Choose **Track A (preferred for final submission)** only when you execute real Codex and real Claude sessions live on camera, or **Track B** when recording the Section 4 synthetic shell simulation. **Never mix Track A narration or overlays onto Track B synthetic footage.**
 
-| Shot | Window | Screen Action / Command | Visual Highlight |
-|---|---|---|---|
-| **Shot 1** | 0:00–0:10 | Title card or clean terminal header (`RelateHandoff — One context. Every agent.`) + `relate --version` | Shows `Relate v1.0.1` (`Apache 2.0`) |
-| **Shot 2** | 0:10–0:28 | Run `doctor` + Act 1/Act 2 (`git commit` -> `record --verify node-test-suite`) | Shows 6/6 `PASS` and `EV-RUNNER-1` (`RUNNER_RECORDED_UNSIGNED`) bound to `SHA_A` |
-| **Shot 3** | 0:28–0:45 | Act 3 (`resume --format markdown` without `--verify`) | Highlights `Metadata freshness: CURRENT` vs. `Execution authenticity: UNVERIFIED` |
-| **Shot 4** | 0:45–1:02 | Act 4 (`record --supersedes RH-DEMO-1` + `list --format markdown`) & Act 5 (`resume --verify node-test-suite --format markdown`) | Shows `RH-DEMO-2` (`ACTIVE`) superseding `RH-DEMO-1` (`SUPERSEDED`), then `Overall status: VERIFIED` / `AUTHENTICATED` |
-| **Shot 5** | 1:02–1:18 | Act 6 (advance Git `HEAD` to `SHA_C` and re-run `resume --format markdown`) | Highlights `Overall status: STALE` (`HEAD_SHA_MISMATCH`) |
-| **Shot 6** | 1:18–1:38 | Act 7 (`RH-DEMO-3` self-asserted -> `UNVERIFIED`, `RH-DEMO-4` failed -> `BLOCKED`, `relate serve --mcp stdio --read-only` write attempts) | Highlights `SELF_ASSERTED`, `BLOCKED`, and both MCP `isError: true` refusals |
-| **Shot 7** | 1:38–1:50 | Run `npm run demo` summary or closing slide (`Git + local verification remain authoritative`) | Clean end frame; no private paths or unverified claims |
-
----
-
-## 6. Timed 90–120-Second Voiceover Script (~217 words)
-
-> **Target duration:** ~100–110 seconds at a steady ~125 wpm narration pace. Adjust only if your recorded terminal output differs.
-
-- **[0:00–0:10]** Coding agents lose context whenever work moves between tools or commits. RelateHandoff fixes that locally using Neo4j's Relate engine, Git, and read-only MCP.
-- **[0:10–0:28]** First, our environment doctor verifies Node, Git, and Relate CLI v1.0.1. Then Agent A finishes a bounded task, commits it, and runs the validated recorder to link repository, task, handoff, decisions, artifacts, and runner-recorded test evidence at that exact Git HEAD.
-- **[0:28–0:45]** Next, Agent B resumes the task over read-only MCP stdio. Notice the honest boundary: metadata is current, yet persisted local store evidence stays unverified because unsigned disk files cannot authenticate test execution by themselves.
-- **[0:45–1:02]** Agent B implements the next commit, supersedes the prior handoff with an immutable edge, and runs in-process verification on the clean worktree—promoting execution authenticity to authenticated and overall status to verified.
-- **[1:02–1:18]** Watch what happens when another commit advances Git HEAD: RelateHandoff immediately marks the previous handoff stale because its commit SHA no longer matches reality.
-- **[1:18–1:38]** Now look at our safeguards. A self-asserted pass without runner execution remains unverified. Failing test evidence turns the handoff blocked. And any attempt to mutate the graph through read-only MCP—whether a Cypher create or a write tool—is refused.
-- **[1:38–1:50]** RelateHandoff treats the graph as a derived context index, while Git and real local verification stay authoritative. One context. Every agent.
-
----
-
-## 7. Mandatory Owner Pre-Upload Checklist
+### Track A (Preferred for Final Video) — Genuine Codex-to-Claude Execution
 
 > [!CAUTION]
-> **Hard Gate:** Do **not** upload a video, publish a public link, merge a PR, or submit to Devpost without explicit owner execution and approval of every item below.
+> **Hard Provenance Rule:** Use Track A overlays and Option A voiceover **only** when both `codex` and `claude` sessions genuinely execute on screen against the same local Relate directory store (`relate v1.0.1`) and clean scratch Git repository, backed by observable session outputs and repository commits.
+> **Required persistent banner / overlay:** `REAL AGENT EXECUTION — Codex -> Relate v1.0.1 Read-Only MCP -> Claude (local-only)`
 
-- [ ] **Exact-HEAD verification:** Reproduce `python3 scripts/validate.py`, `RELATE_REQUIRE_CLI=1 npm test`, `npm run test:security`, `npm run build`, and `npm run demo` on the final merged `main` checkout (`Relate v1.0.1`).
+| Shot | Window | Screen Action / Observable Agent Work | Visual Highlight & Overlay |
+|---|---|---|---|
+| **Shot A1** | 0:00–0:10 | Title card (`RelateHandoff — One context. Every agent.`) + `relate --version` & `doctor` | `REAL AGENT EXECUTION`: `Relate v1.0.1` (`Apache 2.0`), `doctor` 6/6 `PASS` |
+| **Shot A2** | 0:10–0:32 | **Real Codex session:** implements bounded change in scratch repo, commits (`SHA_A`), runs `record --verify node-test-suite` | Observable Codex tool call/CLI output + `EV-RUNNER-1` (`RUNNER_RECORDED_UNSIGNED`) bound to `SHA_A` |
+| **Shot A3** | 0:32–0:52 | **Real Claude session:** connects via `relate serve --mcp stdio --read-only` (or runs `resume --format markdown`), reads `SHA_A` handoff context | Observable Claude session showing `CURRENT` metadata vs. `UNVERIFIED` unsigned store boundary |
+| **Shot A4** | 0:52–1:12 | **Real Claude session:** commits follow-up (`SHA_B`), records `--supersedes` handoff, runs `list` & `resume --verify node-test-suite` | Observable `ACTIVE`/`SUPERSEDED` edge + promotion to `VERIFIED` / `AUTHENTICATED` |
+| **Shot A5** | 1:12–1:28 | Commit `SHA_C` and re-run `resume` -> shows `STALE` (`HEAD_SHA_MISMATCH`) | Immediate staleness detection when Git `HEAD` moves past `SHA_B` |
+| **Shot A6** | 1:28–1:44 | Demonstrate self-asserted `UNVERIFIED`, failed `BLOCKED`, and `read_cypher` / `write_cypher` MCP write refusals | Two MCP `isError: true` refusals (`write_cypher` unknown, `CREATE` blocked) |
+| **Shot A7** | 1:44–1:55 | Closing slide: `Git + local verification remain authoritative. Real Codex -> Claude run recorded locally.` | Clean end frame; no private paths, tokens, or unverified claims |
+
+### Track B — Reproducible Seven-Act Synthetic Simulation (Real Relate v1.0.1 Engine)
+
+Use this sequence when recording the copy-paste shell script from Section 4 (`npm run demo` / `RH-DEMO-*`). Synthetic payload labels (`codex-writer`, `claude-reviewer`, `gemini-auditor`) never prove independent agent activity and **must** carry the synthetic overlay below on every shot.
+
+| Shot | Window | Screen Action / Command | Required On-Screen Overlay | Visual Highlight |
+|---|---|---|---|---|
+| **Shot B1** | 0:00–0:10 | Title card (`RelateHandoff — Synthetic Simulation on Real Relate v1.0.1`) + `relate --version` | `SYNTHETIC SIMULATION — Real Relate v1.0.1 Engine (Shell CLI)` | Shows `Relate v1.0.1` (`Apache 2.0`) |
+| **Shot B2** | 0:10–0:28 | Run `doctor` + Act 1/Act 2 (`git commit` -> `record --verify node-test-suite`) | `SYNTHETIC SIMULATION — Simulated sourceAgent label: codex-writer` | Shows 6/6 `PASS` and `EV-RUNNER-1` (`RUNNER_RECORDED_UNSIGNED`) bound to `SHA_A` |
+| **Shot B3** | 0:28–0:45 | Act 3 (`resume --format markdown` without `--verify`) | `SYNTHETIC SIMULATION — Simulated read-only MCP resume (no live LLM)` | Highlights `Metadata freshness: CURRENT` vs. `Execution authenticity: UNVERIFIED` |
+| **Shot B4** | 0:45–1:02 | Act 4 (`record --supersedes RH-DEMO-1` + `list --format markdown`) & Act 5 (`resume --verify node-test-suite --format markdown`) | `SYNTHETIC SIMULATION — Immutable [:SUPERSEDES] & --verify` | Shows `RH-DEMO-2` (`ACTIVE`) superseding `RH-DEMO-1` (`SUPERSEDED`), then `Overall status: VERIFIED` / `AUTHENTICATED` |
+| **Shot B5** | 1:02–1:18 | Act 6 (advance Git `HEAD` to `SHA_C` and re-run `resume --format markdown`) | `SYNTHETIC SIMULATION — Git HEAD drift detection` | Highlights `Overall status: STALE` (`HEAD_SHA_MISMATCH`) |
+| **Shot B6** | 1:18–1:38 | Act 7 (`RH-DEMO-3` self-asserted -> `UNVERIFIED`, `RH-DEMO-4` failed -> `BLOCKED`, `relate serve --mcp stdio --read-only` write attempts) | `SYNTHETIC SIMULATION — Safeguards & MCP Write Refusal` | Highlights `SELF_ASSERTED`, `BLOCKED`, and both MCP `isError: true` refusals |
+| **Shot B7** | 1:38–1:50 | Run `npm run demo` summary or closing slide (`Synthetic CLI walkthrough; historical real-agent proof noted in docs/RH-P2-REAL-AGENT-PROOF.md`) | `SYNTHETIC SIMULATION — Git + local verification remain authoritative` | Clean end frame; no private paths or unverified claims |
+
+---
+
+## 6. Timed 90–120-Second Voiceover Scripts (Provenance-Matched)
+
+> **Target duration:** ~100–110 seconds at a steady ~125 wpm narration pace. Choose **Option A** only for Track A genuine Codex-to-Claude footage, or **Option B** for Track B shell-scripted simulation footage.
+
+### Option A (Preferred — Use ONLY with Track A Genuinely Executed Codex-to-Claude Footage, ~220 words)
+
+- **[0:00–0:10]** Coding agents lose context whenever work switches tools or commits. RelateHandoff fixes that locally using Neo4j's Relate engine, Git, and read-only MCP.
+- **[0:10–0:32]** First, our environment doctor verifies Node, Git, and Relate CLI v1.0.1. In a clean scratch repo, Codex completes an initial implementation, commits it, and runs our validated recorder—linking repository, task, handoff, decisions, artifacts, and runner-recorded test evidence to that exact Git HEAD.
+- **[0:32–0:52]** Next, Claude opens the handoff over read-only Relate MCP stdio. Notice the honest trust boundary: metadata is current at this commit, yet persisted store rows stay unverified because unsigned local disk files cannot authenticate execution alone.
+- **[0:52–1:12]** Claude implements the follow-up commit, supersedes the prior handoff with an immutable edge, and runs in-process verification on the clean worktree—promoting execution authenticity to authenticated and status to verified.
+- **[1:12–1:28]** When another commit advances Git HEAD, RelateHandoff immediately detects the mismatch and marks the earlier handoff stale.
+- **[1:28–1:44]** Watch our safeguards: a self-asserted pass without runner execution stays unverified, failed test evidence blocks the handoff, and write attempts over read-only MCP are refused.
+- **[1:44–1:55]** Relate is a derived context index; Git and real local verification stay authoritative. One context. Every agent.
+
+### Option B (Use with Track B Section 4 Synthetic Shell Simulation, ~221 words)
+
+> [!IMPORTANT]
+> Never omit the explicit **"synthetic agent-handoff simulation using the real Relate v1.0.1 engine"** framing when narrating Section 4 shell footage. Synthetic `sourceAgent`/`targetAgent` payload labels never prove independent agent activity.
+
+- **[0:00–0:10]** Coding agents lose context across tools and commits. RelateHandoff keeps provenance locally in Neo4j's Relate engine over Git and read-only MCP.
+- **[0:10–0:28]** This walkthrough is a synthetic agent-handoff simulation using the real Relate v1.0.1 engine from clean shell commands; real Codex-to-Claude agent usage is documented separately. First, our doctor checks Node, Git, and Relate CLI, then we record a handoff labeled `codex-writer` to `claude-reviewer` with runner-recorded tests at `SHA_A`.
+- **[0:28–0:45]** Next, we simulate resuming over read-only MCP stdio. Metadata freshness is current, yet persisted local store rows stay unverified because unsigned disk files cannot prove test execution by themselves.
+- **[0:45–1:02]** We then simulate a follow-up commit, link an immutable supersedes edge to the prior handoff, and run in-process verification on the clean checkout—promoting authenticity to authenticated and overall status to verified.
+- **[1:02–1:18]** Watch what happens when a new commit moves Git HEAD: RelateHandoff immediately flags the handoff stale because its recorded commit SHA no longer matches reality.
+- **[1:18–1:38]** Finally, our safeguards: self-asserted passes remain unverified, failed tests turn blocked, and both Cypher mutation and write-tool calls fail over read-only MCP.
+- **[1:38–1:50]** Git and real local verification stay authoritative; Relate remains a derived local index.
+
+---
+
+## 7. Mandatory Owner Checklists (Pre-Upload, Integrated-Main Smoke, & Genuine Capture)
+
+> [!CAUTION]
+> **Hard Gate:** Do **not** upload a video, publish a public link, merge a PR, or submit to Devpost without explicit owner execution and approval of every applicable item below.
+
+### 7.1 Final Integrated-Main Smoke Test (Run After PRs #18, #21, #19, and #20 Merge to `main`)
+
+Run in a clean checkout of final `main` on `Relate v1.0.1`:
+
+- [ ] `git status -s` is empty and `git rev-parse HEAD` is recorded.
+- [ ] `node src/cli.mjs doctor --repo . --store examples/example-store` exits `0` (`6 PASS, 0 WARN, 0 FAIL`).
+- [ ] `python3 scripts/validate.py --repository mrdzyn/relatehandoff` exits `0` (`8/8 PASS`).
+- [ ] `RELATE_REQUIRE_CLI=1 npm test` exits `0` with `0` skipped, explicitly confirming both T3 (`test/mcp_integration.test.mjs`) and T4 (`test/reliability_adversarial.test.mjs`) execute against real Relate `v1.0.1`.
+- [ ] `npm run test:security`, `npm run build`, and `npm run demo` all exit `0`.
+- [ ] `node src/cli.mjs resume --store examples/example-store --repo . --repo-id mrdzyn/relatehandoff --task RH-P1 --format markdown` and `list --format markdown` exit `0`.
+
+### 7.2 Genuine Codex-to-Claude Demo Capture Checklist (Recommended for Final Submission Video)
+
+- [ ] Create an isolated temporary scratch Git repository + fresh temporary Relate store under `/tmp` with zero personal paths, tokens, or live project secrets.
+- [ ] Record observable real **Codex** execution creating/committing a change (`SHA_A`) and running `relatehandoff record ... --verify node-test-suite`.
+- [ ] Record observable real **Claude** execution reading bounded context via `relate serve --mcp stdio --read-only` / `relatehandoff resume --format markdown`, committing `SHA_B`, recording `--supersedes`, and verifying with `--verify node-test-suite`.
+- [ ] Capture `STALE` after advancing Git `HEAD`, `UNVERIFIED` (unsigned & self-asserted), `BLOCKED` (failed test), and both read-only MCP write refusals (`write_cypher` + `read_cypher` `CREATE`).
+- [ ] Use Option A narration + Track A overlays **only** with genuine Codex/Claude footage; otherwise use Option B narration + Track B synthetic overlays exclusively.
+
+### 7.3 Owner Pre-Upload & Submission Gate
+
+- [ ] **Exact-HEAD verification:** Section 7.1 smoke suite completed and passing on the final merged `main` commit (`Relate v1.0.1`).
+- [ ] **Provenance & voiceover truth check (RH20-01):** Confirm spoken voiceover and every on-screen overlay/caption match the recorded footage class (Option A + Track A only for genuinely executed Codex-to-Claude video; Option B + Track B for synthetic shell simulation) and never imply synthetic agent-name labels (`codex-writer`, `claude-reviewer`, `gemini-auditor`) prove independent agent activity.
 - [ ] **No leakage in footage:** Inspect every frame of the recorded video to confirm zero home-directory usernames/paths, API keys, tokens, OS notifications, private repos, or customer transcripts appear.
-- [ ] **Honest provenance labeling:** Confirm the video and Devpost text clearly distinguish the synthetic reproducible walkthrough (`npm run demo` / `RH-DEMO-*`) from the owner-reported real-agent execution (`docs/RH-P2-REAL-AGENT-PROOF.md`).
+- [ ] **Historical real-agent separation:** Confirm README/Devpost text distinguishes the `OWNER-REPORTED` historical proof (`docs/RH-P2-REAL-AGENT-PROOF.md`) and live owner video (if recorded) from synthetic reproducible fixtures (`npm run demo` / `examples/example-store`).
 - [ ] **Hackathon rules & length:** Confirm video is original, `<= 120` seconds, publicly accessible without login or paywall, and uses only properly licensed audio/visual assets.
 - [ ] **Licensing & attribution:** Confirm `LICENSE` (Apache-2.0), `NOTICE`, and `docs/RH-P3-THIRD-PARTY-ATTRIBUTION.md` are accurate; complete third-party dependency review before any bundled distribution.
 - [ ] **Repository metadata:** Confirm required GitHub topic `relate` is set on the public GitHub repository.

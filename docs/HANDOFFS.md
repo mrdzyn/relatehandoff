@@ -762,4 +762,21 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Independent COMMENT-only review and explicit owner merge approval for the `RH-LOCAL-DEMO` Draft PR on `docs/rh-local-demo-readiness`.
 - Owner execution of the recording runbook and mandatory pre-upload checklist before any video upload or Devpost submission; keep `RH-P5-T1`–`T8` on hold.
 
+## Handoff: RH-LOCAL-DEMO-2
+
+- **Task / phase:** `tasks/RH-LOCAL-DEMO-readiness.md` (PR #20 audit remediation RH20-01)
+- **From:** Antigravity (provenance-matched overlays/voiceovers, genuine Codex-to-Claude track, and smoke/capture checklists)
+- **To:** focused independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `docs/rh-local-demo-readiness` (Draft PR #20)
+- **Input HEAD:** `16c828e02165df7e33e56a42702e3bc2da00ef60`
+
+### Verified evidence
+- **RH20-01 (`docs/DEMO-RUNBOOK.md`):** Separated Section 5 and Section 6 into **Track A / Option A** (preferred genuine Codex-to-Claude execution with observable real-agent sessions and explicit prohibition against applying it to synthetic shell footage) and **Track B / Option B** (explicitly labeled **"synthetic agent-handoff simulation using the real Relate v1.0.1 engine"** on overlays and voiceover, clarifying synthetic agent-name labels never prove independent agent activity).
+- Relabeled Section 4 heading and Act 1–4 prose as a synthetic agent-handoff simulation while preserving all seven reproducible acts, commands, and sanitized outputs intact.
+- Expanded Section 7 with an explicit `RH20-01` provenance/voiceover confirmation item, a **Final Integrated-Main Smoke Test** checklist (to run after PRs #18, #21, #19, #20 merge), and a **Genuine Codex-to-Claude Demo Capture Checklist**.
+
+### Remaining
+- Focused independent COMMENT-only re-audit on the new exact HEAD, rebase onto updated `main` after PR #18, #21, and #19 merge, and owner execution of the integrated-main smoke test and demo-capture checklist.
+- Keep PR #20 Draft; no video upload, Devpost submission, deployment, or merge without owner approval; keep `RH-P5-T1`–`T8` on hold.
+
 <!-- HANDOFF_ENTRIES_END -->

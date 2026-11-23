@@ -3,7 +3,7 @@
 ## Project
 - **Name:** RelateHandoff
 - **Current phase:** RH-LOCAL-DEMO Demo Readiness (local demo runbook & recording prep; hosted RH-P5 roadmap remains **ON HOLD**)
-- **Status:** RH-P5 planning (PRs #11–#13), the **LOCAL-ONLY FOR NOW** direction (PR #14 `1d89213c3c8ab8a7bef205ab8696e0b5659d97e3`), RH-LOCAL-T1 (`relatehandoff doctor`, PR #15 `c9e3a46db8723928b37c2d639122934541ee7fcc`), RH-LOCAL-T2A (deterministic safe `resume` output, PR #16 `176e5c2005bf63583c4f33a918bd12e5d6005fb2`), and RH-LOCAL-T2B (`relatehandoff list` & immutable `[:SUPERSEDES]` handoff lifecycle, PR #17 `1a77147e3bb237d94ee3d4e4e5f5d5907be55c70`) are squash-merged to `main`. RH-LOCAL-DEMO adds `tasks/RH-LOCAL-DEMO-readiness.md` and `docs/DEMO-RUNBOOK.md` with real observed, sanitized local outputs (`doctor`, `npm run demo`, `examples/example-store` checks, and a complete 7-act multi-agent synthetic walkthrough), a shot-by-shot recording sequence, a timed 90–120s voiceover script, and a mandatory owner pre-upload checklist. `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` local-only restrictions remain authoritative and unchanged. No `cloud/` code, Worker, D1/KV/R2 resource, OAuth client, DNS, deployment, video upload, or Devpost action exists or is authorized.
+- **Status:** RH-P5 planning (PRs #11–#13), the **LOCAL-ONLY FOR NOW** direction (PR #14 `1d89213c3c8ab8a7bef205ab8696e0b5659d97e3`), RH-LOCAL-T1 (`relatehandoff doctor`, PR #15 `c9e3a46db8723928b37c2d639122934541ee7fcc`), RH-LOCAL-T2A (deterministic safe `resume` output, PR #16 `176e5c2005bf63583c4f33a918bd12e5d6005fb2`), and RH-LOCAL-T2B (`relatehandoff list` & immutable `[:SUPERSEDES]` handoff lifecycle, PR #17 `1a77147e3bb237d94ee3d4e4e5f5d5907be55c70`) are squash-merged to `main`. RH-LOCAL-DEMO adds `tasks/RH-LOCAL-DEMO-readiness.md` and `docs/DEMO-RUNBOOK.md` (updated for `RH20-01` to separate Track A genuine Codex-to-Claude execution from Track B synthetic shell simulation, pair provenance-matched voiceovers/overlays, preserve the complete 7-act reproducible simulation, and include final integrated-main smoke and genuine capture checklists alongside mandatory owner pre-upload gates). `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` local-only restrictions remain authoritative and unchanged. No `cloud/` code, Worker, D1/KV/R2 resource, OAuth client, DNS, deployment, video upload, or Devpost action exists or is authorized.
 - **Primary branch:** `main`
 - **Approved Phase 0 merged baseline:** `7e21fcebc0192ee6f6fecd553ef3619b9ea7465b` (PR #1 squash merge, audited input PR HEAD `3a32213394d762ab33928ed939fc65756d2320db`)
 - **Phase 1 handoff merged baseline:** `7c7d4e9c1efc4911d1250fa9e4e7cef09edd94cf` (PR #2 squash merge)
@@ -19,7 +19,7 @@
 - **Approved RH-LOCAL-T2B merged baseline:** `1a77147e3bb237d94ee3d4e4e5f5d5907be55c70` (PR #17 squash merge)
 - **Working branch:** `docs/rh-local-demo-readiness`
 - **Active task:** `tasks/RH-LOCAL-DEMO-readiness.md`
-- **Active handoff:** RH-LOCAL-DEMO-1
+- **Active handoff:** RH-LOCAL-DEMO-2
 
 ## Completed foundation
 - Created a new project-mode repository from `mrdzyn/ai-native-project-template`; pruned unselected optional packs and inherited master history.
