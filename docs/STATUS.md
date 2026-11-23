@@ -2,8 +2,8 @@
 
 ## Project
 - **Name:** RelateHandoff
-- **Current phase:** RH-LOCAL-T2B Handoff Lifecycle (task-scoped listing/filtering & immutable supersession; hosted RH-P5 roadmap remains **ON HOLD**)
-- **Status:** RH-P5 planning (PRs #11–#13), the **LOCAL-ONLY FOR NOW** direction (PR #14 `1d89213c3c8ab8a7bef205ab8696e0b5659d97e3`), RH-LOCAL-T1 (`relatehandoff doctor`, PR #15 `c9e3a46db8723928b37c2d639122934541ee7fcc`), and RH-LOCAL-T2A (deterministic safe `resume` output, PR #16 `176e5c2005bf63583c4f33a918bd12e5d6005fb2`) are squash-merged to `main`. RH-LOCAL-T2B adds `relatehandoff list` (`--task`, `--status`, `--branch`, `--agent`, `--limit`, `--format json|markdown`), explicit immutable `[:SUPERSEDES]` edges (`record --supersedes`), and `resume --handoff <id>`, preserving historical handoffs, immutable provenance, repository isolation, and 100-row bounds. `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` local-only restrictions remain authoritative and unchanged. No `cloud/` code, Worker, D1/KV/R2 resource, OAuth client, DNS, deployment, video or Devpost action exists or is authorized.
+- **Current phase:** RH-LOCAL-T4 Security & Cross-Platform Reliability (local-only adversarial reliability suite, `.git/index` `--no-optional-locks` hardening, and honest platform matrix; hosted RH-P5 roadmap remains **ON HOLD**)
+- **Status:** RH-P5 planning (PRs #11–#13), the **LOCAL-ONLY FOR NOW** direction (PR #14 `1d89213c3c8ab8a7bef205ab8696e0b5659d97e3`), RH-LOCAL-T1 (`relatehandoff doctor`, PR #15 `c9e3a46db8723928b37c2d639122934541ee7fcc`), RH-LOCAL-T2A (deterministic safe `resume` output, PR #16 `176e5c2005bf63583c4f33a918bd12e5d6005fb2`), and RH-LOCAL-T2B (`relatehandoff list` & immutable supersession, PR #17 `1a77147e3bb237d94ee3d4e4e5f5d5907be55c70`) are squash-merged to `main`. RH-LOCAL-T4 adds `--no-optional-locks` read-only Git hardening in `src/git.mjs`, adversarial reliability & security tests in `test/reliability_adversarial.test.mjs`, and an honest cross-platform matrix in `docs/PLATFORM-RELIABILITY.md`. `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` local-only restrictions remain authoritative and unchanged. No `cloud/` code, Worker, D1/KV/R2 resource, OAuth client, DNS, deployment, video or Devpost action exists or is authorized.
 - **Primary branch:** `main`
 - **Approved Phase 0 merged baseline:** `7e21fcebc0192ee6f6fecd553ef3619b9ea7465b` (PR #1 squash merge, audited input PR HEAD `3a32213394d762ab33928ed939fc65756d2320db`)
 - **Phase 1 handoff merged baseline:** `7c7d4e9c1efc4911d1250fa9e4e7cef09edd94cf` (PR #2 squash merge)
@@ -16,9 +16,10 @@
 - **Approved local-only direction merged baseline:** `1d89213c3c8ab8a7bef205ab8696e0b5659d97e3` (PR #14 squash merge)
 - **Approved RH-LOCAL-T1 merged baseline:** `c9e3a46db8723928b37c2d639122934541ee7fcc` (PR #15 squash merge)
 - **Approved RH-LOCAL-T2A merged baseline:** `176e5c2005bf63583c4f33a918bd12e5d6005fb2` (PR #16 squash merge)
-- **Working branch:** `feat/rh-local-t2b-lifecycle`
-- **Active task:** `tasks/RH-LOCAL-T2B-handoff-lifecycle.md`
-- **Active handoff:** RH-LOCAL-T2B-2
+- **Approved RH-LOCAL-T2B merged baseline:** `1a77147e3bb237d94ee3d4e4e5f5d5907be55c70` (PR #17 squash merge)
+- **Working branch:** `feat/rh-local-t4-security-reliability`
+- **Active task:** `tasks/RH-LOCAL-T4-security-reliability.md`
+- **Active handoff:** RH-LOCAL-T4-1
 
 ## Completed foundation
 - Created a new project-mode repository from `mrdzyn/ai-native-project-template`; pruned unselected optional packs and inherited master history.
@@ -54,7 +55,7 @@
 - Revision 6 SQLite inventory/evidence (historical reference): 38/38 unique paths inventoried, 30 protected paths tested locally in owner/implementer-side SQLite runs (172 probes / 516 assertions; not independently re-executed), 8 mutable administrative paths DAL-controlled, and historical 259-assertion equivalence unproven. D1/Miniflare parity and concurrent transaction/race behavior remain UNVERIFIED.
 
 ## Next authorized action
-Independent COMMENT-only audit and owner merge approval for RH-LOCAL-T2B Draft PR (`relatehandoff list` & immutable handoff supersession), keeping `RH-P5-T1` through `T8` **ON HOLD** and all `cloud/` code, Cloudflare resource creation, OAuth client setup, UI design-gate opening, and deployment **blocked**. Separately owner-gated from RH-P3/RH-P4: required GitHub topic `relate`, original demo video, distribution license diligence, optional static showcase (RH-P4-T1+), and Devpost submission.
+Independent COMMENT-only audit and owner merge approval for RH-LOCAL-T4 Draft PR (`feat/rh-local-t4-security-reliability` — security & cross-platform reliability tests, `--no-optional-locks` read-only Git hardening, and `docs/PLATFORM-RELIABILITY.md`), keeping `RH-P5-T1` through `T8` **ON HOLD** and all `cloud/` code, Cloudflare resource creation, OAuth client setup, UI design-gate opening, and deployment **blocked**. Separately owner-gated from RH-P3/RH-P4: required GitHub topic `relate`, original demo video, distribution license diligence, optional static showcase (RH-P4-T1+), and Devpost submission.
 
 ## Verification truth
 - GitHub PR #1–#13 merges, latest `main` baseline `45865fe6c3f0c5bce128fe9d7599fa9fc015930c` (PR #13 squash merge; PR #12 squash merge `bab22382194da309c051d27444faf2384ce0ecb5`; PR #11 squash merge `19fcf51f7f8d362b9fd25b57bdb842f1c0583546`, `2026-11-22T16:39:56Z`; PR #10 squash merge `282e10e600935ee1c1bba34522cb3e3373f3be1d`; PR #7 merged earlier as `81e8e208eeb8a23417e18f2a8d3f379f441e6ed8`): VERIFIED from GitHub. PR #8 licensing and attribution merged after COMMENT-only focused re-audit PASS at `08234ea0b84b6363bac4be8420e830d32ea73ef8`; PR #9 governance P7-01 correction merged after COMMENT-only source audit PASS at `49be3d7685cb12af7c0f5637edb8c6878b92a090`.

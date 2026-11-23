@@ -744,4 +744,23 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Focused independent COMMENT-only re-audit on the new exact HEAD.
 - Keep PR #17 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
 
+## Handoff: RH-LOCAL-T4-1
+
+- **Task:** `tasks/RH-LOCAL-T4-security-reliability.md` (RH-LOCAL-T4: Security & Cross-Platform Reliability)
+- **From:** Antigravity (implementation & macOS ARM64 exact-HEAD validation)
+- **To:** independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t4-security-reliability`
+- **Base:** `main@1a77147e3bb237d94ee3d4e4e5f5d5907be55c70` (PR #17 squash merge)
+
+### Verified evidence
+- Hardened `src/git.mjs` (`getGitState`) with `--no-optional-locks` so read-only `resume` and `list` invocations never mutate `.git/index` even when tracked file mtimes differ from the index stat cache.
+- Added `test/reliability_adversarial.test.mjs` (wired into `package.json` `"test"` script) covering linked Git worktrees & detached HEAD `.git/index` immutability with real Git + real Relate v1.0.1, cross-repo isolation across `record`/`resume`/`list` and `SUPERSEDES`, 4 concurrent parallel read-only readers with deterministic outputs and unchanged store/index hashes, copied `examples/example-store` per-file SHA-256 preservation across `resume`/`list`/`doctor`, deterministic fake MCP fault injection (partial line without newline, invalid JSON, missing response ID, `SIGKILL`, timeout), 100/101 `BoundExceededError` enforcement at write and read time, and fail-closed evidence authenticity (`tampered`/`unsigned` -> `UNVERIFIED`, `SELF_ASSERTED` -> `UNVERIFIED`, `FAIL` -> `BLOCKED`, advancing HEAD -> `STALE`).
+- Added `docs/PLATFORM-RELIABILITY.md` with an honest platform validation matrix (`macOS ARM64` `VERIFIED`, `Linux native` `UNVERIFIED` on this HEAD with historical Debian 12 `GLIBC_2.36` vs `GLIBC_2.39` finding, `Windows native` `UNVERIFIED` on this HEAD with `test/doctor.test.mjs` `win32` dependency-injected unit coverage).
+- Added `"tasks/RH-LOCAL-T4-security-reliability.md"` to `scripts/test_bootstrap.py` allowlist and updated `docs/STATUS.md`.
+
+### Remaining
+- Independent COMMENT-only audit and owner merge approval on the Draft PR (`feat/rh-local-t4-security-reliability`).
+- Native Linux and native Windows validation on those respective hosts remains `UNVERIFIED` on this HEAD.
+- Keep `RH-P5-T1`–`T8`, `cloud/`, Cloudflare resources, and deployment on hold / blocked.
+
 <!-- HANDOFF_ENTRIES_END -->
