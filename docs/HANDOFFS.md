@@ -744,4 +744,22 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Focused independent COMMENT-only re-audit on the new exact HEAD.
 - Keep PR #17 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
 
+## Handoff: RH-LOCAL-T3-1
+
+- **Task:** `tasks/RH-LOCAL-T3-local-mcp-integration.md` (RH-LOCAL-T3: Local MCP Integration)
+- **From:** Antigravity (MCP hardening, integration recipes & validation)
+- **To:** independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t3-mcp-integration`
+- **Base:** `main@1a77147e3bb237d94ee3d4e4e5f5d5907be55c70` (PR #17 squash merge)
+
+### Verified evidence
+- Hardened `callRelateMcpBatch` in `src/mcp_client.mjs` (`timeoutMs` bounds `[100, 120000]`, `shell: false`, `killSignal: "SIGKILL"`, `maxBuffer`, unexpected EOF detection, non-object JSON-RPC rejection, duplicate response ID detection, and `sanitizeDiagnosticText` redaction on stderr).
+- Added `verifyReadOnlyMcpServer` in `src/mcp_client.mjs` to prove read-only tools and write refusals (`write_cypher` + `read_cypher` `CREATE`).
+- Created `docs/LOCAL-MCP-INTEGRATION.md` covering Claude Code, Codex CLI, and Gemini CLI / Antigravity stdio MCP recipes, Relate v1.0.1's open-time snapshot limitation, and explicit fresh-read / restart workflows.
+- Added `test/mcp_integration.test.mjs` covering real Relate v1.0.1 read-only verification + fresh short-lived reads and deterministic fake timeout/EOF/malformed/duplicate-ID/stderr-redaction tests.
+
+### Remaining
+- Independent COMMENT-only audit and owner merge approval on the Draft PR.
+- Keep `RH-P5-T1`–`T8`, `cloud/`, Cloudflare resources, and deployment on hold / blocked.
+
 <!-- HANDOFF_ENTRIES_END -->
