@@ -3,7 +3,7 @@
 ## Project
 - **Name:** RelateHandoff
 - **Current phase:** RH-LOCAL-T3 Local MCP Integration (hardened local stdio MCP client + Claude Code/Codex CLI/Gemini CLI recipes; hosted RH-P5 roadmap remains **ON HOLD**)
-- **Status:** RH-P5 planning (PRs #11–#13), **LOCAL-ONLY FOR NOW** (PR #14 `1d89213c3c8ab8a7bef205ab8696e0b5659d97e3`), RH-LOCAL-T1 (`doctor`, PR #15 `c9e3a46db8723928b37c2d639122934541ee7fcc`), RH-LOCAL-T2A (`resume --format`, PR #16 `176e5c2005bf63583c4f33a918bd12e5d6005fb2`), and RH-LOCAL-T2B (`list` & immutable supersession, PR #17 `1a77147e3bb237d94ee3d4e4e5f5d5907be55c70`) are squash-merged to `main`. RH-LOCAL-T3 hardens `src/mcp_client.mjs` (timeout bounds, `SIGKILL` cleanup, `maxBuffer`, unexpected EOF, duplicate-ID/non-object JSON-RPC rejection, stderr secret redaction, `verifyReadOnlyMcpServer`) and documents read-only stdio MCP recipes and snapshot-refresh workflows in `docs/LOCAL-MCP-INTEGRATION.md`. `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` local-only restrictions remain authoritative and unchanged. No `cloud/` code, Worker, D1/KV/R2 resource, OAuth client, DNS, deployment, video or Devpost action exists or is authorized.
+- **Status:** RH-P5 planning (PRs #11–#13), **LOCAL-ONLY FOR NOW** (PR #14 `1d89213c3c8ab8a7bef205ab8696e0b5659d97e3`), RH-LOCAL-T1 (`doctor`, PR #15 `c9e3a46db8723928b37c2d639122934541ee7fcc`), RH-LOCAL-T2A (`resume --format`, PR #16 `176e5c2005bf63583c4f33a918bd12e5d6005fb2`), and RH-LOCAL-T2B (`list` & immutable supersession, PR #17 `1a77147e3bb237d94ee3d4e4e5f5d5907be55c70`) are squash-merged to `main`. RH-LOCAL-T3 hardens `src/mcp_client.mjs` (timeout bounds, `SIGKILL` cleanup, `maxBuffer`, unexpected EOF, duplicate-ID/non-object JSON-RPC rejection, static/redacted diagnostics across duplicate IDs and `initialize`/`tools/list` errors for `RH18-01`, `verifyReadOnlyMcpServer`) and documents read-only stdio MCP recipes and snapshot-refresh workflows in `docs/LOCAL-MCP-INTEGRATION.md`. `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` local-only restrictions remain authoritative and unchanged. No `cloud/` code, Worker, D1/KV/R2 resource, OAuth client, DNS, deployment, video or Devpost action exists or is authorized.
 - **Primary branch:** `main`
 - **Approved Phase 0 merged baseline:** `7e21fcebc0192ee6f6fecd553ef3619b9ea7465b` (PR #1 squash merge, audited input PR HEAD `3a32213394d762ab33928ed939fc65756d2320db`)
 - **Phase 1 handoff merged baseline:** `7c7d4e9c1efc4911d1250fa9e4e7cef09edd94cf` (PR #2 squash merge)
@@ -19,7 +19,7 @@
 - **Approved RH-LOCAL-T2B merged baseline:** `1a77147e3bb237d94ee3d4e4e5f5d5907be55c70` (PR #17 squash merge)
 - **Working branch:** `feat/rh-local-t3-mcp-integration`
 - **Active task:** `tasks/RH-LOCAL-T3-local-mcp-integration.md`
-- **Active handoff:** RH-LOCAL-T3-1
+- **Active handoff:** RH-LOCAL-T3-2
 
 ## Completed foundation
 - Created a new project-mode repository from `mrdzyn/ai-native-project-template`; pruned unselected optional packs and inherited master history.

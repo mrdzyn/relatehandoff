@@ -33,7 +33,7 @@ export function resolveRelateCli(explicitBin) {
     if (res.status === 0) {
       return { bin, version: res.stdout.trim() };
     }
-    failures.push(`${bin}: ${res.stderr?.trim() || res.error?.message || `exit ${res.status}`}`);
+    failures.push(`${sanitizeDiagnosticText(bin)}: ${sanitizeDiagnosticText(res.stderr?.trim() || res.error?.message || `exit ${res.status}`)}`);
   }
 
   throw new Error(
@@ -115,7 +115,7 @@ export function callRelateMcpBatch({
       parsed = JSON.parse(line);
     } catch (err) {
       throw new Error(
-        `Invalid JSON-RPC line ${idx + 1} from relate serve --mcp stdio: ${err.message}${stderrText ? ` (stderr: ${stderrText})` : ""}`
+        `Invalid JSON-RPC line ${idx + 1} from relate serve --mcp stdio: ${sanitizeDiagnosticText(err.message)}${stderrText ? ` (stderr: ${stderrText})` : ""}`
       );
     }
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -123,7 +123,7 @@ export function callRelateMcpBatch({
     }
     if (parsed.id !== undefined) {
       if (seenIds.has(parsed.id)) {
-        throw new Error(`Duplicate JSON-RPC response id ${parsed.id} from relate serve --mcp stdio`);
+        throw new Error(`Duplicate JSON-RPC response id on line ${idx + 1} from relate serve --mcp stdio`);
       }
       seenIds.add(parsed.id);
     }
@@ -153,10 +153,15 @@ function parseReadCypherResult(rpcResponse) {
     throw new Error("Missing or invalid MCP JSON-RPC response object");
   }
   if (rpcResponse.error) {
-    throw new Error(`MCP JSON-RPC error: ${JSON.stringify(rpcResponse.error)}`);
+    const code = rpcResponse.error?.code;
+    throw new Error(
+      typeof code === "number"
+        ? `MCP JSON-RPC error (code ${code})`
+        : "MCP JSON-RPC error: server returned an error response"
+    );
   }
   if (rpcResponse.result?.isError) {
-    const msg = rpcResponse.result?.content?.[0]?.text ?? "unknown MCP tool error";
+    const msg = sanitizeDiagnosticText(String(rpcResponse.result?.content?.[0]?.text ?? "unknown MCP tool error"));
     throw new Error(`MCP read_cypher refused: ${msg}`);
   }
   const text = rpcResponse.result?.content?.[0]?.text;
@@ -166,7 +171,7 @@ function parseReadCypherResult(rpcResponse) {
   try {
     return JSON.parse(text);
   } catch (err) {
-    throw new Error(`Invalid JSON payload in MCP read_cypher result: ${err.message}`);
+    throw new Error(`Invalid JSON payload in MCP read_cypher result: ${sanitizeDiagnosticText(err.message)}`);
   }
 }
 
@@ -180,10 +185,19 @@ function assertBoundedRows(rows, label) {
 }
 
 function assertReadOnlyMcpTools(toolsResp) {
-  if (!toolsResp || toolsResp.error || toolsResp.result?.isError) {
-    throw new Error(`MCP tools/list failed: ${JSON.stringify(toolsResp ?? null)}`);
+  if (!toolsResp) {
+    throw new Error("MCP tools/list failed: missing response");
   }
-  const tools = (toolsResp.result?.tools ?? []).map((t) => t.name);
+  if (toolsResp.error) {
+    throw new Error("MCP tools/list failed: server returned JSON-RPC error");
+  }
+  if (toolsResp.result?.isError) {
+    throw new Error("MCP tools/list failed: tool returned error");
+  }
+  if (!Array.isArray(toolsResp.result?.tools)) {
+    throw new Error("MCP tools/list failed: malformed tools list");
+  }
+  const tools = toolsResp.result.tools.map((t) => t.name);
   if (tools.includes("write_cypher")) {
     throw new Error("Security violation: read-only MCP server exposed write_cypher");
   }
@@ -632,8 +646,14 @@ export function verifyReadOnlyMcpServer({
   const byId = new Map(responses.map((r) => [r.id, r]));
 
   const initResp = byId.get(1);
-  if (!initResp || initResp.error || !initResp.result || typeof initResp.result !== "object") {
-    throw new Error(`MCP initialize failed during read-only probe: ${JSON.stringify(initResp ?? null)}`);
+  if (!initResp) {
+    throw new Error("MCP initialize failed during read-only probe: missing initialize response");
+  }
+  if (initResp.error) {
+    throw new Error("MCP initialize failed during read-only probe: server returned JSON-RPC error");
+  }
+  if (!initResp.result || typeof initResp.result !== "object" || Array.isArray(initResp.result)) {
+    throw new Error("MCP initialize failed during read-only probe: malformed initialize result");
   }
 
   const tools = assertReadOnlyMcpTools(byId.get(2));

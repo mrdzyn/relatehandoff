@@ -762,4 +762,21 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Independent COMMENT-only audit and owner merge approval on the Draft PR.
 - Keep `RH-P5-T1`–`T8`, `cloud/`, Cloudflare resources, and deployment on hold / blocked.
 
+## Handoff: RH-LOCAL-T3-2
+
+- **Task:** `tasks/RH-LOCAL-T3-local-mcp-integration.md` (PR #18 audit remediation RH18-01)
+- **From:** Antigravity (diagnostic redaction & bounded MCP error remediation)
+- **To:** focused independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t3-mcp-integration` (Draft PR #18)
+- **Input HEAD:** `38a9c17312ad80589319af239ed365419179a22c`
+
+### Verified evidence
+- **RH18-01 (`src/mcp_client.mjs`):** Replaced raw interpolation of untrusted JSON-RPC duplicate response IDs (`Duplicate JSON-RPC response id on line <N>`), raw `JSON.stringify(initResp ?? null)` in `verifyReadOnlyMcpServer`, raw `JSON.stringify(toolsResp ?? null)` in `assertReadOnlyMcpTools`, and raw `JSON.stringify(rpcResponse.error)` in `parseReadCypherResult` with static bounded diagnostics, and applied `sanitizeDiagnosticText` across CLI lookup and MCP JSON/tool error messages.
+- Added negative fault-injection regressions in `test/mcp_integration.test.mjs` using fictional credential-shaped tokens (`ghp_...`, `Bearer sk-...`) in duplicate JSON-RPC IDs, `initialize` JSON-RPC errors, string/array malformed `initialize` results, and `tools/list` errors, asserting none appear in thrown diagnostics.
+- Preserved read-only `--mcp stdio --read-only` guarantees and all existing `record`/`resume`/`list` behavior.
+
+### Remaining
+- Focused independent COMMENT-only re-audit on the new exact HEAD and owner merge approval before reconciling PR #21 (`RH-LOCAL-T4`), PR #19 (`RH-LOCAL-T5`), and PR #20 (`DEMO`).
+- Keep PR #18 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
+
 <!-- HANDOFF_ENTRIES_END -->

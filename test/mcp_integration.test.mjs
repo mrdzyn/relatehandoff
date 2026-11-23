@@ -184,7 +184,7 @@ console.log(JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }));`
           requests: [{ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }],
           relateBin: dupFake,
         }),
-      /Duplicate JSON-RPC response id 1/
+      /Duplicate JSON-RPC response id/
     );
 
     // 6. Secret-bearing stderr is redacted before error formatting
@@ -207,6 +207,111 @@ process.exit(1);`
     }
     assert.match(caught, /\[REDACTED\]/);
     assert.ok(!caught.includes("ghp_secretFakeToken1234567890abcd"));
+  } finally {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  }
+});
+
+test("RH18-01 (fake): never leaks credential-shaped duplicate JSON-RPC IDs or malformed/error initialize responses", () => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rh-t3-rh1801-"));
+  try {
+    const dupSecret = "ghp_fakeDuplicateIdToken1234567890abcd";
+    const dupSecretFake = writeFakeRelate(
+      tmpRoot,
+      "relate-dup-secret",
+      `if (process.argv.includes("--version")) { console.log("relate-fake 1.0.1"); process.exit(0); }
+console.log(JSON.stringify({ jsonrpc: "2.0", id: ${JSON.stringify(dupSecret)}, result: {} }));
+console.log(JSON.stringify({ jsonrpc: "2.0", id: ${JSON.stringify(dupSecret)}, result: {} }));`
+    );
+    let dupErr = "";
+    try {
+      callRelateMcpBatch({
+        storeDir: tmpRoot,
+        requests: [{ jsonrpc: "2.0", id: dupSecret, method: "tools/list", params: {} }],
+        relateBin: dupSecretFake,
+      });
+    } catch (err) {
+      dupErr = err.message;
+    }
+    assert.match(dupErr, /Duplicate JSON-RPC response id/);
+    assert.ok(!dupErr.includes(dupSecret), "Duplicate response ID error must not leak credential-shaped id");
+
+    const initErrSecret = "Bearer sk-fakeInitErrorSecret1234567890abcdef";
+    const initErrFake = writeFakeRelate(
+      tmpRoot,
+      "relate-init-err",
+      `if (process.argv.includes("--version")) { console.log("relate-fake 1.0.1"); process.exit(0); }
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 1, error: { code: -32000, message: ${JSON.stringify(initErrSecret)} } }));
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 2, result: { tools: [{ name: "read_cypher" }] } }));
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 3, result: { isError: true } }));
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 4, result: { isError: true } }));`
+    );
+    let initErr = "";
+    try {
+      verifyReadOnlyMcpServer({ storeDir: tmpRoot, relateBin: initErrFake });
+    } catch (err) {
+      initErr = err.message;
+    }
+    assert.match(initErr, /MCP initialize failed during read-only probe/);
+    assert.ok(!initErr.includes(initErrSecret), "Initialize error must not echo raw JSON-RPC error content");
+    assert.ok(!initErr.includes("sk-fakeInitErrorSecret1234567890abcdef"));
+
+    const malformedToken = "ghp_fakeMalformedInitResult9876543210abcd";
+    const malformedInitFake = writeFakeRelate(
+      tmpRoot,
+      "relate-init-malformed",
+      `if (process.argv.includes("--version")) { console.log("relate-fake 1.0.1"); process.exit(0); }
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 1, result: ${JSON.stringify(malformedToken)} }));
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 2, result: { tools: [{ name: "read_cypher" }] } }));
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 3, result: { isError: true } }));
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 4, result: { isError: true } }));`
+    );
+    let malformedErr = "";
+    try {
+      verifyReadOnlyMcpServer({ storeDir: tmpRoot, relateBin: malformedInitFake });
+    } catch (err) {
+      malformedErr = err.message;
+    }
+    assert.match(malformedErr, /MCP initialize failed during read-only probe/);
+    assert.ok(!malformedErr.includes(malformedToken), "Malformed initialize result must not echo untrusted payload");
+
+    const arrayToken = "ghp_fakeArrayInitResult9876543210abcd";
+    const arrayInitFake = writeFakeRelate(
+      tmpRoot,
+      "relate-init-array",
+      `if (process.argv.includes("--version")) { console.log("relate-fake 1.0.1"); process.exit(0); }
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 1, result: [${JSON.stringify(arrayToken)}] }));
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 2, result: { tools: [{ name: "read_cypher" }] } }));
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 3, result: { isError: true } }));
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 4, result: { isError: true } }));`
+    );
+    let arrayErr = "";
+    try {
+      verifyReadOnlyMcpServer({ storeDir: tmpRoot, relateBin: arrayInitFake });
+    } catch (err) {
+      arrayErr = err.message;
+    }
+    assert.match(arrayErr, /MCP initialize failed during read-only probe/);
+    assert.ok(!arrayErr.includes(arrayToken), "Array initialize result must be rejected without echoing payload");
+
+    const toolsSecret = "ghp_fakeToolsListError1234567890abcd";
+    const toolsErrFake = writeFakeRelate(
+      tmpRoot,
+      "relate-tools-err",
+      `if (process.argv.includes("--version")) { console.log("relate-fake 1.0.1"); process.exit(0); }
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { protocolVersion: "2024-11-05" } }));
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 2, error: { code: -32603, message: ${JSON.stringify(toolsSecret)} } }));
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 3, result: { isError: true } }));
+console.log(JSON.stringify({ jsonrpc: "2.0", id: 4, result: { isError: true } }));`
+    );
+    let toolsErr = "";
+    try {
+      verifyReadOnlyMcpServer({ storeDir: tmpRoot, relateBin: toolsErrFake });
+    } catch (err) {
+      toolsErr = err.message;
+    }
+    assert.match(toolsErr, /MCP tools\/list failed/);
+    assert.ok(!toolsErr.includes(toolsSecret), "tools/list error must not echo raw JSON-RPC payload");
   } finally {
     fs.rmSync(tmpRoot, { recursive: true, force: true });
   }
