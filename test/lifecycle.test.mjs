@@ -502,17 +502,72 @@ test("RH-LOCAL-T2B (real Relate v1.0.1): list filters by task, status, branch, a
     assert.ok(!cliMd.stdout.includes("\x1b"));
     assert.ok(cliMd.stdout.includes("\\# heading"));
 
-    // Invalid CLI flags exit 2
+    // Invalid CLI flags and selectors exit 2 (RH17-02)
     for (const badArgs of [
       ["list", "--store", storeDir, "--repo", repoA, "--status", "bogus"],
       ["list", "--store", storeDir, "--repo", repoA, "--limit", "101"],
       ["list", "--store", storeDir, "--repo", repoA, "--limit", "0"],
       ["list", "--store", storeDir, "--repo", repoA, "--format", "csv"],
       ["list", "--store", storeDir, "--repo", repoA, "--unknown", "1"],
+      ["list", "--store", storeDir, "--repo", repoA, "--task", "bad/id"],
+      ["list", "--store", storeDir, "--repo", repoA, "--agent", "   "],
+      ["list", "--store", storeDir, "--repo", repoA, "--branch", "   "],
+      ["resume", "--store", storeDir, "--repo", repoA, "--task", "T1", "--handoff", "bad/id"],
     ]) {
       const badRes = spawnSync(process.execPath, [CLI_PATH, ...badArgs], { encoding: "utf8" });
       assert.equal(badRes.status, 2, `Expected exit 2 for ${badArgs.join(" ")}`);
     }
+
+    // Actual repository/MCP retrieval failure continues to exit 1 (RH17-02)
+    const missingRepoRes = spawnSync(
+      process.execPath,
+      [CLI_PATH, "list", "--store", storeDir, "--repo", path.join(tmpRoot, "missing-repo")],
+      { encoding: "utf8" }
+    );
+    assert.equal(missingRepoRes.status, 1);
+  } finally {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  }
+});
+
+test("RH17-01: --supersedes conflict error never echoes secret-shaped values in stdout or stderr", () => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rh-t2b-rh1701-"));
+  try {
+    const repoDir = path.join(tmpRoot, "repo");
+    const storeDir = path.join(tmpRoot, "store");
+    fs.mkdirSync(repoDir, { recursive: true });
+    const { headSha, branch } = initTempGitRepo(repoDir, "mrdzyn/rh17-01");
+
+    const cliSecret = "ghp_fictionalCliSecretToken1234567890abcd";
+    const payloadSecret = "ghp_fictionalPayloadSecretToken9876543210";
+    const res = runRecordCli({
+      storeDir,
+      repoDir,
+      tmpRoot,
+      name: "rh1701",
+      payload: {
+        schemaVersion: "1.0.0",
+        handoffId: "H-SEC",
+        taskId: "T-SEC",
+        repository: "mrdzyn/rh17-01",
+        branch,
+        sourceAgent: "codex",
+        targetAgent: "claude",
+        headSha,
+        summary: "Test secret suppression",
+        nextAction: "Verify",
+        supersedesHandoffId: payloadSecret,
+      },
+      supersedes: cliSecret,
+      expectSuccess: false,
+    });
+
+    assert.equal(res.status, 1);
+    assert.match(res.stderr, /Supersession conflict: CLI --supersedes differs from payload supersedesHandoffId/);
+    assert.ok(!res.stdout.includes(cliSecret));
+    assert.ok(!res.stdout.includes(payloadSecret));
+    assert.ok(!res.stderr.includes(cliSecret));
+    assert.ok(!res.stderr.includes(payloadSecret));
   } finally {
     fs.rmSync(tmpRoot, { recursive: true, force: true });
   }

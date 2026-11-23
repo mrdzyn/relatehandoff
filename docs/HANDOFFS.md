@@ -727,4 +727,21 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Independent COMMENT-only audit and owner merge approval on the Draft PR before proceeding to `RH-LOCAL-T3`.
 - Keep `RH-P5-T1`–`T8`, `cloud/`, Cloudflare resources, and deployment on hold / blocked.
 
+## Handoff: RH-LOCAL-T2B-2
+
+- **Task:** `tasks/RH-LOCAL-T2B-handoff-lifecycle.md` (PR #17 audit remediation RH17-01 & RH17-02)
+- **From:** Antigravity (CLI conflict-error redaction & selector exit-code remediation)
+- **To:** focused independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t2b-lifecycle` (Draft PR #17)
+- **Input HEAD:** `8b8f4d26e29f1e872a1bfda9b92762508c350bfb`
+
+### Verified evidence
+- **RH17-01 (`src/cli.mjs`):** Replaced `--supersedes` conflict error with a generic field-level conflict message (`Supersession conflict: CLI --supersedes differs from payload supersedesHandoffId`) that never prints raw user-controlled values before payload secret validation; added negative test with fictional `ghp_` tokens in `test/lifecycle.test.mjs`.
+- **RH17-02 (`src/cli.mjs`):** Validated `resume --handoff` (`ID_RE`), `list --task` (`ID_RE`), and non-empty `list --branch` / `list --agent` with `CliUsageError` (exit code `2`) while retaining library-side validation in `src/mcp_client.mjs` and exit code `1` for actual repository/MCP retrieval failures; added regression tests in `test/lifecycle.test.mjs`.
+- Preserved all T2B lifecycle behavior (immutable supersession, idempotency, repository isolation, JSON compatibility, Markdown safety, and read-only MCP).
+
+### Remaining
+- Focused independent COMMENT-only re-audit on the new exact HEAD.
+- Keep PR #17 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
+
 <!-- HANDOFF_ENTRIES_END -->

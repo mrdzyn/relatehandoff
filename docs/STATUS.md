@@ -18,7 +18,7 @@
 - **Approved RH-LOCAL-T2A merged baseline:** `176e5c2005bf63583c4f33a918bd12e5d6005fb2` (PR #16 squash merge)
 - **Working branch:** `feat/rh-local-t2b-lifecycle`
 - **Active task:** `tasks/RH-LOCAL-T2B-handoff-lifecycle.md`
-- **Active handoff:** RH-LOCAL-T2B-1
+- **Active handoff:** RH-LOCAL-T2B-2
 
 ## Completed foundation
 - Created a new project-mode repository from `mrdzyn/ai-native-project-template`; pruned unselected optional packs and inherited master history.

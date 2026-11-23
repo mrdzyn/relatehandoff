@@ -5,7 +5,7 @@ import { recordHandoff } from "./recorder.mjs";
 import { listHandoffsViaReadOnlyMcp, resumeTaskViaReadOnlyMcp } from "./mcp_client.mjs";
 import { formatDoctorReport, runDoctor } from "./doctor.mjs";
 import { formatHandoffListMarkdown, formatResumeMarkdown } from "./resume_format.mjs";
-import { MAX_DETAIL_ROWS } from "./schema.mjs";
+import { ID_RE, MAX_DETAIL_ROWS } from "./schema.mjs";
 
 const BOOLEAN_FLAGS = new Set(["help", "json", "strict"]);
 const DOCTOR_ALLOWED_FLAGS = new Set(["help", "json", "strict", "repo", "store", "relate-bin"]);
@@ -91,9 +91,7 @@ function main() {
     const raw = JSON.parse(fs.readFileSync(path.resolve(flags.input), "utf8"));
     if (flags.supersedes !== undefined) {
       if (raw.supersedesHandoffId !== undefined && raw.supersedesHandoffId !== null && raw.supersedesHandoffId !== flags.supersedes) {
-        throw new Error(
-          `Supersession conflict: CLI --supersedes '${flags.supersedes}' differs from payload supersedesHandoffId '${raw.supersedesHandoffId}'`
-        );
+        throw new Error("Supersession conflict: CLI --supersedes differs from payload supersedesHandoffId");
       }
       raw.supersedesHandoffId = flags.supersedes;
     }
@@ -121,6 +119,9 @@ function main() {
     const format = flags.format ?? "json";
     if (!ALLOWED_FORMATS.has(format)) {
       throw new CliUsageError(`Invalid --format '${format}': expected 'json' or 'markdown'`);
+    }
+    if (flags.handoff !== undefined && !ID_RE.test(flags.handoff.trim())) {
+      throw new CliUsageError("Invalid --handoff: must match ^[A-Za-z0-9._-]{1,128}$");
     }
     if (!flags.store || !flags.repo || !flags.task) {
       throw new Error("resume requires --store, --repo, and --task");
@@ -160,6 +161,15 @@ function main() {
       if (limit < 1 || limit > MAX_DETAIL_ROWS) {
         throw new CliUsageError(`Invalid --limit '${flags.limit}': must be an integer between 1 and ${MAX_DETAIL_ROWS}`);
       }
+    }
+    if (flags.task !== undefined && !ID_RE.test(flags.task.trim())) {
+      throw new CliUsageError("Invalid --task: must match ^[A-Za-z0-9._-]{1,128}$");
+    }
+    if (flags.branch !== undefined && flags.branch.trim().length === 0) {
+      throw new CliUsageError("Invalid --branch: must be a non-empty string");
+    }
+    if (flags.agent !== undefined && flags.agent.trim().length === 0) {
+      throw new CliUsageError("Invalid --agent: must be a non-empty string");
     }
     if (!flags.store || !flags.repo) {
       throw new CliUsageError("list requires --store and --repo");
