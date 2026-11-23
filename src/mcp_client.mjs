@@ -5,7 +5,7 @@ import { runTrustedValidation } from "./attestation.mjs";
 import { getGitState } from "./git.mjs";
 import { evaluateFreshness } from "./freshness.mjs";
 import { canonicalizeResumeResult, compareCodeUnits } from "./resume_format.mjs";
-import { MAX_DETAIL_ROWS } from "./schema.mjs";
+import { ID_RE, MAX_DETAIL_ROWS } from "./schema.mjs";
 
 export { MAX_DETAIL_ROWS };
 export const DEFAULT_MCP_TIMEOUT_MS = 15000;
@@ -151,10 +151,27 @@ function assertBoundedRows(rows, label) {
   return rows;
 }
 
+function assertReadOnlyMcpTools(toolsResp) {
+  if (!toolsResp || toolsResp.error || toolsResp.result?.isError) {
+    throw new Error(`MCP tools/list failed: ${JSON.stringify(toolsResp ?? null)}`);
+  }
+  const tools = (toolsResp.result?.tools ?? []).map((t) => t.name);
+  if (tools.includes("write_cypher")) {
+    throw new Error("Security violation: read-only MCP server exposed write_cypher");
+  }
+  if (!tools.includes("read_cypher")) {
+    throw new Error("MCP server missing required read_cypher tool");
+  }
+  return tools;
+}
+
+const VALID_LIFECYCLE_STATUSES = new Set(["active", "superseded", "all"]);
+
 export function resumeTaskViaReadOnlyMcp({
   storeDir,
   repoRoot,
   taskId,
+  handoffId = null,
   repository,
   remoteVerified = false,
   verifyProfile = null,
@@ -168,19 +185,23 @@ export function resumeTaskViaReadOnlyMcp({
     );
   }
 
+  let selectedHandoffId = null;
+  if (handoffId !== null && handoffId !== undefined) {
+    const trimmed = String(handoffId).trim();
+    if (!ID_RE.test(trimmed)) {
+      throw new Error("Invalid handoffId: must match ^[A-Za-z0-9._-]{1,128}$");
+    }
+    selectedHandoffId = trimmed;
+  }
+
   const taskKey = `${gitState.repository}::${taskId}`;
-  const requests = [
-    { jsonrpc: "2.0", id: 1, method: "tools/list", params: {} },
-    {
-      jsonrpc: "2.0",
-      id: 2,
-      method: "tools/call",
-      params: {
-        name: "read_cypher",
-        arguments: {
-          statement: `MATCH (r:Repository {name: $repository})-[:OWNS_TASK]->(t:Task {key: $taskKey})<-[:HANDOFF_FOR]-(h:Handoff)-[:TARGETS_HEAD]->(c:Commit),
+  const handoffKey = selectedHandoffId ? `${taskKey}::${selectedHandoffId}` : null;
+  const statement = handoffKey
+    ? `MATCH (r:Repository {name: $repository})-[:OWNS_TASK]->(t:Task {key: $taskKey})<-[:HANDOFF_FOR]-(h:Handoff {key: $handoffKey})-[:TARGETS_HEAD]->(c:Commit),
        (h)-[:FROM_AGENT]->(sa:Agent),
        (h)-[:TO_AGENT]->(ta:Agent)
+OPTIONAL MATCH (h)-[s:SUPERSEDES]->(prev:Handoff)
+OPTIONAL MATCH (next:Handoff)-[:SUPERSEDES]->(h)
 RETURN r.name AS repository,
        t.id AS taskId,
        h.key AS handoffKey,
@@ -192,10 +213,50 @@ RETURN r.name AS repository,
        h.createdAt AS createdAt,
        c.sha AS headSha,
        sa.name AS sourceAgent,
-       ta.name AS targetAgent
-ORDER BY h.createdAt DESC
-LIMIT 1`,
-          parameters: { repository: gitState.repository, taskKey },
+       ta.name AS targetAgent,
+       prev.id AS supersedesHandoffId,
+       next.id AS supersededByHandoffId,
+       s.reason AS supersessionReason
+LIMIT 1`
+    : `MATCH (r:Repository {name: $repository})-[:OWNS_TASK]->(t:Task {key: $taskKey})<-[:HANDOFF_FOR]-(h:Handoff)-[:TARGETS_HEAD]->(c:Commit),
+       (h)-[:FROM_AGENT]->(sa:Agent),
+       (h)-[:TO_AGENT]->(ta:Agent)
+OPTIONAL MATCH (h)-[s:SUPERSEDES]->(prev:Handoff)
+OPTIONAL MATCH (next:Handoff)-[:SUPERSEDES]->(h)
+WITH r, t, h, c, sa, ta, prev, next, s
+WHERE next IS NULL
+RETURN r.name AS repository,
+       t.id AS taskId,
+       h.key AS handoffKey,
+       h.id AS handoffId,
+       h.schemaVersion AS schemaVersion,
+       h.branch AS branch,
+       h.summary AS summary,
+       h.nextAction AS nextAction,
+       h.createdAt AS createdAt,
+       c.sha AS headSha,
+       sa.name AS sourceAgent,
+       ta.name AS targetAgent,
+       prev.id AS supersedesHandoffId,
+       next.id AS supersededByHandoffId,
+       s.reason AS supersessionReason
+ORDER BY h.createdAt DESC, h.id DESC
+LIMIT 1`;
+  const parameters = handoffKey
+    ? { repository: gitState.repository, taskKey, handoffKey }
+    : { repository: gitState.repository, taskKey };
+
+  const requests = [
+    { jsonrpc: "2.0", id: 1, method: "tools/list", params: {} },
+    {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: {
+        name: "read_cypher",
+        arguments: {
+          statement,
+          parameters,
         },
       },
     },
@@ -203,22 +264,12 @@ LIMIT 1`,
 
   const initialResponses = callRelateMcpBatch({ storeDir, requests, relateBin, timeoutMs });
   const initialById = new Map(initialResponses.map((r) => [r.id, r]));
-  const toolsResp = initialById.get(1);
-  if (!toolsResp || toolsResp.error || toolsResp.result?.isError) {
-    throw new Error(`MCP tools/list failed: ${JSON.stringify(toolsResp ?? null)}`);
-  }
-  const tools = (toolsResp.result?.tools ?? []).map((t) => t.name);
-  if (tools.includes("write_cypher")) {
-    throw new Error("Security violation: read-only MCP server exposed write_cypher");
-  }
-  if (!tools.includes("read_cypher")) {
-    throw new Error("MCP server missing required read_cypher tool");
-  }
+  const tools = assertReadOnlyMcpTools(initialById.get(1));
 
   const handoffEnvelope = parseReadCypherResult(initialById.get(2));
-  const handoff = handoffEnvelope.rows?.[0] ?? null;
+  const rawHandoff = handoffEnvelope.rows?.[0] ?? null;
 
-  if (!handoff) {
+  if (!rawHandoff) {
     const freshness = evaluateFreshness({
       handoff: null,
       evidenceList: [],
@@ -236,11 +287,19 @@ LIMIT 1`,
     });
   }
 
-  if (handoff.repository !== gitState.repository) {
+  if (rawHandoff.repository !== gitState.repository) {
     throw new Error(
-      `Repository isolation violation: retrieved '${handoff.repository}', expected '${gitState.repository}'`
+      `Repository isolation violation: retrieved '${rawHandoff.repository}', expected '${gitState.repository}'`
     );
   }
+
+  const handoff = {
+    ...rawHandoff,
+    supersedesHandoffId: rawHandoff.supersedesHandoffId ?? null,
+    supersededByHandoffId: rawHandoff.supersededByHandoffId ?? null,
+    supersessionReason: rawHandoff.supersessionReason ?? null,
+    lifecycleStatus: rawHandoff.supersededByHandoffId ? "SUPERSEDED" : "ACTIVE",
+  };
 
   const detailLimit = MAX_DETAIL_ROWS + 1;
   const detailRequests = [
@@ -351,4 +410,152 @@ LIMIT ${detailLimit}`,
     inProcessVerification,
     freshness,
   });
+}
+
+/**
+ * List handoffs for the established repository via read-only Relate MCP with optional filters.
+ */
+export function listHandoffsViaReadOnlyMcp({
+  storeDir,
+  repoRoot,
+  taskId = null,
+  repository,
+  status = "all",
+  branch = null,
+  agent = null,
+  limit = MAX_DETAIL_ROWS,
+  relateBin,
+  timeoutMs = DEFAULT_MCP_TIMEOUT_MS,
+}) {
+  if (!VALID_LIFECYCLE_STATUSES.has(status)) {
+    throw new Error(`Invalid status filter '${status}': expected active, superseded, or all`);
+  }
+  if (!Number.isInteger(limit) || limit < 1 || limit > MAX_DETAIL_ROWS) {
+    throw new Error(`Invalid limit '${limit}': must be an integer between 1 and ${MAX_DETAIL_ROWS}`);
+  }
+
+  const gitState = getGitState(repoRoot, { repository });
+  if (!gitState.repository) {
+    throw new Error(
+      "Repository identity is not established for list: configure git remote 'origin', 'relatehandoff.repository', or pass repository"
+    );
+  }
+
+  const normalizedTaskId = taskId !== null && taskId !== undefined ? String(taskId).trim() : null;
+  if (normalizedTaskId !== null && !ID_RE.test(normalizedTaskId)) {
+    throw new Error("Invalid taskId filter: must match ^[A-Za-z0-9._-]{1,128}$");
+  }
+  const normalizedBranch = branch !== null && branch !== undefined ? String(branch).trim() : null;
+  if (normalizedBranch !== null && normalizedBranch.length === 0) {
+    throw new Error("Invalid branch filter: must be non-empty");
+  }
+  const normalizedAgent = agent !== null && agent !== undefined ? String(agent).trim() : null;
+  if (normalizedAgent !== null && normalizedAgent.length === 0) {
+    throw new Error("Invalid agent filter: must be non-empty");
+  }
+
+  const parameters = { repository: gitState.repository };
+  const predicates = [];
+  if (normalizedTaskId !== null) {
+    parameters.taskKey = `${gitState.repository}::${normalizedTaskId}`;
+    predicates.push("t.key = $taskKey");
+  }
+  if (normalizedBranch !== null) {
+    parameters.branch = normalizedBranch;
+    predicates.push("h.branch = $branch");
+  }
+  if (normalizedAgent !== null) {
+    parameters.agent = normalizedAgent;
+    predicates.push("(sa.name = $agent OR ta.name = $agent)");
+  }
+  if (status === "active") {
+    predicates.push("next IS NULL");
+  } else if (status === "superseded") {
+    predicates.push("next IS NOT NULL");
+  }
+
+  const whereClause = predicates.length > 0 ? `WHERE ${predicates.join(" AND ")}\n` : "";
+  const statement = `MATCH (r:Repository {name: $repository})-[:OWNS_TASK]->(t:Task)<-[:HANDOFF_FOR]-(h:Handoff)-[:TARGETS_HEAD]->(c:Commit),
+       (h)-[:FROM_AGENT]->(sa:Agent),
+       (h)-[:TO_AGENT]->(ta:Agent)
+OPTIONAL MATCH (h)-[s:SUPERSEDES]->(prev:Handoff)
+OPTIONAL MATCH (next:Handoff)-[:SUPERSEDES]->(h)
+WITH r, t, h, c, sa, ta, prev, next, s
+${whereClause}RETURN r.name AS repository,
+       t.id AS taskId,
+       h.key AS handoffKey,
+       h.id AS handoffId,
+       h.schemaVersion AS schemaVersion,
+       h.branch AS branch,
+       h.summary AS summary,
+       h.nextAction AS nextAction,
+       h.createdAt AS createdAt,
+       c.sha AS headSha,
+       sa.name AS sourceAgent,
+       ta.name AS targetAgent,
+       prev.id AS supersedesHandoffId,
+       next.id AS supersededByHandoffId,
+       s.reason AS supersessionReason
+ORDER BY h.createdAt DESC, h.id DESC
+LIMIT ${MAX_DETAIL_ROWS + 1}`;
+
+  const requests = [
+    { jsonrpc: "2.0", id: 1, method: "tools/list", params: {} },
+    {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: {
+        name: "read_cypher",
+        arguments: { statement, parameters },
+      },
+    },
+  ];
+
+  const responses = callRelateMcpBatch({ storeDir, requests, relateBin, timeoutMs });
+  const byId = new Map(responses.map((r) => [r.id, r]));
+  const tools = assertReadOnlyMcpTools(byId.get(1));
+  const rawRows = assertBoundedRows(parseReadCypherResult(byId.get(2)).rows ?? [], "handoffs");
+
+  const mapped = rawRows.map((row) => {
+    if (row.repository !== gitState.repository) {
+      throw new Error(
+        `Repository isolation violation: retrieved '${row.repository}', expected '${gitState.repository}'`
+      );
+    }
+    return {
+      ...row,
+      supersedesHandoffId: row.supersedesHandoffId ?? null,
+      supersededByHandoffId: row.supersededByHandoffId ?? null,
+      supersessionReason: row.supersessionReason ?? null,
+      lifecycleStatus: row.supersededByHandoffId ? "SUPERSEDED" : "ACTIVE",
+    };
+  });
+
+  mapped.sort(
+    (a, b) =>
+      compareCodeUnits(b.createdAt, a.createdAt) ||
+      compareCodeUnits(b.handoffId, a.handoffId) ||
+      compareCodeUnits(a.taskId, b.taskId) ||
+      compareCodeUnits(a.handoffKey, b.handoffKey)
+  );
+
+  return {
+    tools,
+    repository: gitState.repository,
+    filters: {
+      taskId: normalizedTaskId,
+      status,
+      branch: normalizedBranch,
+      agent: normalizedAgent,
+      limit,
+    },
+    totalMatched: mapped.length,
+    truncated: mapped.length > limit,
+    handoffs: mapped.slice(0, limit),
+    gitState: {
+      ...gitState,
+      dirtyFiles: [...(gitState.dirtyFiles || [])].sort(compareCodeUnits),
+    },
+  };
 }

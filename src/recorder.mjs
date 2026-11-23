@@ -35,6 +35,10 @@ function canonicalFingerprint(validated) {
       }))
       .sort((a, b) => a.id.localeCompare(b.id)),
   };
+  if (validated.supersedesHandoffId !== null && validated.supersedesHandoffId !== undefined) {
+    canonical.supersedesHandoffId = validated.supersedesHandoffId;
+    canonical.supersessionReason = validated.supersessionReason ?? null;
+  }
   return crypto.createHash("sha256").update(JSON.stringify(canonical), "utf8").digest("hex");
 }
 
@@ -129,6 +133,37 @@ export function recordHandoff({
       throw new Error(
         `HandoffConflictError: Handoff '${validated.handoffId}' already exists for '${taskKey}' with different content; refusing to mutate`
       );
+    }
+
+    const targetHandoffKey = validated.supersedesHandoffId
+      ? `${taskKey}::${validated.supersedesHandoffId}`
+      : null;
+    if (targetHandoffKey) {
+      const targetCheck = conn.query(
+        `MATCH (target:Handoff {key: $targetHandoffKey, repository: $repository, taskId: $taskId})
+         RETURN target.key AS key`,
+        {
+          targetHandoffKey,
+          repository: validated.repository,
+          taskId: validated.taskId,
+        }
+      );
+      if (targetCheck.rows.length === 0) {
+        throw new Error(
+          `SupersessionError: Target handoff '${validated.supersedesHandoffId}' does not exist in '${taskKey}'`
+        );
+      }
+
+      const alreadySuperseded = conn.query(
+        `MATCH (other:Handoff)-[:SUPERSEDES]->(target:Handoff {key: $targetHandoffKey})
+         RETURN other.id AS id`,
+        { targetHandoffKey }
+      );
+      if (alreadySuperseded.rows.length > 0) {
+        throw new Error(
+          `HandoffConflictError: Target handoff '${validated.supersedesHandoffId}' in '${taskKey}' is already superseded by '${alreadySuperseded.rows[0].id}'`
+        );
+      }
     }
 
     conn.query(
@@ -256,6 +291,31 @@ export function recordHandoff({
           attestationSha256: ev.attestationSha256,
         }
       );
+    }
+
+    if (targetHandoffKey) {
+      if (validated.supersessionReason !== null) {
+        conn.query(
+          `MATCH (h:Handoff {key: $handoffKey}), (target:Handoff {key: $targetHandoffKey})
+           CREATE (h)-[:SUPERSEDES {reason: $reason, at: $at}]->(target)`,
+          {
+            handoffKey,
+            targetHandoffKey,
+            reason: validated.supersessionReason,
+            at: validated.createdAt,
+          }
+        );
+      } else {
+        conn.query(
+          `MATCH (h:Handoff {key: $handoffKey}), (target:Handoff {key: $targetHandoffKey})
+           CREATE (h)-[:SUPERSEDES {at: $at}]->(target)`,
+          {
+            handoffKey,
+            targetHandoffKey,
+            at: validated.createdAt,
+          }
+        );
+      }
     }
 
     conn.commit();
