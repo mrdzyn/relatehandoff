@@ -4,6 +4,7 @@ import path from "node:path";
 import { runTrustedValidation } from "./attestation.mjs";
 import { getGitState } from "./git.mjs";
 import { evaluateFreshness } from "./freshness.mjs";
+import { canonicalizeResumeResult, compareCodeUnits } from "./resume_format.mjs";
 import { MAX_DETAIL_ROWS } from "./schema.mjs";
 
 export { MAX_DETAIL_ROWS };
@@ -224,7 +225,15 @@ LIMIT 1`,
       gitState,
       remoteVerified,
     });
-    return { tools, handoff: null, evidence: [], artifacts: [], decisions: [], gitState, freshness };
+    return canonicalizeResumeResult({
+      tools,
+      handoff: null,
+      evidence: [],
+      artifacts: [],
+      decisions: [],
+      gitState,
+      freshness,
+    });
   }
 
   if (handoff.repository !== gitState.repository) {
@@ -298,12 +307,16 @@ LIMIT ${detailLimit}`,
     timeoutMs,
   });
   const detailById = new Map(detailResponses.map((r) => [r.id, r]));
-  const evidence = assertBoundedRows(parseReadCypherResult(detailById.get(3)).rows ?? [], "evidence");
+  const evidence = assertBoundedRows(parseReadCypherResult(detailById.get(3)).rows ?? [], "evidence")
+    .sort((a, b) => compareCodeUnits(a?.id, b?.id) || compareCodeUnits(a?.headSha, b?.headSha));
   const artifacts = assertBoundedRows(
     parseReadCypherResult(detailById.get(4)).rows ?? [],
     "artifacts"
-  ).map((r) => r.path);
-  const decisions = assertBoundedRows(parseReadCypherResult(detailById.get(5)).rows ?? [], "decisions");
+  )
+    .map((r) => r.path)
+    .sort(compareCodeUnits);
+  const decisions = assertBoundedRows(parseReadCypherResult(detailById.get(5)).rows ?? [], "decisions")
+    .sort((a, b) => compareCodeUnits(a?.id, b?.id) || compareCodeUnits(a?.summary, b?.summary));
 
   let inProcessVerification = null;
   if (
@@ -328,7 +341,7 @@ LIMIT ${detailLimit}`,
     inProcessVerification,
   });
 
-  return {
+  return canonicalizeResumeResult({
     tools,
     handoff,
     evidence,
@@ -337,5 +350,5 @@ LIMIT ${detailLimit}`,
     gitState,
     inProcessVerification,
     freshness,
-  };
+  });
 }

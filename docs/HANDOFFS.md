@@ -674,4 +674,21 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Focused independent COMMENT-only re-audit on the new exact HEAD.
 - Keep PR #15 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
 
+## Handoff: RH-LOCAL-T2A-1
+
+- **Task:** `tasks/RH-LOCAL-T2A-resume-output.md` (RH-LOCAL-T2A: Deterministic Multi-Agent Resume Output)
+- **From:** Antigravity (implementation & local validation)
+- **To:** independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t2a-resume-output`
+- **Base:** `main@c9e3a46db8723928b37c2d639122934541ee7fcc` (PR #15 squash merge)
+
+### Verified evidence
+- Added `src/resume_format.mjs` (`canonicalizeResumeResult`, `formatResumeMarkdown`, `escapeMarkdownText`, `stripUnsafeControlChars`, `compareCodeUnits`) and wired deterministic ordering into `src/mcp_client.mjs` and `--format json|markdown` (default `json`, exit `2` on invalid `--format`) into `src/cli.mjs`.
+- Preserved default JSON output, exact freshness/authenticity semantics (never relabels `SELF_ASSERTED`/unsigned evidence as `VERIFIED`), read-only MCP access, parameterized queries, and 100-row detail bounds.
+- Added focused tests in `test/resume_output.test.mjs` covering JSON compatibility, deterministic ordering, Markdown escaping & ANSI stripping, stale HEADs, missing handoffs, authenticity statuses, 100-row bounds, invalid `--format` exit 2, and real Relate v1.0.1 `example-store` integration.
+
+### Remaining
+- Independent COMMENT-only audit and owner merge approval on the Draft PR.
+- Keep `RH-P5-T1`–`T8`, `cloud/`, Cloudflare resources, and deployment on hold / blocked.
+
 <!-- HANDOFF_ENTRIES_END -->
