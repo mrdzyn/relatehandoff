@@ -6,6 +6,14 @@ import { resumeTaskViaReadOnlyMcp } from "./mcp_client.mjs";
 import { formatDoctorReport, runDoctor } from "./doctor.mjs";
 
 const BOOLEAN_FLAGS = new Set(["help", "json", "strict"]);
+const DOCTOR_ALLOWED_FLAGS = new Set(["help", "json", "strict", "repo", "store", "relate-bin"]);
+
+class CliUsageError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "CliUsageError";
+  }
+}
 
 function parseArgs(argv) {
   const [command, ...rest] = argv;
@@ -22,12 +30,12 @@ function parseArgs(argv) {
       }
       const val = rest[i + 1];
       if (!val || val.startsWith("--")) {
-        throw new Error(`Missing value for flag --${key}`);
+        throw new CliUsageError(`Missing value for flag --${key}`);
       }
       flags[key] = val;
       i++;
     } else {
-      throw new Error(`Unexpected positional argument: ${arg}`);
+      throw new CliUsageError(`Unexpected positional argument: ${arg}`);
     }
   }
   return { command, flags };
@@ -82,6 +90,11 @@ function main() {
   }
 
   if (command === "doctor") {
+    for (const key of Object.keys(flags)) {
+      if (!DOCTOR_ALLOWED_FLAGS.has(key)) {
+        throw new CliUsageError(`Unsupported flag for doctor: --${key}`);
+      }
+    }
     const report = runDoctor({
       repo: flags.repo,
       store: flags.store,
@@ -97,12 +110,12 @@ function main() {
     return;
   }
 
-  throw new Error(`Unknown command: ${command}`);
+  throw new CliUsageError(`Unknown command: ${command}`);
 }
 
 try {
   main();
 } catch (err) {
   console.error(`Error: ${err.message}`);
-  process.exit(1);
+  process.exit(err instanceof CliUsageError ? 2 : 1);
 }

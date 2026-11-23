@@ -638,4 +638,23 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Independent COMMENT-only audit and owner merge approval on the Draft PR.
 - Keep `RH-P5-T1`–`T8`, `cloud/`, Cloudflare resources, and deployment on hold / blocked.
 
+## Handoff: RH-LOCAL-T1-2
+
+- **Task:** `tasks/RH-LOCAL-T1-environment-doctor.md` (PR #15 audit remediation RH15-01…RH15-04)
+- **From:** Antigravity (audit remediation & regression tests)
+- **To:** independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t1-doctor` (Draft PR #15)
+- **Input HEAD:** `68c80ed1b643c34a1dcff59ff957a32a5a10db76`
+
+### Verified evidence
+- **RH15-01 (`src/doctor.mjs`):** Validated both MCP `initialize` (`id: 1`) and `tools/list` (`id: 2`, `Array.isArray(result.tools)`) JSON-RPC responses; rejects missing, malformed, partial, or error responses.
+- **RH15-02 (`src/doctor.mjs`):** Passed `--no-optional-locks` to all repo `git` inspection calls (`rev-parse`, `status --porcelain`, `remote`, `config`) so `.git/index` is never refreshed or written; added `.git/index` SHA-256 integrity regression test.
+- **RH15-03 (`src/doctor.mjs`):** Expanded `sanitizeDiagnosticText` (redacting `Authorization:`, `?token=`, `access_token=`, `secret=`, `password=`, `api_key=`, `ghp_`, `sk-`, `Bearer`, `Basic`, URL userinfo) and applied sanitization to all config-derived repo identities, paths, errors, and JSON/text check outputs.
+- **RH15-04 (`src/cli.mjs`):** Returned exit code `2` for invalid CLI usage (`CliUsageError`) and unsupported `doctor` flags, while retaining exit code `1` for failed health checks.
+- Added focused negative/regression tests in `test/doctor.test.mjs` for `RH15-01` through `RH15-04`.
+
+### Remaining
+- Independent COMMENT-only re-audit on the new exact HEAD.
+- Keep PR #15 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
+
 <!-- HANDOFF_ENTRIES_END -->

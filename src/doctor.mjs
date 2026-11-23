@@ -14,16 +14,18 @@ const SECRET_REDACTION_PATTERNS = [
   /\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{10,}\b/g,
   /\bsk-[A-Za-z0-9_-]{12,}\b/g,
   /\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{8,}/gi,
+  /\bAuthorization\s*:\s*[^\s,;]+(?:\s+[^\s,;]+)?/gi,
+  /([?&](?:token|access_token|secret|password|passwd|api_key|apikey|key)=)[^&\s]+/gi,
 ];
 
 /**
- * Redact common credential/token patterns and normalize whitespace from external stderr.
+ * Redact common credential/token patterns and normalize whitespace from external/config strings.
  */
 export function sanitizeDiagnosticText(text) {
   if (typeof text !== "string") return "";
   let out = text.trim();
   for (const re of SECRET_REDACTION_PATTERNS) {
-    out = out.replace(re, "[REDACTED]");
+    out = out.replace(re, (match, p1) => (typeof p1 === "string" && p1.includes("=") ? `${p1}[REDACTED]` : "[REDACTED]"));
   }
   return out.replace(/\s+/g, " ").slice(0, 280);
 }
@@ -177,10 +179,10 @@ function checkGitAndRepo({ repoInput, env, runCmd, fsImpl }) {
     };
   }
 
-  const topRes = runCmd("git", ["rev-parse", "--show-toplevel"], { cwd: resolvedRepo, env });
-  const headRes = runCmd("git", ["rev-parse", "HEAD"], { cwd: resolvedRepo, env });
-  const branchRes = runCmd("git", ["rev-parse", "--abbrev-ref", "HEAD"], { cwd: resolvedRepo, env });
-  const statusRes = runCmd("git", ["status", "--porcelain"], { cwd: resolvedRepo, env });
+  const topRes = runCmd("git", ["--no-optional-locks", "rev-parse", "--show-toplevel"], { cwd: resolvedRepo, env });
+  const headRes = runCmd("git", ["--no-optional-locks", "rev-parse", "HEAD"], { cwd: resolvedRepo, env });
+  const branchRes = runCmd("git", ["--no-optional-locks", "rev-parse", "--abbrev-ref", "HEAD"], { cwd: resolvedRepo, env });
+  const statusRes = runCmd("git", ["--no-optional-locks", "status", "--porcelain"], { cwd: resolvedRepo, env });
 
   if (topRes.status !== 0 || headRes.status !== 0 || !isFullSha((headRes.stdout || "").trim())) {
     const errDetail = sanitizeDiagnosticText(topRes.stderr || headRes.stderr || "not a Git checkout with a valid HEAD");
@@ -201,12 +203,13 @@ function checkGitAndRepo({ repoInput, env, runCmd, fsImpl }) {
   const branch = (branchRes.stdout || "").trim() || "HEAD";
   const dirtyLines = (statusRes.stdout || "").split("\n").map((l) => l.trim()).filter(Boolean);
 
-  const remoteRes = runCmd("git", ["remote", "get-url", "origin"], { cwd: resolvedRepo, env });
-  const cfgRes = runCmd("git", ["config", "--get", "relatehandoff.repository"], { cwd: resolvedRepo, env });
-  const repoId =
+  const remoteRes = runCmd("git", ["--no-optional-locks", "remote", "get-url", "origin"], { cwd: resolvedRepo, env });
+  const cfgRes = runCmd("git", ["--no-optional-locks", "config", "--get", "relatehandoff.repository"], { cwd: resolvedRepo, env });
+  const rawRepoId =
     normalizeRepositoryIdentity(remoteRes.status === 0 ? remoteRes.stdout : "") ||
     (cfgRes.status === 0 ? cfgRes.stdout.trim() : "") ||
     null;
+  const repoId = rawRepoId ? sanitizeDiagnosticText(rawRepoId) : null;
 
   if (!repoId) {
     return {
@@ -461,8 +464,70 @@ function checkLocalStore({ storeInput, resolvedRepo, env, relateBin, runCmd, fsI
       id: "relate-store",
       name: "Local Relate store",
       status: "FAIL",
-      summary: `Read-only MCP probe failed on ${resolvedStore} (${detail}).`,
+      summary: `Read-only MCP probe failed on ${sanitizeDiagnosticText(resolvedStore)} (${detail}).`,
       remediation: "Check store integrity/WAL files and ensure the directory is a valid Relate store.",
+    };
+  }
+
+  const lines = String(res.stdout || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const byId = new Map();
+  for (const line of lines) {
+    let msg;
+    try {
+      msg = JSON.parse(line);
+    } catch {
+      return {
+        id: "relate-store",
+        name: "Local Relate store",
+        status: "FAIL",
+        summary: `Read-only MCP probe returned malformed JSON on ${sanitizeDiagnosticText(resolvedStore)}.`,
+        remediation: "Verify Relate CLI v1.0.1 stdio MCP output and store integrity.",
+      };
+    }
+    if (msg && typeof msg === "object" && msg.id !== undefined) {
+      byId.set(msg.id, msg);
+    }
+  }
+
+  const initResp = byId.get(1);
+  const toolsResp = byId.get(2);
+  if (!initResp || !toolsResp) {
+    return {
+      id: "relate-store",
+      name: "Local Relate store",
+      status: "FAIL",
+      summary: `Read-only MCP probe returned an incomplete response on ${sanitizeDiagnosticText(resolvedStore)} (missing initialize or tools/list reply).`,
+      remediation: "Ensure `relate serve --mcp stdio --read-only` completes both initialize and tools/list.",
+    };
+  }
+  if (initResp.error || toolsResp.error) {
+    const errMsg = sanitizeDiagnosticText(
+      initResp.error?.message || toolsResp.error?.message || "MCP JSON-RPC error"
+    );
+    return {
+      id: "relate-store",
+      name: "Local Relate store",
+      status: "FAIL",
+      summary: `Read-only MCP probe returned an error on ${sanitizeDiagnosticText(resolvedStore)} (${errMsg}).`,
+      remediation: "Check store integrity/WAL files and Relate CLI compatibility.",
+    };
+  }
+  if (
+    !initResp.result ||
+    typeof initResp.result !== "object" ||
+    !toolsResp.result ||
+    typeof toolsResp.result !== "object" ||
+    !Array.isArray(toolsResp.result.tools)
+  ) {
+    return {
+      id: "relate-store",
+      name: "Local Relate store",
+      status: "FAIL",
+      summary: `Read-only MCP probe returned a malformed result payload on ${sanitizeDiagnosticText(resolvedStore)}.`,
+      remediation: "Verify Relate CLI v1.0.1 MCP protocol compatibility.",
     };
   }
 
@@ -470,7 +535,7 @@ function checkLocalStore({ storeInput, resolvedRepo, env, relateBin, runCmd, fsI
     id: "relate-store",
     name: "Local Relate store",
     status: "PASS",
-    summary: `Read-only MCP probe succeeded against ${resolvedStore}.`,
+    summary: `Read-only MCP probe succeeded against ${sanitizeDiagnosticText(resolvedStore)} (${toolsResp.result.tools.length} tools).`,
   };
 }
 
@@ -520,8 +585,14 @@ export function runDoctor(options = {}, deps = {}) {
     })
   );
 
+  const sanitizedChecks = checks.map((c) => ({
+    ...c,
+    summary: sanitizeDiagnosticText(c.summary),
+    ...(c.remediation ? { remediation: sanitizeDiagnosticText(c.remediation) } : {}),
+  }));
+
   const counts = { PASS: 0, WARN: 0, FAIL: 0 };
-  for (const c of checks) {
+  for (const c of sanitizedChecks) {
     counts[c.status] = (counts[c.status] || 0) + 1;
   }
 
@@ -536,7 +607,7 @@ export function runDoctor(options = {}, deps = {}) {
     platform,
     readOnly: true,
     counts,
-    checks,
+    checks: sanitizedChecks,
   };
 }
 

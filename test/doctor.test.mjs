@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -13,32 +13,42 @@ function makeFakeDeps(overrides = {}) {
   const calls = [];
   const defaultRunCmd = (bin, args, opts = {}) => {
     calls.push({ bin, args, cwd: opts.cwd });
-    if (bin === "git" && args[0] === "--version") {
-      return { status: 0, stdout: "git version 2.45.0\n", stderr: "" };
-    }
-    if (bin === "git" && args[0] === "rev-parse" && args[1] === "--show-toplevel") {
-      return { status: 0, stdout: "/repo\n", stderr: "" };
-    }
-    if (bin === "git" && args[0] === "rev-parse" && args[1] === "HEAD") {
-      return { status: 0, stdout: "a".repeat(40) + "\n", stderr: "" };
-    }
-    if (bin === "git" && args[0] === "rev-parse" && args[1] === "--abbrev-ref") {
-      return { status: 0, stdout: "main\n", stderr: "" };
-    }
-    if (bin === "git" && args[0] === "status") {
-      return { status: 0, stdout: "", stderr: "" };
-    }
-    if (bin === "git" && args[0] === "remote") {
-      return { status: 0, stdout: "https://github.com/mrdzyn/relatehandoff.git\n", stderr: "" };
-    }
-    if (bin === "git" && args[0] === "config") {
-      return { status: 1, stdout: "", stderr: "" };
+    if (bin === "git") {
+      const sub = args[0] === "--no-optional-locks" ? args.slice(1) : args;
+      if (sub[0] === "--version") {
+        return { status: 0, stdout: "git version 2.45.0\n", stderr: "" };
+      }
+      if (sub[0] === "rev-parse" && sub[1] === "--show-toplevel") {
+        return { status: 0, stdout: "/repo\n", stderr: "" };
+      }
+      if (sub[0] === "rev-parse" && sub[1] === "HEAD") {
+        return { status: 0, stdout: "a".repeat(40) + "\n", stderr: "" };
+      }
+      if (sub[0] === "rev-parse" && sub[1] === "--abbrev-ref") {
+        return { status: 0, stdout: "main\n", stderr: "" };
+      }
+      if (sub[0] === "status") {
+        return { status: 0, stdout: "", stderr: "" };
+      }
+      if (sub[0] === "remote") {
+        return { status: 0, stdout: "https://github.com/mrdzyn/relatehandoff.git\n", stderr: "" };
+      }
+      if (sub[0] === "config") {
+        return { status: 1, stdout: "", stderr: "" };
+      }
     }
     if ((bin === "relate" || bin.endsWith("relate") || bin.endsWith("relate.exe")) && args[0] === "--version") {
       return { status: 0, stdout: "Relate v1.0.1 License: Apache 2.0\n", stderr: "" };
     }
     if ((bin === "relate" || bin.endsWith("relate") || bin.endsWith("relate.exe")) && args[0] === "serve") {
-      return { status: 0, stdout: '{"jsonrpc":"2.0","id":1,"result":{}}\n', stderr: "" };
+      return {
+        status: 0,
+        stdout: [
+          JSON.stringify({ jsonrpc: "2.0", id: 1, result: { protocolVersion: "2024-11-05" } }),
+          JSON.stringify({ jsonrpc: "2.0", id: 2, result: { tools: [{ name: "cypher_read" }] } }),
+        ].join("\n") + "\n",
+        stderr: "",
+      };
     }
     return { status: 1, stdout: "", stderr: "unexpected command" };
   };
@@ -238,4 +248,153 @@ test("doctor CLI: read-only on real git repo and copied example store", () => {
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
+});
+
+test("RH15-01: rejects missing, malformed, partial, or error MCP initialize/tools/list responses", () => {
+  const cases = [
+    {
+      name: "missing tools/list",
+      stdout: JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }) + "\n",
+    },
+    {
+      name: "malformed JSON",
+      stdout: "{not-json}\n",
+    },
+    {
+      name: "JSON-RPC error in tools/list",
+      stdout:
+        JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }) +
+        "\n" +
+        JSON.stringify({ jsonrpc: "2.0", id: 2, error: { code: -32601, message: "method not found" } }) +
+        "\n",
+    },
+    {
+      name: "partial result without tools array",
+      stdout:
+        JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }) +
+        "\n" +
+        JSON.stringify({ jsonrpc: "2.0", id: 2, result: { tools: "invalid" } }) +
+        "\n",
+    },
+  ];
+
+  for (const tc of cases) {
+    const { deps } = makeFakeDeps({
+      runCmd: (bin, args) => {
+        if (bin === "git") {
+          const sub = args[0] === "--no-optional-locks" ? args.slice(1) : args;
+          if (sub[0] === "--version") return { status: 0, stdout: "git version 2.45.0\n", stderr: "" };
+          if (sub[0] === "rev-parse" && sub[1] === "HEAD") return { status: 0, stdout: "a".repeat(40) + "\n", stderr: "" };
+          if (sub[0] === "remote") return { status: 0, stdout: "org/repo\n", stderr: "" };
+          if (sub[0] === "status") return { status: 0, stdout: "", stderr: "" };
+          return { status: 0, stdout: "main\n", stderr: "" };
+        }
+        if (args[0] === "--version") return { status: 0, stdout: "Relate v1.0.1\n", stderr: "" };
+        return { status: 0, stdout: tc.stdout, stderr: "" };
+      },
+    });
+    const report = runDoctor({ repo: "/repo", store: "/store" }, deps);
+    assert.equal(report.checks.find((c) => c.id === "relate-store").status, "FAIL", tc.name);
+    assert.equal(report.exitCode, 1, tc.name);
+  }
+});
+
+test("RH15-02: git diagnostics use --no-optional-locks and never mutate .git/index", () => {
+  const { deps, calls } = makeFakeDeps();
+  runDoctor({ repo: "/repo", store: "/store" }, deps);
+  const repoGitCalls = calls.filter((c) => c.bin === "git" && c.args[0] !== "--version");
+  assert.ok(repoGitCalls.length > 0);
+  for (const c of repoGitCalls) {
+    assert.equal(c.args[0], "--no-optional-locks");
+  }
+
+  const tmpRepo = fs.mkdtempSync(path.join(os.tmpdir(), "rh-doctor-gitidx-"));
+  try {
+    execFileSync("git", ["init"], { cwd: tmpRepo, stdio: "ignore" });
+    execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: tmpRepo, stdio: "ignore" });
+    execFileSync("git", ["config", "user.name", "Test"], { cwd: tmpRepo, stdio: "ignore" });
+    execFileSync("git", ["remote", "add", "origin", "https://github.com/mrdzyn/relatehandoff.git"], {
+      cwd: tmpRepo,
+      stdio: "ignore",
+    });
+    const tracked = path.join(tmpRepo, "README.md");
+    fs.writeFileSync(tracked, "hello\n");
+    execFileSync("git", ["add", "README.md"], { cwd: tmpRepo, stdio: "ignore" });
+    execFileSync("git", ["commit", "-m", "init"], { cwd: tmpRepo, stdio: "ignore" });
+
+    // Touch tracked file mtime so a normal `git status` without --no-optional-locks would refresh .git/index
+    const future = new Date(Date.now() + 60_000);
+    fs.utimesSync(tracked, future, future);
+
+    const indexPath = path.join(tmpRepo, ".git", "index");
+    const beforeIndex = crypto.createHash("sha256").update(fs.readFileSync(indexPath)).digest("hex");
+
+    const res = spawnSync(
+      process.execPath,
+      [path.join(REPO_ROOT, "src", "cli.mjs"), "doctor", "--repo", tmpRepo, "--json"],
+      { encoding: "utf8" }
+    );
+    assert.equal(res.status, 0);
+    const afterIndex = crypto.createHash("sha256").update(fs.readFileSync(indexPath)).digest("hex");
+    assert.equal(afterIndex, beforeIndex);
+  } finally {
+    fs.rmSync(tmpRepo, { recursive: true, force: true });
+  }
+});
+
+test("RH15-03: redacts secrets in config-derived repo identity, paths, and JSON reports", () => {
+  const { deps } = makeFakeDeps({
+    env: {
+      PATH: "/usr/bin",
+      RELATE_BIN: "/tmp/bin?token=secret_tok_123",
+    },
+    fsImpl: {
+      realpathSync: (p) => p,
+      statSync: () => ({ isDirectory: () => true }),
+      accessSync: () => {},
+      existsSync: (p) => !String(p).includes("secret_tok_123"),
+    },
+    runCmd: (bin, args) => {
+      if (bin === "git") {
+        const sub = args[0] === "--no-optional-locks" ? args.slice(1) : args;
+        if (sub[0] === "--version") return { status: 0, stdout: "git version 2.45.0\n", stderr: "" };
+        if (sub[0] === "rev-parse" && sub[1] === "HEAD") return { status: 0, stdout: "a".repeat(40) + "\n", stderr: "" };
+        if (sub[0] === "config") return { status: 0, stdout: "ghp_secretconfigtoken12345\n", stderr: "" };
+        if (sub[0] === "remote") return { status: 1, stdout: "", stderr: "" };
+        if (sub[0] === "status") return { status: 0, stdout: "", stderr: "" };
+        return { status: 0, stdout: "main\n", stderr: "" };
+      }
+      return { status: 1, stdout: "", stderr: "" };
+    },
+  });
+
+  const report = runDoctor({ repo: "/repo", store: "/store?access_token=abc12345" }, deps);
+  const serialized = JSON.stringify(report);
+  const formatted = formatDoctorReport(report);
+  for (const text of [serialized, formatted]) {
+    assert.ok(!text.includes("secret_tok_123"));
+    assert.ok(!text.includes("ghp_secretconfigtoken12345"));
+    assert.ok(!text.includes("abc12345"));
+  }
+});
+
+test("RH15-04: invalid CLI usage and unsupported doctor flags exit 2 while failed checks exit 1", () => {
+  const cliPath = path.join(REPO_ROOT, "src", "cli.mjs");
+
+  const unsupportedFlag = spawnSync(process.execPath, [cliPath, "doctor", "--bogus", "1"], { encoding: "utf8" });
+  assert.equal(unsupportedFlag.status, 2);
+  assert.match(unsupportedFlag.stderr, /Unsupported flag for doctor/);
+
+  const missingVal = spawnSync(process.execPath, [cliPath, "doctor", "--store"], { encoding: "utf8" });
+  assert.equal(missingVal.status, 2);
+
+  const unknownCmd = spawnSync(process.execPath, [cliPath, "unknown-cmd"], { encoding: "utf8" });
+  assert.equal(unknownCmd.status, 2);
+
+  const failedCheck = spawnSync(
+    process.execPath,
+    [cliPath, "doctor", "--repo", REPO_ROOT, "--store", path.join(REPO_ROOT, "does-not-exist-store")],
+    { encoding: "utf8" }
+  );
+  assert.equal(failedCheck.status, 1);
 });
