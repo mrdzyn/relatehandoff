@@ -17,7 +17,7 @@
 - **Approved RH-LOCAL-T1 merged baseline:** `c9e3a46db8723928b37c2d639122934541ee7fcc` (PR #15 squash merge)
 - **Working branch:** `feat/rh-local-t2a-resume-output`
 - **Active task:** `tasks/RH-LOCAL-T2A-resume-output.md`
-- **Active handoff:** RH-LOCAL-T2A-1
+- **Active handoff:** RH-LOCAL-T2A-2
 
 ## Completed foundation
 - Created a new project-mode repository from `mrdzyn/ai-native-project-template`; pruned unselected optional packs and inherited master history.

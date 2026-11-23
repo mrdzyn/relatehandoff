@@ -284,3 +284,51 @@ test("resume CLI (real Relate v1.0.1): default JSON unchanged and --format markd
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
+test("RH16-01: renders accurate limitation notes for actual evaluateFreshness AUTHENTICATED and FAILED outcomes", () => {
+  const base = makeSampleResult();
+
+  const authFreshness = evaluateFreshness({
+    handoff: base.handoff,
+    evidenceList: base.evidence,
+    gitState: base.gitState,
+    remoteVerified: false,
+    inProcessVerification: {
+      status: "PASS",
+      headSha: SHA_A,
+      validationProfile: "test",
+    },
+  });
+  assert.equal(authFreshness.executionAuthenticity, "AUTHENTICATED");
+  assert.equal(authFreshness.status, "VERIFIED");
+
+  const authMd = formatResumeMarkdown({ ...base, freshness: authFreshness });
+  assert.match(authMd, /\*\*Execution authenticity:\*\* AUTHENTICATED/);
+  assert.match(authMd, /In-process verification passed on clean matching HEAD/);
+  assert.match(authMd, /local Relate store remains unsigned/);
+  assert.match(authMd, /remote PR state is unverified/);
+
+  const failedFreshness = evaluateFreshness({
+    handoff: base.handoff,
+    evidenceList: [
+      {
+        id: "ev-fail",
+        kind: "TEST",
+        command: "npm test",
+        status: "FAIL",
+        headSha: SHA_A,
+        observedAt: "2026-11-23T00:00:00Z",
+        executionMode: "RUNNER_RECORDED_UNSIGNED",
+      },
+    ],
+    gitState: base.gitState,
+    remoteVerified: false,
+  });
+  assert.equal(failedFreshness.executionAuthenticity, "FAILED");
+  assert.equal(failedFreshness.status, "BLOCKED");
+
+  const failedMd = formatResumeMarkdown({ ...base, freshness: failedFreshness });
+  assert.match(failedMd, /\*\*Overall status:\*\* BLOCKED/);
+  assert.match(failedMd, /\*\*Execution authenticity:\*\* FAILED/);
+  assert.match(failedMd, /status is BLOCKED until the failing check or mismatch is resolved/);
+});

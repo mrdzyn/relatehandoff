@@ -88,14 +88,14 @@ export function canonicalizeResumeResult(result) {
 
 function authenticityLimitationNote(authenticity) {
   switch (authenticity) {
-    case "VERIFIED":
-      return "In-process verification passed on clean matching HEAD; local Relate store remains unsigned.";
+    case "AUTHENTICATED":
+      return "In-process verification passed on clean matching HEAD; persisted local Relate store remains unsigned and remote PR state is unverified unless separately checked.";
+    case "FAILED":
+      return "Verification or repository identity check failed; status is BLOCKED until the failing check or mismatch is resolved.";
     case "UNVERIFIED":
       return "Stored runner evidence is unsigned in the local Relate store or incomplete; read alone cannot establish cryptographic authenticity (run `resume --verify <profile>` to verify locally).";
     case "SELF_ASSERTED":
       return "Recorded evidence is self-asserted (`SELF_ASSERTED`) and unauthenticated; do not treat as `VERIFIED`.";
-    case "BLOCKED":
-      return "Verification or repository check failed/mismatched; treat as blocked until resolved.";
     case "MISSING":
     default:
       return "No verified execution evidence is available for this handoff/HEAD.";
