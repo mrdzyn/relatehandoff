@@ -763,4 +763,20 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Native Linux and Windows validation on target OS hosts (`UNVERIFIED` on this macOS host).
 - Keep `RH-P5-T1`–`T8`, package publishing, `cloud/`, Cloudflare resources, and deployment on hold / gated on explicit owner approval.
 
+## Handoff: RH-LOCAL-T5-2
+
+- **Task:** `tasks/RH-LOCAL-T5-dx-onboarding.md` (PR #19 non-blocking documentation advisories)
+- **From:** Antigravity (README simulated workflow framing, post-record doctor check, and subshell cleanup safety)
+- **To:** focused independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `docs/rh-local-t5-dx-onboarding` (Draft PR #19)
+- **Input HEAD:** `a8d7b087357f681303b8bfb04276d0e365bf917b`
+
+### Verified evidence
+- **README.md & docs/ONBOARDING-AND-DISTRIBUTION.md:** Moved `doctor --repo "$REPO_DIR" --store "$STORE_DIR"` after the first `record` succeeds without `|| true` so Doctor failures are never silently ignored; labeled the scratch CLI walkthrough explicitly as a **simulated multi-agent scenario** distinct from historical owner-reported execution in `docs/RH-P2-REAL-AGENT-PROOF.md`; wrapped offline clean-clone `cd` steps in a subshell `( ... )` before `rm -rf` so callers never end in a deleted working directory; replaced local machine paths in onboarding docs with generic `~` / `.`.
+- Re-executed the updated README copy-paste simulated workflow in a temporary `/tmp` workspace with `doctor` failing closed (no `|| true`), confirming exit `0` across all commands.
+
+### Remaining
+- Focused independent COMMENT-only delta review on the updated HEAD, rebase onto updated `main` after PR #18 and PR #21 merge, and explicit owner merge approval.
+- Keep `RH-P5-T1`–`T8`, package publishing, `cloud/`, Cloudflare resources, and deployment on hold / gated on explicit owner approval.
+
 <!-- HANDOFF_ENTRIES_END -->

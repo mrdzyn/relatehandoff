@@ -16,7 +16,7 @@
 - **Relate CLI binary:** Separate `relate` `v1.0.1` executable (NOT installed by `npm ci`). Obtain from [official v1.0.1 release artifacts](https://github.com/relatedb/relate/releases/tag/v1.0.1) and verify per [Relate install docs](https://relatedb.ai/docs/get-started/install/), or set `RELATE_BIN` to its absolute path.
 
 ### macOS (Apple Silicon ARM64 / Intel x64)
-- **Verification status on this host:** **macOS ARM64 (`darwin`, Mach-O 64-bit arm64 `Relate v1.0.1` at `/Users/macjohn/.local/bin/relate`) VERIFIED** in this session; Intel `darwin-x64` native execution is **UNVERIFIED** on this host.
+- **Verification status on this host:** **macOS ARM64 (`darwin`, Mach-O 64-bit arm64 `Relate v1.0.1` at `~/.local/bin/relate`) VERIFIED** in this session; Intel `darwin-x64` native execution is **UNVERIFIED** on this host.
 - **Install & verify:**
   ```bash
   node --version
@@ -65,7 +65,7 @@
 
 ## 2. Offline Clean-Clone Reproducibility Verification
 
-Verified on **2026-11-23** on **macOS ARM64 (`darwin`)** (`Node.js v26.7.0`, `Python 3.15.2`, `Git 2.54.0 (Apple Git-157)`, `Relate v1.0.1` at `/Users/macjohn/.local/bin/relate`) against local commit `1a77147e3bb237d94ee3d4e4e5f5d5907be55c70` (`main` baseline for `RH-LOCAL-T5`). Temporary directories in `/tmp` were removed on exit (`trap "rm -rf ..." EXIT`).
+Verified on **2026-11-23** on **macOS ARM64 (`darwin`)** (`Node.js v26.7.0`, `Python 3.15.2`, `Git 2.54.0 (Apple Git-157)`, `Relate v1.0.1` at `~/.local/bin/relate`) against local commit `1a77147e3bb237d94ee3d4e4e5f5d5907be55c70` (`main` baseline for `RH-LOCAL-T5`). Temporary directories in `/tmp` were removed on exit (`trap "rm -rf ..." EXIT`).
 
 ### Observation A — Raw `git clone --local` without updating `origin`
 When cloning from a local directory path (`git clone --local <worktree> /tmp/.../repo`), Git sets `origin` to the local filesystem path instead of `mrdzyn/relatehandoff`:
@@ -80,13 +80,15 @@ Running the exact same offline clean-clone workflow with `git remote set-url ori
 ```bash
 TMPDIR_OFFLINE="$(mktemp -d /tmp/rh-local-t5-offline.XXXXXX)"
 trap 'rm -rf "$TMPDIR_OFFLINE"' EXIT
-git clone --local /Users/macjohn/Documents/relatehandoff/.claude/worktrees/rh-local-t5 "$TMPDIR_OFFLINE/repo"
-cd "$TMPDIR_OFFLINE/repo"
-git remote set-url origin https://github.com/mrdzyn/relatehandoff.git
-npm ci --offline
-node src/cli.mjs doctor --repo . --store examples/example-store
-node src/cli.mjs resume --store examples/example-store --repo . --repo-id mrdzyn/relatehandoff --task RH-P1 --format markdown
-RELATE_REQUIRE_CLI=1 npm test
+git clone --local . "$TMPDIR_OFFLINE/repo"
+(
+  cd "$TMPDIR_OFFLINE/repo"
+  git remote set-url origin https://github.com/mrdzyn/relatehandoff.git
+  npm ci --offline
+  node src/cli.mjs doctor --repo . --store examples/example-store
+  node src/cli.mjs resume --store examples/example-store --repo . --repo-id mrdzyn/relatehandoff --task RH-P1 --format markdown
+  RELATE_REQUIRE_CLI=1 npm test
+)
 ```
 
 Observed results on `1a77147e3bb237d94ee3d4e4e5f5d5907be55c70`:

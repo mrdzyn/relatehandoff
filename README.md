@@ -50,11 +50,11 @@ All commands run strictly offline against a local Git checkout and local Relate 
 
 Supported `--verify <profile>` allowlist (`src/attestation.mjs`, requires a clean Git worktree): `node-test-suite`, `relatehandoff-tests`, `relatehandoff-build`, `relatehandoff-security`.
 
-## Copy-paste multi-agent workflows
+## Copy-paste simulated multi-agent workflow
 
-The self-contained example below uses a temporary synthetic repository and store in `/tmp` so you can copy-paste every step safely without touching `relatehandoff`'s own Git history:
+> **Note:** The self-contained `/tmp` walkthrough below is a **simulated multi-agent scenario** run manually by a single developer/shell against the real Relate engine using synthetic repository and agent labels (`codex-writer`, `claude-reviewer`, `gemini-auditor`); it does not independently execute Codex, Claude, or Gemini. For historical owner-reported cross-agent execution, see [`docs/RH-P2-REAL-AGENT-PROOF.md`](docs/RH-P2-REAL-AGENT-PROOF.md).
 
-### 1. Initialize a clean scratch workspace and record a verified handoff (`Agent A`)
+### 1. Initialize a clean scratch workspace, record a verified handoff, and inspect with `doctor` (`Simulated Agent A`)
 
 ```bash
 WORK_ROOT="$(mktemp -d /tmp/rh-workflow.XXXXXX)"
@@ -91,11 +91,11 @@ cat > "$WORK_ROOT/handoff-1.json" <<EOF
 }
 EOF
 
-node src/cli.mjs doctor --repo "$REPO_DIR" --store "$STORE_DIR" || true
 node src/cli.mjs record --store "$STORE_DIR" --repo "$REPO_DIR" --input "$WORK_ROOT/handoff-1.json" --verify node-test-suite
+node src/cli.mjs doctor --repo "$REPO_DIR" --store "$STORE_DIR"
 ```
 
-### 2. Resume and verify as the next agent (`Agent B`)
+### 2. Simulate receiving agent resume and verification (`Simulated Agent B`)
 
 ```bash
 # Safe Markdown summary for agent/human review (read-only MCP; unsigned local store -> UNVERIFIED)
@@ -154,12 +154,14 @@ rm -rf "$WORK_ROOT"
   ```bash
   TMP_CLONE="$(mktemp -d /tmp/rh-offline.XXXXXX)"
   git clone --local . "$TMP_CLONE/repo"
-  cd "$TMP_CLONE/repo"
-  git remote set-url origin https://github.com/mrdzyn/relatehandoff.git
-  npm ci --offline   # requires populated local npm cache; otherwise copy node_modules offline
-  node src/cli.mjs doctor --repo . --store examples/example-store
-  node src/cli.mjs resume --store examples/example-store --repo . --repo-id mrdzyn/relatehandoff --task RH-P1 --format markdown
-  RELATE_REQUIRE_CLI=1 npm test
+  (
+    cd "$TMP_CLONE/repo"
+    git remote set-url origin https://github.com/mrdzyn/relatehandoff.git
+    npm ci --offline   # requires populated local npm cache; otherwise copy node_modules offline
+    node src/cli.mjs doctor --repo . --store examples/example-store
+    node src/cli.mjs resume --store examples/example-store --repo . --repo-id mrdzyn/relatehandoff --task RH-P1 --format markdown
+    RELATE_REQUIRE_CLI=1 npm test
+  )
   rm -rf "$TMP_CLONE"
   ```
 - **Persistent MCP snapshot limit:** Long-lived external `relate serve --mcp stdio --read-only` servers retain an open-time snapshot; restart them after external writer updates. `relatehandoff resume` and `relatehandoff list` automatically spawn fresh short-lived read-only servers.

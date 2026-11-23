@@ -3,7 +3,7 @@
 ## Project
 - **Name:** RelateHandoff
 - **Current phase:** RH-LOCAL-T5 Developer Experience & Onboarding (documentation, workflows, offline reproducibility, and distribution/licensing readiness; hosted RH-P5 roadmap remains **ON HOLD**)
-- **Status:** RH-P5 planning (PRs #11–#13), the **LOCAL-ONLY FOR NOW** direction (PR #14 `1d89213c3c8ab8a7bef205ab8696e0b5659d97e3`), RH-LOCAL-T1 (`relatehandoff doctor`, PR #15 `c9e3a46db8723928b37c2d639122934541ee7fcc`), RH-LOCAL-T2A (deterministic safe `resume` output, PR #16 `176e5c2005bf63583c4f33a918bd12e5d6005fb2`), and RH-LOCAL-T2B (`relatehandoff list` & immutable `[:SUPERSEDES]` handoff lifecycle, PR #17 `1a77147e3bb237d94ee3d4e4e5f5d5907be55c70`) are squash-merged to `main`. RH-LOCAL-T5 updates `README.md` with all shipped local-only commands and multi-agent workflows, adds `docs/ONBOARDING-AND-DISTRIBUTION.md` with platform setup/troubleshooting, verified macOS ARM64 offline clean-clone reproducibility results, and Apache-2.0 / `@relate/relate@1.0.1` / Relate CLI licensing readiness review (keeping package publishing gated on owner approval). `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` local-only restrictions remain authoritative and unchanged. No `cloud/` code, Worker, D1/KV/R2 resource, OAuth client, DNS, deployment, video or Devpost action exists or is authorized.
+- **Status:** RH-P5 planning (PRs #11–#13), the **LOCAL-ONLY FOR NOW** direction (PR #14 `1d89213c3c8ab8a7bef205ab8696e0b5659d97e3`), RH-LOCAL-T1 (`relatehandoff doctor`, PR #15 `c9e3a46db8723928b37c2d639122934541ee7fcc`), RH-LOCAL-T2A (deterministic safe `resume` output, PR #16 `176e5c2005bf63583c4f33a918bd12e5d6005fb2`), and RH-LOCAL-T2B (`relatehandoff list` & immutable `[:SUPERSEDES]` handoff lifecycle, PR #17 `1a77147e3bb237d94ee3d4e4e5f5d5907be55c70`) are squash-merged to `main`. RH-LOCAL-T5 updates `README.md` with all shipped local-only commands and simulated multi-agent workflow examples (post-`record` `doctor` with no silent suppression and subshell offline clean-clone steps), adds `docs/ONBOARDING-AND-DISTRIBUTION.md` with platform setup/troubleshooting, verified macOS ARM64 offline clean-clone reproducibility results, and Apache-2.0 / `@relate/relate@1.0.1` / Relate CLI licensing readiness review (keeping package publishing gated on owner approval). `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` local-only restrictions remain authoritative and unchanged. No `cloud/` code, Worker, D1/KV/R2 resource, OAuth client, DNS, deployment, video or Devpost action exists or is authorized.
 - **Primary branch:** `main`
 - **Approved Phase 0 merged baseline:** `7e21fcebc0192ee6f6fecd553ef3619b9ea7465b` (PR #1 squash merge, audited input PR HEAD `3a32213394d762ab33928ed939fc65756d2320db`)
 - **Phase 1 handoff merged baseline:** `7c7d4e9c1efc4911d1250fa9e4e7cef09edd94cf` (PR #2 squash merge)
@@ -19,7 +19,7 @@
 - **Approved RH-LOCAL-T2B merged baseline:** `1a77147e3bb237d94ee3d4e4e5f5d5907be55c70` (PR #17 squash merge)
 - **Working branch:** `docs/rh-local-t5-dx-onboarding`
 - **Active task:** `tasks/RH-LOCAL-T5-dx-onboarding.md`
-- **Active handoff:** RH-LOCAL-T5-1
+- **Active handoff:** RH-LOCAL-T5-2
 
 ## Completed foundation
 - Created a new project-mode repository from `mrdzyn/ai-native-project-template`; pruned unselected optional packs and inherited master history.
