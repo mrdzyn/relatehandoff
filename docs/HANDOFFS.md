@@ -621,4 +621,57 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Owner selection and task-contract approval before implementing any item in `docs/LOCAL-ONLY-ROADMAP.md`.
 - Keep `RH-P5-T1`–`T8`, `cloud/`, Cloudflare resources, and deployment on hold / blocked.
 
+## Handoff: RH-LOCAL-T1-1
+
+- **Task:** `tasks/RH-LOCAL-T1-environment-doctor.md` (RH-LOCAL-T1: CLI Reliability & Environment Doctor)
+- **From:** Antigravity (implementation & local validation)
+- **To:** independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t1-doctor`
+- **Base:** `main@1d89213c3c8ab8a7bef205ab8696e0b5659d97e3` (PR #14 squash merge)
+
+### Verified evidence
+- Implemented strictly read-only `relatehandoff doctor` (`src/doctor.mjs`, wired in `src/cli.mjs` and `package.json`), checking Node.js compatibility, environment PATH/vars, Git CLI and repository/worktree health, Relate CLI v1.0.1 availability and Linux `GLIBC` mismatch detection, and local Relate store read-only access (including read-only MCP `initialize`/`tools/list` probe).
+- Added deterministic tests in `test/doctor.test.mjs` (8 tests) covering healthy PASS, unsupported Node versions, missing executables, Linux `GLIBC_2.39` errors, inaccessible stores, malformed environments, Windows `Path`/`relate.exe`, secret redaction, and real read-only Git/store preservation.
+- Added `tasks/RH-LOCAL-T1-environment-doctor.md` and allowlisted it in `scripts/test_bootstrap.py`.
+
+### Remaining
+- Independent COMMENT-only audit and owner merge approval on the Draft PR.
+- Keep `RH-P5-T1`–`T8`, `cloud/`, Cloudflare resources, and deployment on hold / blocked.
+
+## Handoff: RH-LOCAL-T1-2
+
+- **Task:** `tasks/RH-LOCAL-T1-environment-doctor.md` (PR #15 audit remediation RH15-01…RH15-04)
+- **From:** Antigravity (audit remediation & regression tests)
+- **To:** independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t1-doctor` (Draft PR #15)
+- **Input HEAD:** `68c80ed1b643c34a1dcff59ff957a32a5a10db76`
+
+### Verified evidence
+- **RH15-01 (`src/doctor.mjs`):** Validated both MCP `initialize` (`id: 1`) and `tools/list` (`id: 2`, `Array.isArray(result.tools)`) JSON-RPC responses; rejects missing, malformed, partial, or error responses.
+- **RH15-02 (`src/doctor.mjs`):** Passed `--no-optional-locks` to all repo `git` inspection calls (`rev-parse`, `status --porcelain`, `remote`, `config`) so `.git/index` is never refreshed or written; added `.git/index` SHA-256 integrity regression test.
+- **RH15-03 (`src/doctor.mjs`):** Expanded `sanitizeDiagnosticText` (redacting `Authorization:`, `?token=`, `access_token=`, `secret=`, `password=`, `api_key=`, `ghp_`, `sk-`, `Bearer`, `Basic`, URL userinfo) and applied sanitization to all config-derived repo identities, paths, errors, and JSON/text check outputs.
+- **RH15-04 (`src/cli.mjs`):** Returned exit code `2` for invalid CLI usage (`CliUsageError`) and unsupported `doctor` flags, while retaining exit code `1` for failed health checks.
+- Added focused negative/regression tests in `test/doctor.test.mjs` for `RH15-01` through `RH15-04`.
+
+### Remaining
+- Independent COMMENT-only re-audit on the new exact HEAD.
+- Keep PR #15 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
+
+## Handoff: RH-LOCAL-T1-3
+
+- **Task:** `tasks/RH-LOCAL-T1-environment-doctor.md` (PR #15 follow-up remediation RH15-03 & RH15-05)
+- **From:** Antigravity (strict repo-id validation & Git fail-closed remediation)
+- **To:** focused independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t1-doctor` (Draft PR #15)
+- **Input HEAD:** `e6ab50280f2ec9f7e3975d3f02b0f57ec1f11011`
+
+### Verified evidence
+- **RH15-03 (`src/doctor.mjs`):** Strictly validated repository identities against canonical `owner/repo` (`CANONICAL_REPO_ID_RE`, no `..`); non-canonical or credential-bearing values (including SSH URLs) are suppressed and reported as `WARN` without echoing raw config strings in text or JSON output. Added SSH URL regression test in `test/doctor.test.mjs`.
+- **RH15-05 (`src/doctor.mjs`):** Failed closed (`FAIL`, exit `1`) whenever any Git inspection command (`rev-parse --show-toplevel`, `rev-parse HEAD`, `rev-parse --abbrev-ref HEAD`, `status --porcelain`) returns an error, signal, or nonzero exit status. Added `git status --porcelain` exit-128 regression test with a valid `HEAD`.
+- Preserved `RH15-01`, `RH15-02`, and `RH15-04` fixes and existing `record`/`resume` behavior.
+
+### Remaining
+- Focused independent COMMENT-only re-audit on the new exact HEAD.
+- Keep PR #15 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
+
 <!-- HANDOFF_ENTRIES_END -->

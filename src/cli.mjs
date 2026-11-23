@@ -3,6 +3,17 @@ import fs from "node:fs";
 import path from "node:path";
 import { recordHandoff } from "./recorder.mjs";
 import { resumeTaskViaReadOnlyMcp } from "./mcp_client.mjs";
+import { formatDoctorReport, runDoctor } from "./doctor.mjs";
+
+const BOOLEAN_FLAGS = new Set(["help", "json", "strict"]);
+const DOCTOR_ALLOWED_FLAGS = new Set(["help", "json", "strict", "repo", "store", "relate-bin"]);
+
+class CliUsageError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "CliUsageError";
+  }
+}
 
 function parseArgs(argv) {
   const [command, ...rest] = argv;
@@ -13,25 +24,30 @@ function parseArgs(argv) {
       flags.help = true;
     } else if (arg.startsWith("--")) {
       const key = arg.slice(2);
+      if (BOOLEAN_FLAGS.has(key)) {
+        flags[key] = true;
+        continue;
+      }
       const val = rest[i + 1];
       if (!val || val.startsWith("--")) {
-        throw new Error(`Missing value for flag --${key}`);
+        throw new CliUsageError(`Missing value for flag --${key}`);
       }
       flags[key] = val;
       i++;
     } else {
-      throw new Error(`Unexpected positional argument: ${arg}`);
+      throw new CliUsageError(`Unexpected positional argument: ${arg}`);
     }
   }
   return { command, flags };
 }
 
 function printHelp() {
-  console.log(`RelateHandoff CLI (RH-P1)
+  console.log(`RelateHandoff CLI
 
 Usage:
   node src/cli.mjs record --store <dir> --repo <dir> --input <json-file> [--repo-id <owner/repo>] [--verify <profile>]
   node src/cli.mjs resume --store <dir> --repo <dir> --task <taskId> [--repo-id <owner/repo>] [--verify <profile>]
+  node src/cli.mjs doctor [--repo <dir>] [--store <dir>] [--relate-bin <path>] [--json] [--strict]
   node src/cli.mjs --help`);
 }
 
@@ -73,12 +89,33 @@ function main() {
     return;
   }
 
-  throw new Error(`Unknown command: ${command}`);
+  if (command === "doctor") {
+    for (const key of Object.keys(flags)) {
+      if (!DOCTOR_ALLOWED_FLAGS.has(key)) {
+        throw new CliUsageError(`Unsupported flag for doctor: --${key}`);
+      }
+    }
+    const report = runDoctor({
+      repo: flags.repo,
+      store: flags.store,
+      relateBin: flags["relate-bin"],
+      strict: Boolean(flags.strict),
+    });
+    if (flags.json) {
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      console.log(formatDoctorReport(report));
+    }
+    process.exitCode = report.exitCode;
+    return;
+  }
+
+  throw new CliUsageError(`Unknown command: ${command}`);
 }
 
 try {
   main();
 } catch (err) {
   console.error(`Error: ${err.message}`);
-  process.exit(1);
+  process.exit(err instanceof CliUsageError ? 2 : 1);
 }
