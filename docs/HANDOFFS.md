@@ -744,4 +744,23 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Focused independent COMMENT-only re-audit on the new exact HEAD.
 - Keep PR #17 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
 
+## Handoff: RH-LOCAL-T5-1
+
+- **Task:** `tasks/RH-LOCAL-T5-dx-onboarding.md` (RH-LOCAL-T5: Developer Experience & Onboarding)
+- **From:** Antigravity (documentation, offline clean-clone verification, and distribution readiness)
+- **To:** independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `docs/rh-local-t5-dx-onboarding`
+- **Base:** `main@1a77147e3bb237d94ee3d4e4e5f5d5907be55c70` (PR #17 squash merge)
+
+### Verified evidence
+- Created bounded task contract `tasks/RH-LOCAL-T5-dx-onboarding.md` and added its allowlist entry to `scripts/test_bootstrap.py` with all fail-closed checks preserved.
+- Updated `README.md` (no `src/` edits) to reflect current local-only status and all shipped commands (`doctor`, `record --verify/--supersedes/--supersession-reason`, `resume --format json|markdown --handoff --verify`, `list --task --status --branch --agent --limit --format`), copy-paste multi-agent workflows, Linux `GLIBC_2.36` vs `GLIBC_2.39` source-build guidance, offline clean-clone reproducibility steps, and `docs/AGENT-ORCHESTRATION.md` reference.
+- Created `docs/ONBOARDING-AND-DISTRIBUTION.md` covering platform-by-platform installation & troubleshooting (macOS ARM64 verified on this host; native Linux and Windows explicitly marked `UNVERIFIED` on this macOS host), offline clean-clone reproducibility results in `/tmp` (`git clone --local`, `npm ci --offline`, `doctor`, `resume`, `RELATE_REQUIRE_CLI=1 npm test` 42/42 PASS after setting canonical `origin` offline; raw path-based `origin` failure also documented), and distribution/licensing readiness (`Apache-2.0`, `@relate/relate@1.0.1` + Neo4j Labs disclaimer, Relate CLI notices, `koffi@2.16.4` MIT notice, explicit gate against publishing without owner approval).
+- Updated `docs/STATUS.md` to point to `docs/rh-local-t5-dx-onboarding` / `tasks/RH-LOCAL-T5-dx-onboarding.md` / `RH-LOCAL-T5-1`.
+
+### Remaining
+- Independent COMMENT-only audit and owner merge approval on the RH-LOCAL-T5 Draft PR.
+- Native Linux and Windows validation on target OS hosts (`UNVERIFIED` on this macOS host).
+- Keep `RH-P5-T1`–`T8`, package publishing, `cloud/`, Cloudflare resources, and deployment on hold / gated on explicit owner approval.
+
 <!-- HANDOFF_ENTRIES_END -->
