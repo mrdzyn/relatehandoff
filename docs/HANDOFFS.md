@@ -674,4 +674,38 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Focused independent COMMENT-only re-audit on the new exact HEAD.
 - Keep PR #15 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
 
+## Handoff: RH-LOCAL-T2A-1
+
+- **Task:** `tasks/RH-LOCAL-T2A-resume-output.md` (RH-LOCAL-T2A: Deterministic Multi-Agent Resume Output)
+- **From:** Antigravity (implementation & local validation)
+- **To:** independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t2a-resume-output`
+- **Base:** `main@c9e3a46db8723928b37c2d639122934541ee7fcc` (PR #15 squash merge)
+
+### Verified evidence
+- Added `src/resume_format.mjs` (`canonicalizeResumeResult`, `formatResumeMarkdown`, `escapeMarkdownText`, `stripUnsafeControlChars`, `compareCodeUnits`) and wired deterministic ordering into `src/mcp_client.mjs` and `--format json|markdown` (default `json`, exit `2` on invalid `--format`) into `src/cli.mjs`.
+- Preserved default JSON output, exact freshness/authenticity semantics (never relabels `SELF_ASSERTED`/unsigned evidence as `VERIFIED`), read-only MCP access, parameterized queries, and 100-row detail bounds.
+- Added focused tests in `test/resume_output.test.mjs` covering JSON compatibility, deterministic ordering, Markdown escaping & ANSI stripping, stale HEADs, missing handoffs, authenticity statuses, 100-row bounds, invalid `--format` exit 2, and real Relate v1.0.1 `example-store` integration.
+
+### Remaining
+- Independent COMMENT-only audit and owner merge approval on the Draft PR.
+- Keep `RH-P5-T1`–`T8`, `cloud/`, Cloudflare resources, and deployment on hold / blocked.
+
+## Handoff: RH-LOCAL-T2A-2
+
+- **Task:** `tasks/RH-LOCAL-T2A-resume-output.md` (PR #16 audit remediation RH16-01)
+- **From:** Antigravity (authenticityLimitationNote alignment & regression tests)
+- **To:** focused independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t2a-resume-output` (Draft PR #16)
+- **Input HEAD:** `d9e2fe2d8ef70a8a6fa921579296ee2e0b9564b3`
+
+### Verified evidence
+- **RH16-01 (`src/resume_format.mjs`):** Updated `authenticityLimitationNote` to handle the exact `executionAuthenticity` enum values returned by `evaluateFreshness` (`AUTHENTICATED`, `FAILED`, `UNVERIFIED`, `SELF_ASSERTED`, `MISSING`), accurately preserving unsigned-store and remote-PR limitations on `AUTHENTICATED` and explicit `BLOCKED`/failure messaging on `FAILED`.
+- Added regression tests in `test/resume_output.test.mjs` using actual `evaluateFreshness` outcomes for both `AUTHENTICATED` and `FAILED`.
+- Preserved all existing freshness semantics, JSON compatibility, deterministic ordering, Markdown safety, and read-only MCP behavior.
+
+### Remaining
+- Focused independent COMMENT-only re-audit on the new exact HEAD.
+- Keep PR #16 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
+
 <!-- HANDOFF_ENTRIES_END -->

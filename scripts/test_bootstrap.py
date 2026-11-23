@@ -23,6 +23,7 @@ assert active_task_path in {
     "tasks/RH-P4-cloudflare-judge-showcase.md",
     "tasks/RH-P5-remote-mcp-platform.md",
     "tasks/RH-LOCAL-T1-environment-doctor.md",
+    "tasks/RH-LOCAL-T2A-resume-output.md",
 }, "Unexpected active task in P0/P1/P2/P3/P4/P5/LOCAL foundation"
 assert (ROOT / active_task_path).is_file(), "STATUS active task file not found"
 assert "tasks/RH-P1-relate-handoff-mvp.md" in status
