@@ -621,4 +621,21 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Owner selection and task-contract approval before implementing any item in `docs/LOCAL-ONLY-ROADMAP.md`.
 - Keep `RH-P5-T1`–`T8`, `cloud/`, Cloudflare resources, and deployment on hold / blocked.
 
+## Handoff: RH-LOCAL-T1-1
+
+- **Task:** `tasks/RH-LOCAL-T1-environment-doctor.md` (RH-LOCAL-T1: CLI Reliability & Environment Doctor)
+- **From:** Antigravity (implementation & local validation)
+- **To:** independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t1-doctor`
+- **Base:** `main@1d89213c3c8ab8a7bef205ab8696e0b5659d97e3` (PR #14 squash merge)
+
+### Verified evidence
+- Implemented strictly read-only `relatehandoff doctor` (`src/doctor.mjs`, wired in `src/cli.mjs` and `package.json`), checking Node.js compatibility, environment PATH/vars, Git CLI and repository/worktree health, Relate CLI v1.0.1 availability and Linux `GLIBC` mismatch detection, and local Relate store read-only access (including read-only MCP `initialize`/`tools/list` probe).
+- Added deterministic tests in `test/doctor.test.mjs` (8 tests) covering healthy PASS, unsupported Node versions, missing executables, Linux `GLIBC_2.39` errors, inaccessible stores, malformed environments, Windows `Path`/`relate.exe`, secret redaction, and real read-only Git/store preservation.
+- Added `tasks/RH-LOCAL-T1-environment-doctor.md` and allowlisted it in `scripts/test_bootstrap.py`.
+
+### Remaining
+- Independent COMMENT-only audit and owner merge approval on the Draft PR.
+- Keep `RH-P5-T1`–`T8`, `cloud/`, Cloudflare resources, and deployment on hold / blocked.
+
 <!-- HANDOFF_ENTRIES_END -->

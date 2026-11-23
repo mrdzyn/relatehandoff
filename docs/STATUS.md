@@ -2,8 +2,8 @@
 
 ## Project
 - **Name:** RelateHandoff
-- **Current phase:** Local-only direction active (2026-11-23 owner decision: **LOCAL-ONLY FOR NOW**; hosted RH-P5 roadmap **ON HOLD**, `RH-P5-T1`–`T8` not executed)
-- **Status:** RH-P5 planning (PR #11 `19fcf51f7f8d362b9fd25b57bdb842f1c0583546`, PR #12 `bab22382194da309c051d27444faf2384ce0ecb5`, PR #13 `45865fe6c3f0c5bce128fe9d7599fa9fc015930c`) is squash-merged to `main`. Per owner decision (**LOCAL-ONLY FOR NOW**, 2026-11-23), the hosted RH-P5 roadmap is **ON HOLD** while its approved D0–D6 architecture proposals remain preserved as historical reference; `RH-P5-T1` through `T8` must not be executed. `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` local-only restrictions remain authoritative and unchanged. A focused local-only improvement roadmap is proposed in `docs/LOCAL-ONLY-ROADMAP.md`. No `cloud/` code, Worker, D1/KV/R2 resource, OAuth client, DNS, deployment, video or Devpost action exists or is authorized.
+- **Current phase:** RH-LOCAL-T1 CLI Reliability & Environment Doctor (`relatehandoff doctor`, local-only; hosted RH-P5 roadmap remains **ON HOLD**)
+- **Status:** RH-P5 planning (PR #11 `19fcf51f7f8d362b9fd25b57bdb842f1c0583546`, PR #12 `bab22382194da309c051d27444faf2384ce0ecb5`, PR #13 `45865fe6c3f0c5bce128fe9d7599fa9fc015930c`) and the **LOCAL-ONLY FOR NOW** direction (PR #14 `1d89213c3c8ab8a7bef205ab8696e0b5659d97e3`) are squash-merged to `main`. RH-LOCAL-T1 implements the strictly read-only `relatehandoff doctor` command (`src/doctor.mjs`, `src/cli.mjs`, `test/doctor.test.mjs`). `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` local-only restrictions remain authoritative and unchanged. No `cloud/` code, Worker, D1/KV/R2 resource, OAuth client, DNS, deployment, video or Devpost action exists or is authorized.
 - **Primary branch:** `main`
 - **Approved Phase 0 merged baseline:** `7e21fcebc0192ee6f6fecd553ef3619b9ea7465b` (PR #1 squash merge, audited input PR HEAD `3a32213394d762ab33928ed939fc65756d2320db`)
 - **Phase 1 handoff merged baseline:** `7c7d4e9c1efc4911d1250fa9e4e7cef09edd94cf` (PR #2 squash merge)
@@ -13,9 +13,10 @@
 - **Approved RH-P5 planning merged baseline:** `19fcf51f7f8d362b9fd25b57bdb842f1c0583546` (PR #11 squash merge, `2026-11-22T16:39:56Z`)
 - **Approved RH-P5 closeout merged baseline:** `bab22382194da309c051d27444faf2384ce0ecb5` (PR #12 squash merge)
 - **Approved RH-P5 D0–D6 record merged baseline:** `45865fe6c3f0c5bce128fe9d7599fa9fc015930c` (PR #13 squash merge)
-- **Working branch:** `docs/local-only-direction`
-- **Active task:** `tasks/RH-P5-remote-mcp-platform.md` (hosted T1–T8 **ON HOLD** per 2026-11-23 owner decision; local-only roadmap proposed in `docs/LOCAL-ONLY-ROADMAP.md`)
-- **Active handoff:** RH-LOCAL-ONLY-1
+- **Approved local-only direction merged baseline:** `1d89213c3c8ab8a7bef205ab8696e0b5659d97e3` (PR #14 squash merge)
+- **Working branch:** `feat/rh-local-t1-doctor`
+- **Active task:** `tasks/RH-LOCAL-T1-environment-doctor.md`
+- **Active handoff:** RH-LOCAL-T1-1
 
 ## Completed foundation
 - Created a new project-mode repository from `mrdzyn/ai-native-project-template`; pruned unselected optional packs and inherited master history.
@@ -51,7 +52,7 @@
 - Revision 6 SQLite inventory/evidence (historical reference): 38/38 unique paths inventoried, 30 protected paths tested locally in owner/implementer-side SQLite runs (172 probes / 516 assertions; not independently re-executed), 8 mutable administrative paths DAL-controlled, and historical 259-assertion equivalence unproven. D1/Miniflare parity and concurrent transaction/race behavior remain UNVERIFIED.
 
 ## Next authorized action
-Review and merge this documentation PR recording the **LOCAL-ONLY FOR NOW** owner decision and the proposed local-only improvement roadmap in `docs/LOCAL-ONLY-ROADMAP.md` (covering CLI reliability, agent handoffs, local stdio MCP, testing, and installation). Keep `RH-P5-T1` through `T8` **ON HOLD** and all `cloud/` code, Cloudflare resource creation, OAuth client setup, UI design-gate opening, and deployment **blocked**. Separately owner-gated from RH-P3/RH-P4: required GitHub topic `relate`, original demo video, distribution license diligence, optional static showcase (RH-P4-T1+), and Devpost submission.
+Independent COMMENT-only audit and owner merge approval for RH-LOCAL-T1 Draft PR (`relatehandoff doctor`), keeping `RH-P5-T1` through `T8` **ON HOLD** and all `cloud/` code, Cloudflare resource creation, OAuth client setup, UI design-gate opening, and deployment **blocked**. Separately owner-gated from RH-P3/RH-P4: required GitHub topic `relate`, original demo video, distribution license diligence, optional static showcase (RH-P4-T1+), and Devpost submission.
 
 ## Verification truth
 - GitHub PR #1–#13 merges, latest `main` baseline `45865fe6c3f0c5bce128fe9d7599fa9fc015930c` (PR #13 squash merge; PR #12 squash merge `bab22382194da309c051d27444faf2384ce0ecb5`; PR #11 squash merge `19fcf51f7f8d362b9fd25b57bdb842f1c0583546`, `2026-11-22T16:39:56Z`; PR #10 squash merge `282e10e600935ee1c1bba34522cb3e3373f3be1d`; PR #7 merged earlier as `81e8e208eeb8a23417e18f2a8d3f379f441e6ed8`): VERIFIED from GitHub. PR #8 licensing and attribution merged after COMMENT-only focused re-audit PASS at `08234ea0b84b6363bac4be8420e830d32ea73ef8`; PR #9 governance P7-01 correction merged after COMMENT-only source audit PASS at `49be3d7685cb12af7c0f5637edb8c6878b92a090`.
