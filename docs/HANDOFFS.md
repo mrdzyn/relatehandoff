@@ -744,6 +744,82 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Focused independent COMMENT-only re-audit on the new exact HEAD.
 - Keep PR #17 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
 
+## Handoff: RH-LOCAL-T3-1
+
+- **Task:** `tasks/RH-LOCAL-T3-local-mcp-integration.md` (RH-LOCAL-T3: Local MCP Integration)
+- **From:** Antigravity (MCP hardening, integration recipes & validation)
+- **To:** independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t3-mcp-integration`
+- **Base:** `main@1a77147e3bb237d94ee3d4e4e5f5d5907be55c70` (PR #17 squash merge)
+
+### Verified evidence
+- Hardened `callRelateMcpBatch` in `src/mcp_client.mjs` (`timeoutMs` bounds `[100, 120000]`, `shell: false`, `killSignal: "SIGKILL"`, `maxBuffer`, unexpected EOF detection, non-object JSON-RPC rejection, duplicate response ID detection, and `sanitizeDiagnosticText` redaction on stderr).
+- Added `verifyReadOnlyMcpServer` in `src/mcp_client.mjs` to prove read-only tools and write refusals (`write_cypher` + `read_cypher` `CREATE`).
+- Created `docs/LOCAL-MCP-INTEGRATION.md` covering Claude Code, Codex CLI, and Gemini CLI / Antigravity stdio MCP recipes, Relate v1.0.1's open-time snapshot limitation, and explicit fresh-read / restart workflows.
+- Added `test/mcp_integration.test.mjs` covering real Relate v1.0.1 read-only verification + fresh short-lived reads and deterministic fake timeout/EOF/malformed/duplicate-ID/stderr-redaction tests.
+
+### Remaining
+- Independent COMMENT-only audit and owner merge approval on the Draft PR.
+- Keep `RH-P5-T1`–`T8`, `cloud/`, Cloudflare resources, and deployment on hold / blocked.
+
+## Handoff: RH-LOCAL-T3-2
+
+- **Task:** `tasks/RH-LOCAL-T3-local-mcp-integration.md` (PR #18 audit remediation RH18-01)
+- **From:** Antigravity (diagnostic redaction & bounded MCP error remediation)
+- **To:** focused independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t3-mcp-integration` (Draft PR #18)
+- **Input HEAD:** `38a9c17312ad80589319af239ed365419179a22c`
+
+### Verified evidence
+- **RH18-01 (`src/mcp_client.mjs`):** Replaced raw interpolation of untrusted JSON-RPC duplicate response IDs (`Duplicate JSON-RPC response id on line <N>`), raw `JSON.stringify(initResp ?? null)` in `verifyReadOnlyMcpServer`, raw `JSON.stringify(toolsResp ?? null)` in `assertReadOnlyMcpTools`, and raw `JSON.stringify(rpcResponse.error)` in `parseReadCypherResult` with static bounded diagnostics, and applied `sanitizeDiagnosticText` across CLI lookup and MCP JSON/tool error messages.
+- Added negative fault-injection regressions in `test/mcp_integration.test.mjs` using fictional credential-shaped tokens (`ghp_...`, `Bearer sk-...`) in duplicate JSON-RPC IDs, `initialize` JSON-RPC errors, string/array malformed `initialize` results, and `tools/list` errors, asserting none appear in thrown diagnostics.
+- Preserved read-only `--mcp stdio --read-only` guarantees and all existing `record`/`resume`/`list` behavior.
+
+### Remaining
+- Focused independent COMMENT-only re-audit on the new exact HEAD and owner merge approval before reconciling PR #21 (`RH-LOCAL-T4`), PR #19 (`RH-LOCAL-T5`), and PR #20 (`DEMO`).
+- Keep PR #18 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
+
+## Handoff: RH-LOCAL-T4-1
+
+- **Task:** `tasks/RH-LOCAL-T4-security-reliability.md` (RH-LOCAL-T4: Security & Cross-Platform Reliability)
+- **From:** Antigravity (implementation & macOS ARM64 exact-HEAD validation)
+- **To:** independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t4-security-reliability`
+- **Base:** `main@1a77147e3bb237d94ee3d4e4e5f5d5907be55c70` (PR #17 squash merge)
+
+### Verified evidence
+- Hardened `src/git.mjs` (`getGitState`) with `--no-optional-locks` so read-only `resume` and `list` invocations never mutate `.git/index` even when tracked file mtimes differ from the index stat cache.
+- Added `test/reliability_adversarial.test.mjs` (wired into `package.json` `"test"` script) covering linked Git worktrees & detached HEAD `.git/index` immutability with real Git + real Relate v1.0.1, cross-repo isolation across `record`/`resume`/`list` and `SUPERSEDES`, 4 concurrent parallel read-only readers with deterministic outputs and unchanged store/index hashes, copied `examples/example-store` per-file SHA-256 preservation across `resume`/`list`/`doctor`, deterministic fake MCP fault injection (partial line without newline, invalid JSON, missing response ID, `SIGKILL`, timeout), 100/101 `BoundExceededError` enforcement at write and read time, and fail-closed evidence authenticity (`tampered`/`unsigned` -> `UNVERIFIED`, `SELF_ASSERTED` -> `UNVERIFIED`, `FAIL` -> `BLOCKED`, advancing HEAD -> `STALE`).
+- Added `docs/PLATFORM-RELIABILITY.md` with an honest platform validation matrix (`macOS ARM64` `VERIFIED`, `Linux native` `UNVERIFIED` on this HEAD with historical Debian 12 `GLIBC_2.36` vs `GLIBC_2.39` finding, `Windows native` `UNVERIFIED` on this HEAD with `test/doctor.test.mjs` `win32` dependency-injected unit coverage).
+- Added `"tasks/RH-LOCAL-T4-security-reliability.md"` to `scripts/test_bootstrap.py` allowlist and updated `docs/STATUS.md`.
+
+### Remaining
+- Independent COMMENT-only audit and owner merge approval on the Draft PR (`feat/rh-local-t4-security-reliability`).
+- Native Linux and native Windows validation on those respective hosts remains `UNVERIFIED` on this HEAD.
+- Keep `RH-P5-T1`–`T8`, `cloud/`, Cloudflare resources, and deployment on hold / blocked.
+
+## Handoff: RH-LOCAL-T4-2
+
+- **Task:** `tasks/RH-LOCAL-T4-security-reliability.md` (reconcile Draft PR #21 onto `main@0b0b81dd56416caed183e8cadf84fc27bb764235`)
+- **From:** Antigravity (integration reconciliation & exact-HEAD validation)
+- **To:** independent COMMENT-only delta reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t4-security-reliability` (Draft PR #21)
+- **Input HEAD:** `d2ba9d7fb5af8752f3bafc559eae2ba850807556`
+- **Reconciled base:** `main@0b0b81dd56416caed183e8cadf84fc27bb764235` (PR #18 squash merge)
+
+### Verified evidence
+- Merged `origin/main@0b0b81dd56416caed183e8cadf84fc27bb764235` cleanly into `feat/rh-local-t4-security-reliability` without rewriting `d2ba9d7fb5af8752f3bafc559eae2ba850807556` history.
+- Reconciled shared files preserving all T3 and T4 changes:
+  - `package.json`: `"test"` runs both `test/mcp_integration.test.mjs` (T3) and `test/reliability_adversarial.test.mjs` (T4) alongside existing suites.
+  - `scripts/test_bootstrap.py`: allowlist retains both `tasks/RH-LOCAL-T3-local-mcp-integration.md` and `tasks/RH-LOCAL-T4-security-reliability.md`.
+  - `docs/STATUS.md`: records PR #18 (`0b0b81dd56416caed183e8cadf84fc27bb764235`) merged baseline and points to `feat/rh-local-t4-security-reliability` / `tasks/RH-LOCAL-T4-security-reliability.md` / `RH-LOCAL-T4-2`.
+  - `docs/HANDOFFS.md`: preserves all prior `origin/main` handoffs byte-identical through `RH-LOCAL-T3-2`, retains `RH-LOCAL-T4-1`, and appends `RH-LOCAL-T4-2` before the single `<!-- HANDOFF_ENTRIES_END -->` marker.
+
+### Remaining
+- Independent COMMENT-only delta review of the reconciled PR #21 HEAD and explicit owner merge approval before reconciling PR #19 (`RH-LOCAL-T5`) and PR #20 (`DEMO`).
+- Native Linux and native Windows validation remain `UNVERIFIED` on this macOS host.
+- Keep PR #21 Draft and hosted `RH-P5-T1`–`T8`, `cloud/`, deployment, publishing, and Devpost actions on hold / gated.
+
 ## Handoff: RH-LOCAL-T5-1
 
 - **Task:** `tasks/RH-LOCAL-T5-dx-onboarding.md` (RH-LOCAL-T5: Developer Experience & Onboarding)
@@ -778,5 +854,24 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 ### Remaining
 - Focused independent COMMENT-only delta review on the updated HEAD, rebase onto updated `main` after PR #18 and PR #21 merge, and explicit owner merge approval.
 - Keep `RH-P5-T1`–`T8`, package publishing, `cloud/`, Cloudflare resources, and deployment on hold / gated on explicit owner approval.
+
+## Handoff: RH-LOCAL-T5-3
+
+- **Task:** `tasks/RH-LOCAL-T5-dx-onboarding.md` (reconcile Draft PR #19 onto `main@cdc73f95dbc243335a46e0e753c0e51ff8107c88` and resolve `RH21-01`)
+- **From:** Antigravity (integration reconciliation, `RH21-01` remediation & exact-HEAD validation)
+- **To:** independent COMMENT-only delta reviewer and project owner (`mrdzyn`)
+- **Branch:** `docs/rh-local-t5-dx-onboarding` (Draft PR #19)
+- **Input HEAD:** `4eca53aaf0ca709ced5dca0c67af21ec0584a5ce`
+- **Reconciled base:** `main@cdc73f95dbc243335a46e0e753c0e51ff8107c88` (PR #21 squash merge)
+
+### Verified evidence
+- Merged `origin/main@cdc73f95dbc243335a46e0e753c0e51ff8107c88` into `docs/rh-local-t5-dx-onboarding`, preserving all T3 (`src/mcp_client.mjs`, `test/mcp_integration.test.mjs`, `docs/LOCAL-MCP-INTEGRATION.md`) and T4 (`src/git.mjs`, `test/reliability_adversarial.test.mjs`, `docs/PLATFORM-RELIABILITY.md`) implementation and combined 53-test coverage in `package.json`.
+- **RH21-01 (`docs/PLATFORM-RELIABILITY.md`):** Updated `docs/PLATFORM-RELIABILITY.md` to distinguish historical pre-reconciliation `49/49` T4 results (`main@1a77147e...` / `feat/rh-local-t4-security-reliability@d2ba9d7f...`) from reconciled `53/53` combined test evidence (`test/mcp_integration.test.mjs` `4/4` + `test/reliability_adversarial.test.mjs` `7/7`), replaced the workstation-specific `/Users/macjohn/.local/bin/relate` path with `~/.local/bin/relate`, and preserved `UNVERIFIED` status for native Linux and native Windows.
+- Reconciled `scripts/test_bootstrap.py` (retaining T3, T4, and T5 task allowlists), `docs/STATUS.md`, and append-only `docs/HANDOFFS.md` (preserving all `origin/main` handoffs through `RH-LOCAL-T4-2`, `RH-LOCAL-T5-1`, `RH-LOCAL-T5-2`, and appending `RH-LOCAL-T5-3` before the single `<!-- HANDOFF_ENTRIES_END -->` marker).
+
+### Remaining
+- Independent COMMENT-only delta review of the reconciled PR #19 HEAD and explicit owner merge approval before reconciling PR #20 (`DEMO Readiness`).
+- Native Linux and native Windows validation remain `UNVERIFIED` on this macOS host.
+- Keep PR #19 Draft and hosted `RH-P5-T1`–`T8`, package publishing, `cloud/`, deployment, video upload, and Devpost submission on hold / gated.
 
 <!-- HANDOFF_ENTRIES_END -->

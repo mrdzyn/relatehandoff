@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { runTrustedValidation } from "./attestation.mjs";
+import { sanitizeDiagnosticText } from "./doctor.mjs";
 import { getGitState } from "./git.mjs";
 import { evaluateFreshness } from "./freshness.mjs";
 import { canonicalizeResumeResult, compareCodeUnits } from "./resume_format.mjs";
@@ -9,6 +10,9 @@ import { ID_RE, MAX_DETAIL_ROWS } from "./schema.mjs";
 
 export { MAX_DETAIL_ROWS };
 export const DEFAULT_MCP_TIMEOUT_MS = 15000;
+export const MIN_MCP_TIMEOUT_MS = 100;
+export const MAX_MCP_TIMEOUT_MS = 120000;
+export const MAX_MCP_BUFFER_BYTES = 10 * 1024 * 1024;
 
 export function resolveRelateCli(explicitBin) {
   const candidates = [
@@ -29,7 +33,7 @@ export function resolveRelateCli(explicitBin) {
     if (res.status === 0) {
       return { bin, version: res.stdout.trim() };
     }
-    failures.push(`${bin}: ${res.stderr?.trim() || res.error?.message || `exit ${res.status}`}`);
+    failures.push(`${sanitizeDiagnosticText(bin)}: ${sanitizeDiagnosticText(res.stderr?.trim() || res.error?.message || `exit ${res.status}`)}`);
   }
 
   throw new Error(
@@ -46,6 +50,11 @@ export function callRelateMcpBatch({
   if (!Array.isArray(requests) || requests.length === 0) {
     throw new Error("callRelateMcpBatch requires a non-empty requests array");
   }
+  if (!Number.isInteger(timeoutMs) || timeoutMs < MIN_MCP_TIMEOUT_MS || timeoutMs > MAX_MCP_TIMEOUT_MS) {
+    throw new Error(
+      `Invalid timeoutMs '${timeoutMs}': expected integer in [${MIN_MCP_TIMEOUT_MS}, ${MAX_MCP_TIMEOUT_MS}]`
+    );
+  }
   const cli = resolveRelateCli(relateBin);
   const resolvedStore = path.resolve(storeDir);
 
@@ -57,11 +66,13 @@ export function callRelateMcpBatch({
       encoding: "utf8",
       timeout: timeoutMs,
       killSignal: "SIGKILL",
+      maxBuffer: MAX_MCP_BUFFER_BYTES,
+      shell: false,
     }
   );
 
-  const stderrText = res.stderr?.trim() || "";
-  const stdoutText = res.stdout?.trim() || "";
+  const stderrText = sanitizeDiagnosticText(res.stderr || "");
+  const stdoutText = sanitizeDiagnosticText(res.stdout || "");
 
   if (res.error) {
     if (res.error.code === "ETIMEDOUT") {
@@ -91,14 +102,32 @@ export function callRelateMcpBatch({
     .map((line) => line.trim())
     .filter(Boolean);
 
+  if (lines.length === 0) {
+    throw new Error(
+      `Unexpected EOF from relate serve --mcp stdio: empty stdout${stderrText ? ` (stderr: ${stderrText})` : ""}`
+    );
+  }
+
+  const seenIds = new Set();
   const responses = lines.map((line, idx) => {
+    let parsed;
     try {
-      return JSON.parse(line);
+      parsed = JSON.parse(line);
     } catch (err) {
       throw new Error(
-        `Invalid JSON-RPC line ${idx + 1} from relate serve --mcp stdio: ${err.message}${stderrText ? ` (stderr: ${stderrText})` : ""}`
+        `Invalid JSON-RPC line ${idx + 1} from relate serve --mcp stdio: ${sanitizeDiagnosticText(err.message)}${stderrText ? ` (stderr: ${stderrText})` : ""}`
       );
     }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error(`Invalid JSON-RPC line ${idx + 1}: expected JSON object`);
+    }
+    if (parsed.id !== undefined) {
+      if (seenIds.has(parsed.id)) {
+        throw new Error(`Duplicate JSON-RPC response id on line ${idx + 1} from relate serve --mcp stdio`);
+      }
+      seenIds.add(parsed.id);
+    }
+    return parsed;
   });
 
   if (responses.length < requests.length) {
@@ -108,9 +137,8 @@ export function callRelateMcpBatch({
   }
 
   const expectedIds = new Set(requests.map((r) => r.id));
-  const receivedIds = new Set(responses.map((r) => r?.id));
   for (const id of expectedIds) {
-    if (!receivedIds.has(id)) {
+    if (!seenIds.has(id)) {
       throw new Error(
         `Incomplete MCP batch response: missing response for request id ${id}${stderrText ? ` (stderr: ${stderrText})` : ""}`
       );
@@ -125,10 +153,15 @@ function parseReadCypherResult(rpcResponse) {
     throw new Error("Missing or invalid MCP JSON-RPC response object");
   }
   if (rpcResponse.error) {
-    throw new Error(`MCP JSON-RPC error: ${JSON.stringify(rpcResponse.error)}`);
+    const code = rpcResponse.error?.code;
+    throw new Error(
+      typeof code === "number"
+        ? `MCP JSON-RPC error (code ${code})`
+        : "MCP JSON-RPC error: server returned an error response"
+    );
   }
   if (rpcResponse.result?.isError) {
-    const msg = rpcResponse.result?.content?.[0]?.text ?? "unknown MCP tool error";
+    const msg = sanitizeDiagnosticText(String(rpcResponse.result?.content?.[0]?.text ?? "unknown MCP tool error"));
     throw new Error(`MCP read_cypher refused: ${msg}`);
   }
   const text = rpcResponse.result?.content?.[0]?.text;
@@ -138,7 +171,7 @@ function parseReadCypherResult(rpcResponse) {
   try {
     return JSON.parse(text);
   } catch (err) {
-    throw new Error(`Invalid JSON payload in MCP read_cypher result: ${err.message}`);
+    throw new Error(`Invalid JSON payload in MCP read_cypher result: ${sanitizeDiagnosticText(err.message)}`);
   }
 }
 
@@ -152,10 +185,19 @@ function assertBoundedRows(rows, label) {
 }
 
 function assertReadOnlyMcpTools(toolsResp) {
-  if (!toolsResp || toolsResp.error || toolsResp.result?.isError) {
-    throw new Error(`MCP tools/list failed: ${JSON.stringify(toolsResp ?? null)}`);
+  if (!toolsResp) {
+    throw new Error("MCP tools/list failed: missing response");
   }
-  const tools = (toolsResp.result?.tools ?? []).map((t) => t.name);
+  if (toolsResp.error) {
+    throw new Error("MCP tools/list failed: server returned JSON-RPC error");
+  }
+  if (toolsResp.result?.isError) {
+    throw new Error("MCP tools/list failed: tool returned error");
+  }
+  if (!Array.isArray(toolsResp.result?.tools)) {
+    throw new Error("MCP tools/list failed: malformed tools list");
+  }
+  const tools = toolsResp.result.tools.map((t) => t.name);
   if (tools.includes("write_cypher")) {
     throw new Error("Security violation: read-only MCP server exposed write_cypher");
   }
@@ -557,5 +599,84 @@ LIMIT ${MAX_DETAIL_ROWS + 1}`;
       ...gitState,
       dirtyFiles: [...(gitState.dirtyFiles || [])].sort(compareCodeUnits),
     },
+  };
+}
+
+/**
+ * Probe a local Relate stdio MCP server to verify read-only enforcement and write refusals.
+ */
+export function verifyReadOnlyMcpServer({
+  storeDir,
+  relateBin,
+  timeoutMs = DEFAULT_MCP_TIMEOUT_MS,
+}) {
+  const requests = [
+    {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2024-11-05",
+        capabilities: {},
+        clientInfo: { name: "relatehandoff-mcp-probe", version: "0.1.0" },
+      },
+    },
+    { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
+    {
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: {
+        name: "write_cypher",
+        arguments: { statement: "CREATE (n:ForbiddenProbe {x: 1}) RETURN n" },
+      },
+    },
+    {
+      jsonrpc: "2.0",
+      id: 4,
+      method: "tools/call",
+      params: {
+        name: "read_cypher",
+        arguments: { statement: "CREATE (n:ForbiddenProbe {x: 1}) RETURN n" },
+      },
+    },
+  ];
+
+  const responses = callRelateMcpBatch({ storeDir, requests, relateBin, timeoutMs });
+  const byId = new Map(responses.map((r) => [r.id, r]));
+
+  const initResp = byId.get(1);
+  if (!initResp) {
+    throw new Error("MCP initialize failed during read-only probe: missing initialize response");
+  }
+  if (initResp.error) {
+    throw new Error("MCP initialize failed during read-only probe: server returned JSON-RPC error");
+  }
+  if (!initResp.result || typeof initResp.result !== "object" || Array.isArray(initResp.result)) {
+    throw new Error("MCP initialize failed during read-only probe: malformed initialize result");
+  }
+
+  const tools = assertReadOnlyMcpTools(byId.get(2));
+
+  const writeToolResp = byId.get(3);
+  const writeCypherRefused = Boolean(writeToolResp && (writeToolResp.error || writeToolResp.result?.isError));
+  if (!writeCypherRefused) {
+    throw new Error("Security violation: write_cypher was not refused by read-only MCP server");
+  }
+
+  const readWriteResp = byId.get(4);
+  const readCypherWriteRefused = Boolean(readWriteResp && (readWriteResp.error || readWriteResp.result?.isError));
+  if (!readCypherWriteRefused) {
+    throw new Error("Security violation: read_cypher accepted a CREATE write query");
+  }
+
+  return {
+    ok: true,
+    readOnlyVerified: true,
+    tools,
+    writeCypherRefused,
+    readCypherWriteRefused,
+    snapshotNote:
+      "Relate v1.0.1 stdio MCP retains an open-time snapshot; restart persistent MCP hosts or use short-lived `relatehandoff resume`/`list` calls after external writes.",
   };
 }
