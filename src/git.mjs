@@ -28,7 +28,7 @@ export function normalizeRepositoryIdentity(rawRemote) {
 export function getGitState(repoRoot, options = {}) {
   const resolvedRoot = fs.realpathSync(repoRoot);
   const runGit = (args) =>
-    execFileSync("git", args, {
+    execFileSync("git", ["--no-optional-locks", ...args], {
       cwd: resolvedRoot,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],

@@ -779,4 +779,45 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Focused independent COMMENT-only re-audit on the new exact HEAD and owner merge approval before reconciling PR #21 (`RH-LOCAL-T4`), PR #19 (`RH-LOCAL-T5`), and PR #20 (`DEMO`).
 - Keep PR #18 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
 
+## Handoff: RH-LOCAL-T4-1
+
+- **Task:** `tasks/RH-LOCAL-T4-security-reliability.md` (RH-LOCAL-T4: Security & Cross-Platform Reliability)
+- **From:** Antigravity (implementation & macOS ARM64 exact-HEAD validation)
+- **To:** independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t4-security-reliability`
+- **Base:** `main@1a77147e3bb237d94ee3d4e4e5f5d5907be55c70` (PR #17 squash merge)
+
+### Verified evidence
+- Hardened `src/git.mjs` (`getGitState`) with `--no-optional-locks` so read-only `resume` and `list` invocations never mutate `.git/index` even when tracked file mtimes differ from the index stat cache.
+- Added `test/reliability_adversarial.test.mjs` (wired into `package.json` `"test"` script) covering linked Git worktrees & detached HEAD `.git/index` immutability with real Git + real Relate v1.0.1, cross-repo isolation across `record`/`resume`/`list` and `SUPERSEDES`, 4 concurrent parallel read-only readers with deterministic outputs and unchanged store/index hashes, copied `examples/example-store` per-file SHA-256 preservation across `resume`/`list`/`doctor`, deterministic fake MCP fault injection (partial line without newline, invalid JSON, missing response ID, `SIGKILL`, timeout), 100/101 `BoundExceededError` enforcement at write and read time, and fail-closed evidence authenticity (`tampered`/`unsigned` -> `UNVERIFIED`, `SELF_ASSERTED` -> `UNVERIFIED`, `FAIL` -> `BLOCKED`, advancing HEAD -> `STALE`).
+- Added `docs/PLATFORM-RELIABILITY.md` with an honest platform validation matrix (`macOS ARM64` `VERIFIED`, `Linux native` `UNVERIFIED` on this HEAD with historical Debian 12 `GLIBC_2.36` vs `GLIBC_2.39` finding, `Windows native` `UNVERIFIED` on this HEAD with `test/doctor.test.mjs` `win32` dependency-injected unit coverage).
+- Added `"tasks/RH-LOCAL-T4-security-reliability.md"` to `scripts/test_bootstrap.py` allowlist and updated `docs/STATUS.md`.
+
+### Remaining
+- Independent COMMENT-only audit and owner merge approval on the Draft PR (`feat/rh-local-t4-security-reliability`).
+- Native Linux and native Windows validation on those respective hosts remains `UNVERIFIED` on this HEAD.
+- Keep `RH-P5-T1`–`T8`, `cloud/`, Cloudflare resources, and deployment on hold / blocked.
+
+## Handoff: RH-LOCAL-T4-2
+
+- **Task:** `tasks/RH-LOCAL-T4-security-reliability.md` (reconcile Draft PR #21 onto `main@0b0b81dd56416caed183e8cadf84fc27bb764235`)
+- **From:** Antigravity (integration reconciliation & exact-HEAD validation)
+- **To:** independent COMMENT-only delta reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t4-security-reliability` (Draft PR #21)
+- **Input HEAD:** `d2ba9d7fb5af8752f3bafc559eae2ba850807556`
+- **Reconciled base:** `main@0b0b81dd56416caed183e8cadf84fc27bb764235` (PR #18 squash merge)
+
+### Verified evidence
+- Merged `origin/main@0b0b81dd56416caed183e8cadf84fc27bb764235` cleanly into `feat/rh-local-t4-security-reliability` without rewriting `d2ba9d7fb5af8752f3bafc559eae2ba850807556` history.
+- Reconciled shared files preserving all T3 and T4 changes:
+  - `package.json`: `"test"` runs both `test/mcp_integration.test.mjs` (T3) and `test/reliability_adversarial.test.mjs` (T4) alongside existing suites.
+  - `scripts/test_bootstrap.py`: allowlist retains both `tasks/RH-LOCAL-T3-local-mcp-integration.md` and `tasks/RH-LOCAL-T4-security-reliability.md`.
+  - `docs/STATUS.md`: records PR #18 (`0b0b81dd56416caed183e8cadf84fc27bb764235`) merged baseline and points to `feat/rh-local-t4-security-reliability` / `tasks/RH-LOCAL-T4-security-reliability.md` / `RH-LOCAL-T4-2`.
+  - `docs/HANDOFFS.md`: preserves all prior `origin/main` handoffs byte-identical through `RH-LOCAL-T3-2`, retains `RH-LOCAL-T4-1`, and appends `RH-LOCAL-T4-2` before the single `<!-- HANDOFF_ENTRIES_END -->` marker.
+
+### Remaining
+- Independent COMMENT-only delta review of the reconciled PR #21 HEAD and explicit owner merge approval before reconciling PR #19 (`RH-LOCAL-T5`) and PR #20 (`DEMO`).
+- Native Linux and native Windows validation remain `UNVERIFIED` on this macOS host.
+- Keep PR #21 Draft and hosted `RH-P5-T1`–`T8`, `cloud/`, deployment, publishing, and Devpost actions on hold / gated.
+
 <!-- HANDOFF_ENTRIES_END -->
