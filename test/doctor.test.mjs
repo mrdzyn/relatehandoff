@@ -398,3 +398,78 @@ test("RH15-04: invalid CLI usage and unsupported doctor flags exit 2 while faile
   );
   assert.equal(failedCheck.status, 1);
 });
+
+test("RH15-03: suppresses non-canonical repository identities including credential-bearing SSH URLs", () => {
+  const sshUrls = [
+    { url: "ssh://deploy:sshsecret99@git.example.com/org/repo.git", secret: "sshsecret99" },
+    { url: "git:sshsecret88@example.com:org/repo.git", secret: "sshsecret88" },
+  ];
+
+  for (const { url, secret } of sshUrls) {
+    const { deps } = makeFakeDeps({
+      runCmd: (bin, args) => {
+        if (bin === "git") {
+          const sub = args[0] === "--no-optional-locks" ? args.slice(1) : args;
+          if (sub[0] === "--version") return { status: 0, stdout: "git version 2.45.0\n", stderr: "" };
+          if (sub[0] === "rev-parse" && sub[1] === "HEAD") return { status: 0, stdout: "a".repeat(40) + "\n", stderr: "" };
+          if (sub[0] === "remote") return { status: 0, stdout: `${url}\n`, stderr: "" };
+          if (sub[0] === "config") return { status: 1, stdout: "", stderr: "" };
+          if (sub[0] === "status") return { status: 0, stdout: "", stderr: "" };
+          return { status: 0, stdout: "main\n", stderr: "" };
+        }
+        if (args[0] === "--version") return { status: 0, stdout: "Relate v1.0.1\n", stderr: "" };
+        return {
+          status: 0,
+          stdout:
+            JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }) +
+            "\n" +
+            JSON.stringify({ jsonrpc: "2.0", id: 2, result: { tools: [] } }) +
+            "\n",
+          stderr: "",
+        };
+      },
+    });
+
+    const report = runDoctor({ repo: "/repo", store: "/store" }, deps);
+    const repoCheck = report.checks.find((c) => c.id === "git-repo");
+    assert.equal(repoCheck.status, "WARN");
+    assert.match(repoCheck.summary, /suppressed/);
+    const jsonText = JSON.stringify(report);
+    const plainText = formatDoctorReport(report);
+    assert.ok(!jsonText.includes(secret));
+    assert.ok(!plainText.includes(secret));
+    assert.ok(!jsonText.includes("example.com"));
+    assert.ok(!plainText.includes("example.com"));
+  }
+});
+
+test("RH15-05: fails closed when git status --porcelain exits 128 despite valid HEAD", () => {
+  const { deps } = makeFakeDeps({
+    runCmd: (bin, args) => {
+      if (bin === "git") {
+        const sub = args[0] === "--no-optional-locks" ? args.slice(1) : args;
+        if (sub[0] === "--version") return { status: 0, stdout: "git version 2.45.0\n", stderr: "" };
+        if (sub[0] === "rev-parse" && sub[1] === "HEAD") return { status: 0, stdout: "a".repeat(40) + "\n", stderr: "" };
+        if (sub[0] === "status") return { status: 128, stdout: "", stderr: "fatal: detected dubious ownership in repository" };
+        if (sub[0] === "remote") return { status: 0, stdout: "https://github.com/mrdzyn/relatehandoff.git\n", stderr: "" };
+        return { status: 0, stdout: "main\n", stderr: "" };
+      }
+      if (args[0] === "--version") return { status: 0, stdout: "Relate v1.0.1\n", stderr: "" };
+      return {
+        status: 0,
+        stdout:
+          JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }) +
+          "\n" +
+          JSON.stringify({ jsonrpc: "2.0", id: 2, result: { tools: [] } }) +
+          "\n",
+        stderr: "",
+      };
+    },
+  });
+
+  const report = runDoctor({ repo: "/repo", store: "/store" }, deps);
+  const repoCheck = report.checks.find((c) => c.id === "git-repo");
+  assert.equal(repoCheck.status, "FAIL");
+  assert.match(repoCheck.summary, /dubious ownership/);
+  assert.equal(report.exitCode, 1);
+});

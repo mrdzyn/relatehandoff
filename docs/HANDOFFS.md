@@ -657,4 +657,21 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Independent COMMENT-only re-audit on the new exact HEAD.
 - Keep PR #15 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
 
+## Handoff: RH-LOCAL-T1-3
+
+- **Task:** `tasks/RH-LOCAL-T1-environment-doctor.md` (PR #15 follow-up remediation RH15-03 & RH15-05)
+- **From:** Antigravity (strict repo-id validation & Git fail-closed remediation)
+- **To:** focused independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `feat/rh-local-t1-doctor` (Draft PR #15)
+- **Input HEAD:** `e6ab50280f2ec9f7e3975d3f02b0f57ec1f11011`
+
+### Verified evidence
+- **RH15-03 (`src/doctor.mjs`):** Strictly validated repository identities against canonical `owner/repo` (`CANONICAL_REPO_ID_RE`, no `..`); non-canonical or credential-bearing values (including SSH URLs) are suppressed and reported as `WARN` without echoing raw config strings in text or JSON output. Added SSH URL regression test in `test/doctor.test.mjs`.
+- **RH15-05 (`src/doctor.mjs`):** Failed closed (`FAIL`, exit `1`) whenever any Git inspection command (`rev-parse --show-toplevel`, `rev-parse HEAD`, `rev-parse --abbrev-ref HEAD`, `status --porcelain`) returns an error, signal, or nonzero exit status. Added `git status --porcelain` exit-128 regression test with a valid `HEAD`.
+- Preserved `RH15-01`, `RH15-02`, and `RH15-04` fixes and existing `record`/`resume` behavior.
+
+### Remaining
+- Focused independent COMMENT-only re-audit on the new exact HEAD.
+- Keep PR #15 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
+
 <!-- HANDOFF_ENTRIES_END -->

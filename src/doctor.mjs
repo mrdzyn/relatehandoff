@@ -8,9 +8,11 @@ const NODE_MIN_MAJOR = 20;
 const NODE_RECOMMENDED_MAJOR = 24;
 const EXPECTED_RELATE_VERSION = "1.0.1";
 const CMD_TIMEOUT_MS = 5000;
+const CANONICAL_REPO_ID_RE = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
 
 const SECRET_REDACTION_PATTERNS = [
-  /https?:\/\/[^/\s:@]+:[^/\s@]+@/gi,
+  /[a-z][a-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/gi,
+  /\b[^/\s:@]+:[^/\s@]+@[^/\s:]+:/gi,
   /\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{10,}\b/g,
   /\bsk-[A-Za-z0-9_-]{12,}\b/g,
   /\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{8,}/gi,
@@ -184,16 +186,25 @@ function checkGitAndRepo({ repoInput, env, runCmd, fsImpl }) {
   const branchRes = runCmd("git", ["--no-optional-locks", "rev-parse", "--abbrev-ref", "HEAD"], { cwd: resolvedRepo, env });
   const statusRes = runCmd("git", ["--no-optional-locks", "status", "--porcelain"], { cwd: resolvedRepo, env });
 
-  if (topRes.status !== 0 || headRes.status !== 0 || !isFullSha((headRes.stdout || "").trim())) {
-    const errDetail = sanitizeDiagnosticText(topRes.stderr || headRes.stderr || "not a Git checkout with a valid HEAD");
+  const gitFailed = [topRes, headRes, branchRes, statusRes].find(
+    (r) => !r || r.error || r.signal || r.status !== 0
+  );
+  if (gitFailed || !isFullSha((headRes.stdout || "").trim())) {
+    const errDetail = sanitizeDiagnosticText(
+      gitFailed?.stderr ||
+        gitFailed?.error?.message ||
+        (gitFailed?.signal ? `signal ${gitFailed.signal}` : "") ||
+        (gitFailed ? `exit ${gitFailed.status}` : "") ||
+        "not a Git checkout with a valid HEAD"
+    );
     return {
       gitCheck,
       repoCheck: {
         id: "git-repo",
         name: "Git repository",
         status: "FAIL",
-        summary: `Directory is not a healthy Git worktree with a valid HEAD (${errDetail}).`,
-        remediation: "Run inside a valid Git repository with at least one commit.",
+        summary: `Git worktree inspection failed (${errDetail}).`,
+        remediation: "Run inside a healthy Git repository with a valid HEAD and accessible worktree.",
       },
       resolvedRepo,
     };
@@ -205,13 +216,12 @@ function checkGitAndRepo({ repoInput, env, runCmd, fsImpl }) {
 
   const remoteRes = runCmd("git", ["--no-optional-locks", "remote", "get-url", "origin"], { cwd: resolvedRepo, env });
   const cfgRes = runCmd("git", ["--no-optional-locks", "config", "--get", "relatehandoff.repository"], { cwd: resolvedRepo, env });
-  const rawRepoId =
-    normalizeRepositoryIdentity(remoteRes.status === 0 ? remoteRes.stdout : "") ||
-    (cfgRes.status === 0 ? cfgRes.stdout.trim() : "") ||
-    null;
-  const repoId = rawRepoId ? sanitizeDiagnosticText(rawRepoId) : null;
+  const remoteRaw = remoteRes && !remoteRes.error && remoteRes.status === 0 ? remoteRes.stdout.trim() : "";
+  const cfgRaw = cfgRes && !cfgRes.error && cfgRes.status === 0 ? cfgRes.stdout.trim() : "";
+  const normalizedRemote = normalizeRepositoryIdentity(remoteRaw);
+  const candidateRepoId = normalizedRemote || cfgRaw || null;
 
-  if (!repoId) {
+  if (!candidateRepoId) {
     return {
       gitCheck,
       repoCheck: {
@@ -224,6 +234,22 @@ function checkGitAndRepo({ repoInput, env, runCmd, fsImpl }) {
       resolvedRepo,
     };
   }
+
+  if (!CANONICAL_REPO_ID_RE.test(candidateRepoId) || candidateRepoId.includes("..")) {
+    return {
+      gitCheck,
+      repoCheck: {
+        id: "git-repo",
+        name: "Git repository",
+        status: "WARN",
+        summary: `Git worktree OK (${branch} @ ${headSha.slice(0, 12)}), but configured repository identity is not a canonical owner/repo identifier (value suppressed).`,
+        remediation: "Configure a canonical GitHub origin remote or `git config relatehandoff.repository <owner/repo>`, or pass `--repo-id <owner/repo>`.",
+      },
+      resolvedRepo,
+    };
+  }
+
+  const repoId = candidateRepoId;
 
   if (dirtyLines.length > 0) {
     return {

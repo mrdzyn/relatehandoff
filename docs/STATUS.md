@@ -16,7 +16,7 @@
 - **Approved local-only direction merged baseline:** `1d89213c3c8ab8a7bef205ab8696e0b5659d97e3` (PR #14 squash merge)
 - **Working branch:** `feat/rh-local-t1-doctor`
 - **Active task:** `tasks/RH-LOCAL-T1-environment-doctor.md`
-- **Active handoff:** RH-LOCAL-T1-2
+- **Active handoff:** RH-LOCAL-T1-3
 
 ## Completed foundation
 - Created a new project-mode repository from `mrdzyn/ai-native-project-template`; pruned unselected optional packs and inherited master history.
