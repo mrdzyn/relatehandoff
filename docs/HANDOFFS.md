@@ -744,4 +744,22 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Focused independent COMMENT-only re-audit on the new exact HEAD.
 - Keep PR #17 Draft and hosted RH-P5 (`RH-P5-T1`–`T8`) on hold / blocked.
 
+## Handoff: RH-LOCAL-DEMO-1
+
+- **Task / phase:** `tasks/RH-LOCAL-DEMO-readiness.md` (RH-LOCAL-DEMO: Local Demo Readiness & Recording Runbook)
+- **From:** Antigravity (local demo execution, sanitized output capture, and runbook authoring)
+- **To:** independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `docs/rh-local-demo-readiness`
+- **Base:** `main@1a77147e3bb237d94ee3d4e4e5f5d5907be55c70` (PR #17 squash merge)
+
+### Verified evidence
+- Added bounded task contract `tasks/RH-LOCAL-DEMO-readiness.md` and allowlisted it in `scripts/test_bootstrap.py` while preserving fail-closed bootstrap checks.
+- Executed real local commands against `Relate v1.0.1` (`doctor`, `npm run demo`, `examples/example-store` `resume`/`list`, and a complete 7-act `/tmp` synthetic multi-agent walkthrough) and captured sanitized observed outputs with zero local home-directory paths, secrets, or tokens.
+- Authored `docs/DEMO-RUNBOOK.md` with explicit real (`docs/RH-P2-REAL-AGENT-PROOF.md`) vs. synthetic (`npm run demo` / `examples/example-store`) provenance separation, copy-paste commands, sanitized outputs, shot-by-shot capture plan, a timed 90–120s voiceover script (~217 words), and a mandatory owner pre-upload checklist.
+- Updated `docs/STATUS.md` and appended this handoff without modifying runtime source, tests, fixtures, or uploading/submitting anything.
+
+### Remaining
+- Independent COMMENT-only review and explicit owner merge approval for the `RH-LOCAL-DEMO` Draft PR on `docs/rh-local-demo-readiness`.
+- Owner execution of the recording runbook and mandatory pre-upload checklist before any video upload or Devpost submission; keep `RH-P5-T1`–`T8` on hold.
+
 <!-- HANDOFF_ENTRIES_END -->
