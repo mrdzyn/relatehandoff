@@ -891,4 +891,59 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Native Linux and native Windows validation remain `UNVERIFIED` on this macOS host.
 - Keep PR #19 Draft and hosted `RH-P5-T1`–`T8`, package publishing, `cloud/`, deployment, video upload, and Devpost submission on hold / gated.
 
+## Handoff: RH-LOCAL-DEMO-1
+
+- **Task / phase:** `tasks/RH-LOCAL-DEMO-readiness.md` (RH-LOCAL-DEMO: Local Demo Readiness & Recording Runbook)
+- **From:** Antigravity (local demo execution, sanitized output capture, and runbook authoring)
+- **To:** independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `docs/rh-local-demo-readiness`
+- **Base:** `main@1a77147e3bb237d94ee3d4e4e5f5d5907be55c70` (PR #17 squash merge)
+
+### Verified evidence
+- Added bounded task contract `tasks/RH-LOCAL-DEMO-readiness.md` and allowlisted it in `scripts/test_bootstrap.py` while preserving fail-closed bootstrap checks.
+- Executed real local commands against `Relate v1.0.1` (`doctor`, `npm run demo`, `examples/example-store` `resume`/`list`, and a complete 7-act `/tmp` synthetic multi-agent walkthrough) and captured sanitized observed outputs with zero local home-directory paths, secrets, or tokens.
+- Authored `docs/DEMO-RUNBOOK.md` with explicit real (`docs/RH-P2-REAL-AGENT-PROOF.md`) vs. synthetic (`npm run demo` / `examples/example-store`) provenance separation, copy-paste commands, sanitized outputs, shot-by-shot capture plan, a timed 90–120s voiceover script (~217 words), and a mandatory owner pre-upload checklist.
+- Updated `docs/STATUS.md` and appended this handoff without modifying runtime source, tests, fixtures, or uploading/submitting anything.
+
+### Remaining
+- Independent COMMENT-only review and explicit owner merge approval for the `RH-LOCAL-DEMO` Draft PR on `docs/rh-local-demo-readiness`.
+- Owner execution of the recording runbook and mandatory pre-upload checklist before any video upload or Devpost submission; keep `RH-P5-T1`–`T8` on hold.
+
+## Handoff: RH-LOCAL-DEMO-2
+
+- **Task / phase:** `tasks/RH-LOCAL-DEMO-readiness.md` (PR #20 audit remediation RH20-01)
+- **From:** Antigravity (provenance-matched overlays/voiceovers, genuine Codex-to-Claude track, and smoke/capture checklists)
+- **To:** focused independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `docs/rh-local-demo-readiness` (Draft PR #20)
+- **Input HEAD:** `16c828e02165df7e33e56a42702e3bc2da00ef60`
+
+### Verified evidence
+- **RH20-01 (`docs/DEMO-RUNBOOK.md`):** Separated Section 5 and Section 6 into **Track A / Option A** (preferred genuine Codex-to-Claude execution with observable real-agent sessions and explicit prohibition against applying it to synthetic shell footage) and **Track B / Option B** (explicitly labeled **"synthetic agent-handoff simulation using the real Relate v1.0.1 engine"** on overlays and voiceover, clarifying synthetic agent-name labels never prove independent agent activity).
+- Relabeled Section 4 heading and Act 1–4 prose as a synthetic agent-handoff simulation while preserving all seven reproducible acts, commands, and sanitized outputs intact.
+- Expanded Section 7 with an explicit `RH20-01` provenance/voiceover confirmation item, a **Final Integrated-Main Smoke Test** checklist (to run after PRs #18, #21, #19, #20 merge), and a **Genuine Codex-to-Claude Demo Capture Checklist**.
+
+### Remaining
+- Focused independent COMMENT-only re-audit on the new exact HEAD, rebase onto updated `main` after PR #18, #21, and #19 merge, and owner execution of the integrated-main smoke test and demo-capture checklist.
+- Keep PR #20 Draft; no video upload, Devpost submission, deployment, or merge without owner approval; keep `RH-P5-T1`–`T8` on hold.
+
+## Handoff: RH-LOCAL-DEMO-3
+
+- **Task / phase:** `tasks/RH-LOCAL-DEMO-readiness.md` (reconcile Draft PR #20 onto `main@4a58146706cb3ca74e48098f10634024fbd78244`)
+- **From:** Antigravity (integration reconciliation, T1–T5 runbook alignment & exact-HEAD validation)
+- **To:** independent COMMENT-only delta reviewer and project owner (`mrdzyn`)
+- **Branch:** `docs/rh-local-demo-readiness` (Draft PR #20)
+- **Input HEAD:** `c142f5336c249650fd9219b895e6723e0f5cd211`
+- **Reconciled base:** `main@4a58146706cb3ca74e48098f10634024fbd78244` (PR #19 squash merge)
+
+### Verified evidence
+- Merged `origin/main@4a58146706cb3ca74e48098f10634024fbd78244` into `docs/rh-local-demo-readiness`, preserving all merged T1–T5 runtime code (`src/`), 53-test suite (`package.json`, `test/`), and onboarding/reliability/MCP documentation (`README.md`, `docs/LOCAL-MCP-INTEGRATION.md`, `docs/PLATFORM-RELIABILITY.md`, `docs/ONBOARDING-AND-DISTRIBUTION.md`) unchanged.
+- Preserved `RH20-01` Track A / Option A (genuine Codex-to-Claude execution) vs. Track B / Option B (synthetic shell simulation) separation in `docs/DEMO-RUNBOOK.md`, updated baseline references to merged `main@4a58146706cb3ca74e48098f10634024fbd78244` (`53/53` combined real `Relate v1.0.1` tests), referenced T3–T5 integration/reliability/onboarding docs, and aligned `tasks/RH-LOCAL-DEMO-readiness.md` + `docs/STATUS.md` + `scripts/test_bootstrap.py`.
+- Preserved all prior `docs/HANDOFFS.md` entries byte-identically through `RH-LOCAL-T5-4`, retained `RH-LOCAL-DEMO-1`/`RH-LOCAL-DEMO-2`, and appended `RH-LOCAL-DEMO-3` before the single `<!-- HANDOFF_ENTRIES_END -->` marker.
+- Executed exact-HEAD validation (`scripts/test_bootstrap.py`, `scripts/validate.py` 8/8, `RELATE_REQUIRE_CLI=1 npm test` 53/53 with 0 skipped, `npm run test:security` 5/5, `npm run build`, `npm run demo`, and preflight `doctor`/`resume`/`list` smoke checks against real `Relate v1.0.1`).
+
+### Remaining
+- Focused independent COMMENT-only delta audit and explicit owner merge approval for Draft PR #20.
+- Owner execution of §7.1 integrated-`main` smoke check, §7.2 genuine Codex-to-Claude screen capture, and §7.3 pre-upload gate after PR #20 merges; native Linux and Windows remain `UNVERIFIED` on this macOS host.
+- Keep PR #20 Draft, hosted `RH-P5-T1`–`T8` on hold, and publishing/upload/Devpost actions blocked without explicit owner approval.
+
 <!-- HANDOFF_ENTRIES_END -->
