@@ -946,4 +946,21 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Owner execution of §7.1 integrated-`main` smoke check, §7.2 genuine Codex-to-Claude screen capture, and §7.3 pre-upload gate after PR #20 merges; native Linux and Windows remain `UNVERIFIED` on this macOS host.
 - Keep PR #20 Draft, hosted `RH-P5-T1`–`T8` on hold, and publishing/upload/Devpost actions blocked without explicit owner approval.
 
+## Handoff: RH-LOCAL-SHOWCASE-1
+
+- **Task:** `tasks/RH-LOCAL-SHOWCASE-readme.md` (RH-LOCAL-SHOWCASE: Final GitHub Showcase README)
+- **From:** Antigravity (README showcase authoring, Mermaid validation, and real-Relate GIF/PNG capture)
+- **To:** independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `docs/rh-local-showcase-readme` (Draft PR rebased onto `main@dc6d80c0c3444f53d217f8376348e44f21265c60`)
+
+### Verified evidence
+- Created bounded task contract `tasks/RH-LOCAL-SHOWCASE-readme.md` and added `"tasks/RH-LOCAL-SHOWCASE-readme.md"` to `scripts/test_bootstrap.py` while retaining T3–T5 + DEMO allowlists and fail-closed checks.
+- Executed real local CLI commands (`doctor`, `record --verify`, `resume`, `resume --verify`, `record --supersedes`, `list`, Git `HEAD` advance `STALE`, and `relate serve --mcp stdio --read-only` `write_cypher` refusal) against `Relate v1.0.1` in a sanitized temporary synthetic repository and rendered `assets/readme/relatehandoff-demo.gif` (`960x540`, `15.36s` loop, `215,816` bytes) plus `assets/readme/relatehandoff-demo.png` (`960x540`, `99,393` bytes) in dark charcoal, white, `#22C6F0` cyan, and restrained red (`#E5534B`), with zero yellow/gold, zero personal paths, zero secrets, and explicit `SYNTHETIC CLI DEMONSTRATION` labeling.
+- Updated `README.md` with hero badges, above-the-fold animated GIF and navigation links, two Mermaid 11-rendered light/dark diagrams (Architecture & Handoff Lifecycle), quickstart and collapsible simulated/offline recipes, CLI reference, truthful real-vs-synthetic evidence and T1–T5 + PR #20 merged baselines, compatibility table (`macOS ARM64` `VERIFIED`, Linux/Windows `UNVERIFIED`), documentation links (including `docs/AGENT-ORCHESTRATION.md` and `docs/DEMO-RUNBOOK.md`), and Apache-2.0/attribution notices.
+- Preserved all runtime code, tests (`53/53`), security boundaries, and all prior `docs/HANDOFFS.md` entries byte-identically through `RH-LOCAL-DEMO-3` before the single terminal `<!-- HANDOFF_ENTRIES_END -->` marker.
+
+### Remaining
+- Visual verification of the rendered Draft PR on GitHub, independent COMMENT-only audit, and explicit owner merge approval.
+- Native Linux and Windows validation remain `UNVERIFIED` on this macOS host; keep hosted `RH-P5` (`RH-P5-T1`–`T8`), publishing, deployment, video upload, and Devpost submission gated / ON HOLD.
+
 <!-- HANDOFF_ENTRIES_END -->
