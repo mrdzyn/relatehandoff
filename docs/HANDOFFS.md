@@ -874,4 +874,21 @@ Finish exact-HEAD validation, verify the remote PR head before normal push, upda
 - Native Linux and native Windows validation remain `UNVERIFIED` on this macOS host.
 - Keep PR #19 Draft and hosted `RH-P5-T1`–`T8`, package publishing, `cloud/`, deployment, video upload, and Devpost submission on hold / gated.
 
+## Handoff: RH-LOCAL-T5-4
+
+- **Task:** `tasks/RH-LOCAL-T5-dx-onboarding.md` (PR #19 audit remediation RH19-01)
+- **From:** Antigravity (task-contract scope & acceptance alignment)
+- **To:** focused independent COMMENT-only reviewer and project owner (`mrdzyn`)
+- **Branch:** `docs/rh-local-t5-dx-onboarding` (Draft PR #19)
+- **Input HEAD:** `5560f3f8e16c86c18fc6d86a148d51eb22755af3`
+
+### Verified evidence
+- **RH19-01 (`tasks/RH-LOCAL-T5-dx-onboarding.md`):** Added `docs/PLATFORM-RELIABILITY.md` to Allowed Scope strictly restricted to the owner-directed `RH21-01` evidence and workstation-path correction; updated Context, Acceptance Criteria, and Required Validation to acknowledge historical `49/49` pre-reconciliation `RH-LOCAL-T4` evidence vs. reconciled `53/53` combined `T3+T4` test evidence on macOS ARM64, preserve native Linux and native Windows verification as `UNVERIFIED`, and retain `RH-LOCAL-T3` + `RH-LOCAL-T4` allowlists, tests, code, and governance unchanged.
+- Fixed duplicate `## Next authorized action` heading and updated `Active handoff: RH-LOCAL-T5-4` in `docs/STATUS.md`; preserved all prior `docs/HANDOFFS.md` entries byte-identically and appended this handoff before the single `<!-- HANDOFF_ENTRIES_END -->` marker.
+
+### Remaining
+- Focused independent COMMENT-only re-audit on the new exact HEAD and explicit owner merge approval before reconciling Draft PR #20 (`DEMO Readiness`).
+- Native Linux and native Windows validation remain `UNVERIFIED` on this macOS host.
+- Keep PR #19 Draft and hosted `RH-P5-T1`–`T8`, package publishing, `cloud/`, deployment, video upload, and Devpost submission on hold / gated.
+
 <!-- HANDOFF_ENTRIES_END -->

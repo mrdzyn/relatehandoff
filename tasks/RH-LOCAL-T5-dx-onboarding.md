@@ -1,6 +1,6 @@
 # RH-LOCAL-T5 — Developer Experience & Onboarding
 
-- **Status:** In progress (`docs/rh-local-t5-dx-onboarding` from `main@1a77147e3bb237d94ee3d4e4e5f5d5907be55c70`)
+- **Status:** In progress (`docs/rh-local-t5-dx-onboarding`, originally from `main@1a77147e3bb237d94ee3d4e4e5f5d5907be55c70` and reconciled onto `main@cdc73f95dbc243335a46e0e753c0e51ff8107c88`)
 - **Owner/orchestrator:** project owner (`mrdzyn`)
 - **Implementation agent:** Antigravity
 - **Primary branch:** `main`
@@ -10,7 +10,7 @@
 Bring developer documentation, copy-paste multi-agent workflows, platform installation/troubleshooting guidance, offline clean-clone reproducibility verification, and distribution/licensing readiness review up to date with all shipped local-only RelateHandoff commands (`doctor`, `record`, `resume`, `list`) without editing `src/` or enabling hosted/cloud work.
 
 ## Context
-`RH-LOCAL-T1` (`doctor`), `RH-LOCAL-T2A` (`resume --format json|markdown`), and `RH-LOCAL-T2B` (`list`, `record --supersedes` / `--supersession-reason`, `resume --handoff`) are squash-merged to `main` (`1a77147e3bb237d94ee3d4e4e5f5d5907be55c70`), while `RH-P5` hosted platform work remains **ON HOLD**. `README.md` still reflects pre-`RH-LOCAL` status and lacks copy-paste multi-agent lifecycle workflows and verified offline clean-clone guidance.
+`RH-LOCAL-T1` (`doctor`), `RH-LOCAL-T2A` (`resume --format json|markdown`), `RH-LOCAL-T2B` (`list`, `record --supersedes` / `--supersession-reason`, `resume --handoff`), `RH-LOCAL-T3` (PR #18 `0b0b81dd56416caed183e8cadf84fc27bb764235`), and `RH-LOCAL-T4` (PR #21 `cdc73f95dbc243335a46e0e753c0e51ff8107c88`) are squash-merged to `main`, while `RH-P5` hosted platform work remains **ON HOLD**. During reconciliation onto T3+T4 `main@cdc73f95dbc243335a46e0e753c0e51ff8107c88`, the owner additionally directed resolving non-blocking `RH21-01` in `docs/PLATFORM-RELIABILITY.md`.
 
 ## Delivery mode / UI design gate
 - **Material user-facing UI:** No (documentation and local onboarding verification only).
@@ -23,9 +23,10 @@ Bring developer documentation, copy-paste multi-agent workflows, platform instal
 
 ## Allowed scope
 - `tasks/RH-LOCAL-T5-dx-onboarding.md`
-- `scripts/test_bootstrap.py` (one allowlist entry for this task, preserving fail-closed checks)
+- `scripts/test_bootstrap.py` (one allowlist entry for this task while retaining `RH-LOCAL-T3` and `RH-LOCAL-T4` allowlist entries and fail-closed checks)
 - `README.md` (documentation only)
 - `docs/ONBOARDING-AND-DISTRIBUTION.md`
+- `docs/PLATFORM-RELIABILITY.md` (restricted strictly to the owner-directed `RH21-01` evidence distinction and workstation-path removal)
 - `docs/STATUS.md`
 - `docs/HANDOFFS.md` (append-only)
 
@@ -39,17 +40,18 @@ Bring developer documentation, copy-paste multi-agent workflows, platform instal
 - [x] Bounded task contract `tasks/RH-LOCAL-T5-dx-onboarding.md` created and allowlisted in `scripts/test_bootstrap.py` with fail-closed checks intact.
 - [x] `README.md` updated (no `src/` edits) to reflect current local-only status and all shipped CLI commands (`doctor`, `record --verify/--supersedes/--supersession-reason`, `resume --format json|markdown --handoff --verify`, `list --task --status --branch --agent --limit --format`), copy-paste multi-agent workflows, Linux `GLIBC_2.36` vs `GLIBC_2.39` source-build guidance, offline reproducibility steps, and `docs/AGENT-ORCHESTRATION.md` reference.
 - [x] `docs/ONBOARDING-AND-DISTRIBUTION.md` created with platform-by-platform installation & troubleshooting (macOS, Linux, Windows — explicitly marking native Linux/Windows runs `UNVERIFIED` on this macOS host), verified offline clean-clone reproducibility results (`git clone --local` in `/tmp`, `npm ci --offline`, `doctor`, `resume`, `RELATE_REQUIRE_CLI=1 npm test`, temp dir cleaned), and distribution/licensing readiness review (`Apache-2.0`, `@relate/relate@1.0.1` + Neo4j Labs experimental disclaimer, Relate CLI notices, `koffi@2.16.4` MIT notice, explicit gate forbidding publishing without owner approval).
-- [x] `docs/STATUS.md` updated and `## Handoff: RH-LOCAL-T5-1` appended to `docs/HANDOFFS.md`.
-- [x] `git diff --check origin/main...HEAD` exits 0 and exact-HEAD canonical validation passes (`scripts/test_bootstrap.py`, `scripts/validate.py`, `RELATE_REQUIRE_CLI=1 npm test`, `npm run test:security`, `npm run build`).
+- [x] `docs/PLATFORM-RELIABILITY.md` updated per owner-directed `RH21-01` to distinguish historical pre-reconciliation `49/49` `RH-LOCAL-T4` results from reconciled `53/53` combined `T3+T4` test evidence on macOS ARM64, remove workstation-specific paths (`~/.local/bin/relate`), and preserve native Linux and native Windows verification as `UNVERIFIED`.
+- [x] `docs/STATUS.md` updated, prior `docs/HANDOFFS.md` entries preserved byte-identically through `RH-LOCAL-T4-2`, and `RH-LOCAL-T5-1` through `RH-LOCAL-T5-4` appended cleanly before the single `<!-- HANDOFF_ENTRIES_END -->` marker.
+- [x] All existing T3/T4 code, tests (`53/53` combined `test/mcp_integration.test.mjs` + `test/reliability_adversarial.test.mjs` + baseline suites), and governance preserved untouched (`git diff --check origin/main...HEAD` exits 0; exact-HEAD `scripts/test_bootstrap.py`, `scripts/validate.py`, `RELATE_REQUIRE_CLI=1 npm test`, `npm run test:security`, and `npm run build` pass).
 
 ## Required validation
 - `git diff --check origin/main...HEAD`
 - `python3 scripts/test_bootstrap.py`
 - `python3 scripts/validate.py --repository mrdzyn/relatehandoff`
-- `RELATE_REQUIRE_CLI=1 npm test`
+- `RELATE_REQUIRE_CLI=1 npm test` (confirming combined `53/53` T3+T4 coverage against real `Relate v1.0.1`, `0` skipped)
 - `npm run test:security`
 - `npm run build`
-- Temporary `/tmp` offline clean-clone reproducibility test (`git clone --local`, `npm ci --offline`, `doctor`, `resume`, `RELATE_REQUIRE_CLI=1 npm test`), followed by cleanup of `/tmp` directory.
+- Temporary `/tmp` offline clean-clone reproducibility test (`git clone --local`, `npm ci --offline`, `doctor`, `resume`, `RELATE_REQUIRE_CLI=1 npm test`) and `/tmp` README simulated workflow re-verification, followed by cleanup of `/tmp` directories.
 
 ## Security / privacy considerations
 Documentation-only changes; all workflows and fixtures remain strictly local, offline-capable, and free of real credentials, private transcripts, or customer data. Temp verification directories are cleaned up after verification.
