@@ -1,6 +1,6 @@
 # RelateHandoff — Local Demo Runbook & Recording Guide
 
-**State:** Draft demo runbook prepared on `docs/rh-local-demo-readiness` from `main@1a77147e3bb237d94ee3d4e4e5f5d5907be55c70`. No video has been recorded, uploaded, or submitted to Devpost by this PR.
+**State:** Reconciled demo runbook on `docs/rh-local-demo-readiness` over merged T1–T5 `main@4a58146706cb3ca74e48098f10634024fbd78244` (including `RH20-01` Track A genuine Codex-to-Claude vs. Track B synthetic simulation provenance separation, `docs/LOCAL-MCP-INTEGRATION.md`, `docs/PLATFORM-RELIABILITY.md`, and `docs/ONBOARDING-AND-DISTRIBUTION.md`). No video has been recorded, uploaded, or submitted to Devpost by this PR. Hosted `RH-P5` remains **ON HOLD**.
 
 ---
 
@@ -29,7 +29,8 @@ Pinned local baseline verified on macOS ARM64 (`darwin`):
 - **NPM dependencies:** `npm ci` (`@relate/relate@1.0.1`)
 
 > [!NOTE]
-> On Linux hosts with `GLIBC_2.36` (such as Debian 12), the prebuilt `relate-linux-amd64` `v1.0.1` binary requires `GLIBC_2.39`. Use the pinned Rust/Cargo source build (`cargo install --git https://github.com/relatedb/relate --tag v1.0.1 relate-cli`) documented in [`docs/JUDGE-WALKTHROUGH.md`](JUDGE-WALKTHROUGH.md).
+> - **Linux `GLIBC_2.36` vs `GLIBC_2.39`:** On Linux hosts with `GLIBC_2.36` (such as Debian 12), the prebuilt `relate-linux-amd64` `v1.0.1` binary requires `GLIBC_2.39`. Use the pinned Rust/Cargo source build (`cargo install --git https://github.com/relatedb/relate --tag v1.0.1 relate-cli`) documented in [`docs/JUDGE-WALKTHROUGH.md`](JUDGE-WALKTHROUGH.md) and [`docs/ONBOARDING-AND-DISTRIBUTION.md`](ONBOARDING-AND-DISTRIBUTION.md).
+> - **Merged T3–T5 guides & platform matrix:** See [`docs/LOCAL-MCP-INTEGRATION.md`](LOCAL-MCP-INTEGRATION.md) for hardened stdio MCP configuration recipes (Claude Code, Codex CLI, Gemini CLI / Antigravity) and open-time snapshot refresh rules, and [`docs/PLATFORM-RELIABILITY.md`](PLATFORM-RELIABILITY.md) for the `53/53` combined real `Relate v1.0.1` suite on macOS ARM64 (`UNVERIFIED` on native Linux and native Windows).
 
 ### Preflight & Committed Example Store Commands
 
@@ -43,6 +44,8 @@ node src/cli.mjs list --store examples/example-store --repo . --repo-id mrdzyn/r
 ```
 
 ### Sanitized Observed Preflight Outputs
+
+> *(Captured against `examples/example-store` on initial `docs/rh-local-demo-readiness` branch snapshot `1a77147e3bb2`; `HEAD` hash in `doctor` and `resume` output reflects your current checkout HEAD when run on `main@4a58146706cb3`.)*
 
 `node src/cli.mjs doctor --repo . --store examples/example-store`:
 
@@ -877,7 +880,7 @@ Run in a clean checkout of final `main` on `Relate v1.0.1`:
 - [ ] `git status -s` is empty and `git rev-parse HEAD` is recorded.
 - [ ] `node src/cli.mjs doctor --repo . --store examples/example-store` exits `0` (`6 PASS, 0 WARN, 0 FAIL`).
 - [ ] `python3 scripts/validate.py --repository mrdzyn/relatehandoff` exits `0` (`8/8 PASS`).
-- [ ] `RELATE_REQUIRE_CLI=1 npm test` exits `0` with `0` skipped, explicitly confirming both T3 (`test/mcp_integration.test.mjs`) and T4 (`test/reliability_adversarial.test.mjs`) execute against real Relate `v1.0.1`.
+- [ ] `RELATE_REQUIRE_CLI=1 npm test` exits `0` with `53/53 PASS` and `0` skipped, explicitly confirming both T3 (`test/mcp_integration.test.mjs`, `4/4`) and T4 (`test/reliability_adversarial.test.mjs`, `7/7`) plus all baseline suites execute against real Relate `v1.0.1`. (Keep native Linux and Windows marked `UNVERIFIED` unless actually executed on those hosts; see `docs/PLATFORM-RELIABILITY.md`.)
 - [ ] `npm run test:security`, `npm run build`, and `npm run demo` all exit `0`.
 - [ ] `node src/cli.mjs resume --store examples/example-store --repo . --repo-id mrdzyn/relatehandoff --task RH-P1 --format markdown` and `list --format markdown` exit `0`.
 
