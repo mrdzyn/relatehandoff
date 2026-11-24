@@ -64,7 +64,7 @@ Git `HEAD` and local verification (`--verify`) act as independent sources of tru
 ```mermaid
 flowchart LR
     A["Real AI Agents / Operator<br/>(Writer Session)"] -->|"Validated payload<br/>+ --verify"| W["Validated Recorder<br/>relatehandoff record"]
-    G["Git HEAD &amp; Worktree<br/>(Source of Truth)"] -->|"repo · branch · headSha"| W
+    G["Git HEAD & Worktree<br/>(Source of Truth)"] -->|"repo · branch · headSha"| W
     V["Local Test Runner<br/>(--verify allowlist)"] -->|"clean-tree TAP<br/>pass >= 1"| W
     W -->|"Typed graph +<br/>[:SUPERSEDES]"| S[("Local Relate Graph<br/>Directory Store v1.0.1")]
     S -->|"--read-only<br/>snapshot"| M["Read-Only MCP Server<br/>relate serve --mcp stdio --read-only"]
@@ -92,11 +92,11 @@ Every handoff is immutable once recorded; newer handoffs advance the task via ex
 
 ```mermaid
 flowchart TD
-    REC["record<br/>Validate schema, paths &amp; HEAD"] --> ACT["ACTIVE Handoff Node<br/>(Local Relate Store)"]
+    REC["record<br/>Validate schema, paths & HEAD"] --> ACT["ACTIVE Handoff Node<br/>(Local Relate Store)"]
     SUP["record --supersedes prevId<br/>Immutable [:SUPERSEDES] edge"] --> ACT
     ACT -->|"Prior node retained<br/>on disk"| SUPD["SUPERSEDED Node<br/>(resume --handoff / list --status all)"]
     ACT --> RES["resume / list<br/>Read-only MCP stdio"]
-    RES --> VER{"Check Git HEAD &amp;<br/>evidence status"}
+    RES --> VER{"Check Git HEAD &<br/>evidence status"}
 
     VER -->|"--verify passed on<br/>clean matching HEAD"| V_OK["VERIFIED<br/>CURRENT · AUTHENTICATED"]
     VER -->|"Unsigned store read or<br/>SELF_ASSERTED / MISSING"| V_UNV["UNVERIFIED<br/>Unauthenticated evidence"]
